@@ -6,7 +6,7 @@
 - A successful catalogue read treats Supabase as the source of truth, even when there are zero active rows; demo products are not silently shown as live products.
 - The database foundation migration defines customer profiles, orders, order items, and product passports with row-level security.
 - Required table grants are tracked in `202610220002_grant_rls_protected_store_table_access.sql`; RLS still controls row access.
-- Approved owners now have read-only RLS access to all order headers and order items, tracked in `202610220003_approved_owner_order_read_access.sql`. This is groundwork for order review, not a completed order-management screen.
+- Approved owners now have read-only RLS access to all order headers and order items, tracked in `202610220003_approved_owner_order_read_access.sql`. The live owner order panel source is now in `supabase-admin-orders.js`; it reads real orders and item snapshots only for an approved owner.
 
 ## Current limitations — not production-ready yet
 - Live Supabase logs now show successful HTTP 200 catalogue requests for both products and categories after the table-grant fix.
@@ -15,10 +15,10 @@
 - Security advisor currently reports one warning: leaked-password protection is disabled in Supabase Auth.
 - Cart state is stored in browser local storage. Customer order history is incomplete.
 - Customer email/password sign-up and sign-in UI is wired to Supabase Auth. Email confirmation may be required by Auth settings. Checkout requires a signed-in customer and supports only cash on delivery or bank transfer; online card payments are not integrated.
-- The owner catalogue panel is intended to add products, create/reactivate categories, list live products, and deactivate products. Owner login and actual product management still need a live user-session test. Category editing, image uploads to Storage, and full order-management screens remain incomplete.
+- The owner catalogue panel is intended to add products, create/reactivate categories, list live products, and deactivate products. Owner login and actual product management still need a live user-session test. Category editing and image uploads to Storage remain incomplete. The new live order panel and status controls are committed in source, but need a production browser test.
 - The deployed `create-store-order` Edge Function requires a valid JWT, validates active product IDs and current LKR prices server-side, calculates totals server-side, and stores order/item snapshots. It rejects unsupported payment methods. Delivery fee is currently zero. A successful end-to-end order has not yet been verified with an authenticated customer and real product row.
 - The approved-owner order policies are read-only. No browser policy grants owners permission to edit order totals or payment state.
-- An owner-verified `update-order-status` Edge Function is now deployed with JWT verification. It checks the signed-in user's approved `owner` staff profile and permits only valid order-status transitions (pending → confirmed/cancelled → processing → shipped → delivered). It does not alter prices or payment status. The storefront UI is not yet wired to call this endpoint, and the function source still needs to be committed into this repository.
+- An owner-verified `update-order-status` Edge Function is now deployed with JWT verification. It checks the signed-in user's approved `owner` staff profile and permits only valid order-status transitions (pending → confirmed/cancelled → processing → shipped → delivered). It does not alter prices or payment status. The storefront order panel now invokes this endpoint from `supabase-admin-orders.js`. It still needs a successful signed-in owner browser test.
 
 
 ## Database foundation migration
@@ -46,3 +46,5 @@ A follow-up migration added self-read access for staff profiles and revoked dire
 5. Configure delivery fees and enable leaked-password protection in Supabase Auth.
 6. Integrate a payment provider only after order validation/security checks.
 7. Run mobile, desktop, accessibility, and security smoke tests before launch.
+
+- The current Vercel production deployment may lag behind these latest source commits. A manual deployment attempt was blocked by Vercel's free daily deployment API limit; the source changes are committed on GitHub, but are not claimed as live until a deployment is confirmed.
