@@ -10,9 +10,9 @@
 - The storefront rendering hook and connection-error state have been corrected in code; deployment is READY, but browser-level runtime behaviour still needs a final live smoke test.
 - The Supabase project currently has zero products and zero categories, so the storefront correctly shows an empty catalogue until real catalogue rows are added.
 - Security advisor findings for the staff profile RLS policy and publicly callable `rls_auto_enable()` function were addressed; the remaining security advisor finding is leaked-password protection being disabled in Auth.
-- The cart still uses browser-local storage and checkout is still a WhatsApp request flow.
-- Customer sign-up/sign-in UI, trusted order creation, payment handling, customer order history, and admin product/category write workflows are not yet complete.
-- The current database has no Edge Functions deployed. `staff_profiles` has a self-read RLS policy, while its existing owner-management policies still require an approved owner row to be seeded securely.
+- The cart still uses browser-local storage and the current storefront checkout is still a WhatsApp request flow; the new secure order endpoint is deployed but is not wired into the storefront yet.
+- Customer sign-up/sign-in UI, checkout integration with the order endpoint, payment handling, customer order history, and admin product/category write workflows are not yet complete.
+- The `create-store-order` Edge Function is deployed with JWT verification enabled. It validates the signed-in user, active products, quantities, and current database prices server-side; only COD and bank transfer are accepted for now. The endpoint is not yet called by the existing checkout UI. `staff_profiles` has a self-read RLS policy, while its existing owner-management policies still require an approved owner row to be seeded securely.
 - The existing products/categories schema and RLS policies must be kept compatible with the current integration.
 
 ## Database foundation migration
@@ -25,6 +25,9 @@ Tables introduced:
 - `product_passports`: public traceability details, readable only when published.
 
 Order and item tables intentionally have no browser-side insert policy. The next checkout implementation must be a trusted Edge Function that verifies product IDs and current database prices, validates quantities and delivery fee, calculates totals server-side, and does not trust a client-supplied payment status.
+
+## Secure order endpoint
+Source: `functions/create-store-order/index.ts`. The deployed `create-store-order` function requires a valid Supabase user JWT, checks the requested active products and current LKR prices server-side, calculates totals on the server, and stores the order plus item snapshots. It rejects online payments until a real payment provider is integrated. Delivery fee is temporarily set to zero and must be configured before public launch. The existing storefront checkout still needs to be connected to this endpoint and tested with a real signed-in test account.
 
 ## Latest security fix
 A follow-up migration added `Staff read own profile` for authenticated users and revoked direct `EXECUTE` grants on `public.rls_auto_enable()` for `PUBLIC`, `anon`, and `authenticated`. A fresh Supabase security-advisor check no longer reports the earlier RLS/function exposure findings. The remaining warning is leaked-password protection being disabled.
