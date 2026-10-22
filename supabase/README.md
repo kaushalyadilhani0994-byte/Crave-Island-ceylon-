@@ -10,8 +10,9 @@
 - The storefront rendering hook and connection-error state have been corrected in code; deployment is READY, but browser-level runtime behaviour still needs a final live smoke test.
 - The Supabase project currently has zero products and zero categories, so the storefront correctly shows an empty catalogue until real catalogue rows are added.
 - Security advisor findings for the staff profile RLS policy and publicly callable `rls_auto_enable()` function were addressed; the remaining security advisor finding is leaked-password protection being disabled in Auth.
-- The cart is still stored in browser-local storage; confirmed orders are now created through the authenticated `create-store-order` Edge Function, but customer order history and real admin product/category write screens remain incomplete.
+- The cart is still stored in browser-local storage; confirmed orders are created through the authenticated `create-store-order` Edge Function. Customer order history remains incomplete.
 - Customer email/password sign-up and sign-in UI is wired to Supabase Auth. Email confirmation may be required depending on the project's Auth settings. Checkout requires a signed-in customer and accepts only COD or bank transfer; online card payment remains disabled.
+- The owner catalogue panel can add products to Supabase, create/reactivate their category, list live products, and deactivate products. These actions check the signed-in user's approved owner profile and rely on database RLS. Category editing, image uploads to Storage, and full order-management screens remain incomplete.
 - The `create-store-order` Edge Function is deployed with JWT verification enabled and is called by checkout. It validates the signed-in user, active products, quantities, and current database prices server-side; only COD and bank transfer are accepted. `staff_profiles` has a self-read RLS policy. Product/category owner policies use a `SECURITY DEFINER` helper in the non-public `private` schema to avoid recursive RLS checks; an approved owner profile row exists in the database, but its real sign-in and admin permissions still need a live test.
 - The existing products/categories schema and RLS policies must be kept compatible with the current integration.
 
@@ -36,7 +37,7 @@ A follow-up migration added `Staff read own profile` for authenticated users and
 1. Verify the latest deployment and live catalogue reads in a real browser.
 2. Add verified categories and products with actual prices, ingredients, images, allergens, and traceability data.
 3. Test sign-up/sign-in and a secure order using an authenticated test customer.
-4. Seed the first approved owner profile securely; complete real admin product/category management and image storage.
+4. Test the existing approved owner profile and RLS-protected product add/deactivate workflow in a live browser; complete category editing and image storage.
 5. Configure delivery fees and enable leaked-password protection in Supabase Auth.
 6. Add payment integration only after order validation and security checks pass.
 7. Run mobile, desktop, accessibility, and security smoke tests before launch.
