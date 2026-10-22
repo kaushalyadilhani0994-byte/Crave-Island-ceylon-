@@ -119,7 +119,7 @@ Deno.serve(async (req: Request) => {
       payment_method: paymentMethod,
       payment_status: "pending",
       order_status: "pending",
-      note: note || null,
+      customer_note: note || null,
     }).select("id,order_number,subtotal,delivery_fee,total,payment_method,payment_status,order_status,created_at").single();
     if (orderError || !order) {
       console.error("Order insert failed", orderError?.message);
