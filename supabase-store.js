@@ -87,6 +87,37 @@
     }
   }
 
+  function activateDatabaseCatalogueMode() {
+    // Once a real key is configured, do not mix device-local demo products into
+    // the public catalogue, search results, category filters, or gift picker.
+    if (typeof PRODUCTS !== "undefined" && Array.isArray(PRODUCTS)) PRODUCTS.splice(0, PRODUCTS.length);
+    if (typeof CATS !== "undefined" && Array.isArray(CATS)) CATS.splice(0, CATS.length);
+    window.CIC_ALL_PRODUCTS = () => (typeof PRODUCTS !== "undefined" ? PRODUCTS : []);
+    window.filterCategory = function (category) {
+      const list = PRODUCTS.filter((product) => product.cat === category);
+      const el = document.getElementById("products");
+      if (!el) return;
+      el.innerHTML = list.length && typeof window.card === "function"
+        ? list.map((product) => window.card(product)).join("")
+        : '<p style="font-size:13px;color:#7c6d63;padding:18px">No products are available in this collection yet.</p>';
+      if (typeof window.jump === "function") window.jump("featured");
+    };
+    window.searchProducts = function (query) {
+      const q = String(query || "").toLowerCase().trim();
+      const list = q ? PRODUCTS.filter((product) =>
+        (product.name + " " + product.cat + " " + product.desc).toLowerCase().includes(q)
+      ) : PRODUCTS;
+      const el = document.getElementById("products");
+      if (!el) return;
+      el.innerHTML = list.length && typeof window.card === "function"
+        ? list.map((product) => window.card(product)).join("")
+        : '<p style="font-size:13px;color:#7c6d63;padding:18px">No matching products are available yet.</p>';
+    };
+    if (typeof window.renderCats === "function") window.renderCats();
+    const productsEl = document.getElementById("products");
+    if (productsEl) productsEl.innerHTML = '<p style="font-size:13px;color:#7c6d63;padding:18px">Loading our Ceylon collection…</p>';
+  }
+
   window.CIC_SUPABASE = {
     get client() { return state.client; },
     get status() { return { connected: state.connected, lastError: state.lastError, lastSyncAt: state.lastSyncAt }; },
@@ -97,6 +128,8 @@
     announce("Supabase setup is incomplete: add the project's publishable key in supabase/client-config.js.", "setup");
     return;
   }
+  activateDatabaseCatalogueMode();
+  announce("Connecting to the CRAVE ISLAND CEYLON catalogue…", "info");
   if (!window.supabase || typeof window.supabase.createClient !== "function") {
     announce("Supabase library did not load. Check the network connection and reload.", "error");
     return;
