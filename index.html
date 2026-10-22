@@ -683,13 +683,7 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
  }
  function showOwnerSignIn(){
    const email=document.getElementById('cicAuthEmail');
-   const title=document.getElementById('cicAuthTitle');
-   if(title)title.textContent='Owner Sign In';
    if(email)email.value='';
-   const nameWrap=document.getElementById('cicAuthNameWrap');
-   if(nameWrap)nameWrap.style.display='none';
-   const signUp=document.getElementById('cicAuthSignUp');
-   if(signUp)signUp.style.display='none';
    const msg=document.getElementById('cicAuthMessage');
    if(msg){msg.textContent='Use the existing approved owner account. Public customer sign-up does not grant staff or owner access.';msg.style.color='#7c6d63'}
    window.openModal('cicAuthModal');
@@ -722,11 +716,14 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
    if(button){button.disabled=true;button.textContent='Saving…'}
    try{
      const client=access.client;
-     const existing=await client.from('categories').select('id').eq('name',category).maybeSingle();
+     const existing=await client.from('categories').select('id,is_active').eq('name',category).maybeSingle();
      if(existing.error)throw existing.error;
      if(!existing.data){
        const addedCategory=await client.from('categories').insert({name:category,description:'Curated CRAVE ISLAND CEYLON collection.',is_active:true}).select('id').single();
        if(addedCategory.error)throw addedCategory.error;
+     }else if(!existing.data.is_active){
+       const reactivated=await client.from('categories').update({is_active:true}).eq('id',existing.data.id);
+       if(reactivated.error)throw reactivated.error;
      }
      const added=await client.from('products').insert({
        name,price,currency:'LKR',category,image_url:imageUrl||null,
