@@ -72,7 +72,7 @@
       state.lastSyncAt = new Date().toISOString();
       const summary = "Supabase connected · " + rows.length + " active products · " + categoryRows.length + " active categories";
       announce(summary, "success");
-      if (typeof window.renderCats === "function") window.renderCats();
+      if (typeof window.CIC_RENDER_CATS === "function") window.CIC_RENDER_CATS();
       if (typeof window.renderProducts === "function") window.renderProducts();
       if (!rows.length) {
         const productsEl = document.getElementById("products");
@@ -83,6 +83,8 @@
     } catch (error) {
       state.connected = false;
       announce("Supabase catalogue connection failed: " + (error && error.message ? error.message : "unknown error"), "error");
+      const productsEl = document.getElementById("products");
+      if (productsEl) productsEl.innerHTML = '<p style="font-size:13px;color:#7c6d63;padding:18px">We could not load the live catalogue. Please try again shortly.</p>';
       return false;
     }
   }
@@ -97,8 +99,8 @@
       const list = PRODUCTS.filter((product) => product.cat === category);
       const el = document.getElementById("products");
       if (!el) return;
-      el.innerHTML = list.length && typeof window.card === "function"
-        ? list.map((product) => window.card(product)).join("")
+      el.innerHTML = list.length && typeof window.CIC_RENDER_CARD === "function"
+        ? list.map((product) => window.CIC_RENDER_CARD(product)).join("")
         : '<p style="font-size:13px;color:#7c6d63;padding:18px">No products are available in this collection yet.</p>';
       if (typeof window.jump === "function") window.jump("featured");
     };
@@ -109,11 +111,11 @@
       ) : PRODUCTS;
       const el = document.getElementById("products");
       if (!el) return;
-      el.innerHTML = list.length && typeof window.card === "function"
-        ? list.map((product) => window.card(product)).join("")
+      el.innerHTML = list.length && typeof window.CIC_RENDER_CARD === "function"
+        ? list.map((product) => window.CIC_RENDER_CARD(product)).join("")
         : '<p style="font-size:13px;color:#7c6d63;padding:18px">No matching products are available yet.</p>';
     };
-    if (typeof window.renderCats === "function") window.renderCats();
+    if (typeof window.CIC_RENDER_CATS === "function") window.CIC_RENDER_CATS();
     const productsEl = document.getElementById("products");
     if (productsEl) productsEl.innerHTML = '<p style="font-size:13px;color:#7c6d63;padding:18px">Loading our Ceylon collection…</p>';
   }
@@ -132,6 +134,8 @@
   announce("Connecting to the CRAVE ISLAND CEYLON catalogue…", "info");
   if (!window.supabase || typeof window.supabase.createClient !== "function") {
     announce("Supabase library did not load. Check the network connection and reload.", "error");
+    const productsEl = document.getElementById("products");
+    if (productsEl) productsEl.innerHTML = '<p style="font-size:13px;color:#7c6d63;padding:18px">The live catalogue could not be loaded. Check your connection and reload.</p>';
     return;
   }
 
