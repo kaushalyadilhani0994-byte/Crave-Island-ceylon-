@@ -73,7 +73,7 @@
       const summary = "Supabase connected · " + rows.length + " active products · " + categoryRows.length + " active categories";
       announce(summary, "success");
       if (typeof window.CIC_RENDER_CATS === "function") window.CIC_RENDER_CATS();
-      if (typeof window.renderProducts === "function") window.renderProducts();
+      if (typeof window.CIC_RENDER_PRODUCTS === "function") window.CIC_RENDER_PRODUCTS(rows.map(toProduct));
       if (!rows.length) {
         const productsEl = document.getElementById("products");
         if (productsEl) productsEl.innerHTML = '<p style="font-size:13px;color:#7c6d63;padding:18px">Our catalogue is being prepared. Please check back soon.</p>';
