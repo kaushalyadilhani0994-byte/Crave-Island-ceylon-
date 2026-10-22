@@ -5,8 +5,10 @@
 - `supabase-store.js` loads active products and categories into the existing V18 storefront without redesigning it.
 - A successful catalogue read now treats Supabase as the source of truth, even when there are zero active rows. Demo catalogue items are not silently displayed as if they were live database products.
 - The database foundation migration defines customer profiles, orders, order items, and product passports with row-level security.
+- Required SQL table grants are now explicitly applied and tracked in `202610220002_grant_rls_protected_store_table_access.sql`; RLS still restricts public catalogue reads and owner/customer actions.
 
 ## Current limitations — not production-ready yet
+- A live deployment log audit found the catalogue REST requests were failing with HTTP 401 because table privileges had not been granted despite RLS policies existing. The required least-privilege grants have now been applied and verified in Postgres; reload the live site for a fresh browser smoke test.
 - The storefront rendering hook and connection-error state have been corrected in code; deployment is READY, but browser-level runtime behaviour still needs a final live smoke test.
 - The Supabase project currently has zero products and zero categories, so the storefront correctly shows an empty catalogue until real catalogue rows are added.
 - Security advisor findings for the staff profile RLS policy and publicly callable `rls_auto_enable()` function were addressed; the remaining security advisor finding is leaked-password protection being disabled in Auth.
