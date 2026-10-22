@@ -79,6 +79,8 @@ alter table public.store_order_items enable row level security;
 alter table public.product_passports enable row level security;
 
 -- Customers may access only their own profile and orders.
+-- Order creation is intentionally not allowed from the browser: a trusted
+-- Edge Function must verify product prices/stock and calculate totals first.
 drop policy if exists "Customers read own profile" on public.customer_profiles;
 create policy "Customers read own profile"
   on public.customer_profiles for select to authenticated
@@ -100,11 +102,6 @@ create policy "Customers read own orders"
   on public.store_orders for select to authenticated
   using (customer_id = (select auth.uid()));
 
-drop policy if exists "Customers create own orders" on public.store_orders;
-create policy "Customers create own orders"
-  on public.store_orders for insert to authenticated
-  with check (customer_id = (select auth.uid()));
-
 drop policy if exists "Customers read own order items" on public.store_order_items;
 create policy "Customers read own order items"
   on public.store_order_items for select to authenticated
@@ -112,16 +109,6 @@ create policy "Customers read own order items"
     select 1 from public.store_orders o
     where o.id = store_order_items.order_id
       and o.customer_id = (select auth.uid())
-  ));
-
-drop policy if exists "Customers add items to own orders" on public.store_order_items;
-create policy "Customers add items to own orders"
-  on public.store_order_items for insert to authenticated
-  with check (exists (
-    select 1 from public.store_orders o
-    where o.id = store_order_items.order_id
-      and o.customer_id = (select auth.uid())
-      and o.order_status = 'pending'
   ));
 
 -- Only published passport records are public. Admin publishing should be
@@ -132,5 +119,6 @@ create policy "Anyone reads published product passports"
   on public.product_passports for select to anon, authenticated
   using (published = true);
 
--- No anonymous order insertion, public customer data access, or client-side
--- admin privileges are granted by this migration.
+-- No browser-side order insertion, public customer data access, or client-side
+-- admin privileges are granted by this migration. Create orders only through
+-- a trusted Edge Function/service-role backend after validating prices and stock.
