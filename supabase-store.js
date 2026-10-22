@@ -152,4 +152,8 @@
   ownerProductsScript.src = "supabase-admin-products.js";
   ownerProductsScript.defer = true;
   document.body.appendChild(ownerProductsScript);
+  const ownerPassportsScript = document.createElement("script");
+  ownerPassportsScript.src = "supabase-admin-passports.js";
+  ownerPassportsScript.defer = true;
+  document.body.appendChild(ownerPassportsScript);
 })();
