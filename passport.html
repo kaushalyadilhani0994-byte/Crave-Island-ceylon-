@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#2C1A14">
+<title>Product Passport | CRAVE ISLAND CEYLON</title>
+<style>
+:root{--brown:#2C1A14;--gold:#D4AF37;--cream:#FFF8E7}*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--brown);font:16px/1.6 system-ui,sans-serif}.head{background:var(--brown);color:var(--cream);border-bottom:3px solid var(--gold);padding:26px 16px;text-align:center;letter-spacing:.12em}.head small{display:block;color:var(--gold);letter-spacing:.2em;margin-top:5px}main{max-width:720px;margin:28px auto;padding:0 14px}.card{background:#fffdf7;border:1px solid #e6d8c3;border-radius:16px;padding:clamp(18px,5vw,34px)}h1{font:500 clamp(28px,5vw,42px)/1.2 Georgia,serif;margin:14px 0}.muted{color:#78665a}.status{padding:14px;background:#f0e5d4;border-radius:10px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{border:1px solid #e6d8c3;border-radius:10px;padding:12px;overflow-wrap:anywhere}.field h2{font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin:0 0 4px;color:#78665a}.field p{margin:0}.wide{grid-column:1/-1}@media(max-width:500px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="/supabase/client-config.js"></script>
+</head>
+<body><header class="head">CRAVE ISLAND CEYLON<small>CEYLON HERITAGE · PRODUCT PASSPORT</small></header>
+<main><section class="card" id="passport" aria-live="polite"><div class="status">Verifying product information…</div></section><p class="muted" style="font-size:12px;text-align:center">Always read the physical package label. If details do not match, contact the brand before consuming.</p></main>
+<script>
+(function(){
+const root=document.getElementById("passport");
+const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const slug=(new URLSearchParams(location.search).get("slug")||"").trim();
+function fail(t){root.innerHTML='<div class="status">'+esc(t)+'</div>'}
+function f(label,value,wide){if(!value||Array.isArray(value)&&!value.length)return "";return '<div class="field'+(wide?' wide':'')+'"><h2>'+esc(label)+'</h2><p>'+esc(Array.isArray(value)?value.join(", "):value)+'</p></div>'}
+async function init(){
+const cfg=window.CIC_SUPABASE_CONFIG||{};
+if(!slug||slug.length>160){fail("This QR link is incomplete. Please scan the product code again.");return}
+if(!cfg.url||!cfg.anonKey||!window.supabase){fail("Product verification is temporarily unavailable. Please try again later.");return}
+try{
+const db=window.supabase.createClient(cfg.url,cfg.anonKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+const {data,error}=await db.from("product_passports").select("product_id,ingredients,allergen_information,origin,batch_code,best_before,storage_instructions,public_story").eq("public_slug",slug).eq("published",true).maybeSingle();
+if(error||!data){fail("No published product passport could be verified for this QR code. Please check the printed code or contact the brand.");return}
+root.innerHTML='<h1>Product passport</h1><p class="muted">'+esc(data.public_story||"A product from CRAVE ISLAND CEYLON, inspired by Sri Lankan food heritage.")+'</p><div class="grid">'+f("Product reference",data.product_id)+f("Batch / lot",data.batch_code)+f("Origin",data.origin)+f("Best before",data.best_before)+f("Ingredients",data.ingredients,true)+f("Allergen information",data.allergen_information,true)+f("Storage instructions",data.storage_instructions,true)+'</div>';
+}catch(e){fail("Product verification is temporarily unavailable. Please try again later.")}
+}
+init();
+})();
+</script></body></html>
