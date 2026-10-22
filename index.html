@@ -664,5 +664,97 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
 })();
 </script>
 
+
+<script>
+/* CIC owner-only live catalogue management */
+(function(){
+ 'use strict';
+ async function ownerAccess(){
+   const client=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
+   if(!client)return {ok:false,reason:'connection'};
+   const {data,error}=await client.auth.getSession();
+   if(error)return {ok:false,reason:'session'};
+   const user=data.session&&data.session.user;
+   if(!user)return {ok:false,reason:'signin'};
+   const profile=await client.from('staff_profiles').select('role,approved').eq('id',user.id).maybeSingle();
+   if(profile.error)return {ok:false,reason:'profile'};
+   if(!profile.data||profile.data.role!=='owner'||profile.data.approved!==true)return {ok:false,reason:'owner'};
+   return {ok:true,client,user};
+ }
+ function showOwnerSignIn(){
+   const email=document.getElementById('cicAuthEmail');
+   const title=document.getElementById('cicAuthTitle');
+   if(title)title.textContent='Owner Sign In';
+   if(email)email.value='';
+   const nameWrap=document.getElementById('cicAuthNameWrap');
+   if(nameWrap)nameWrap.style.display='none';
+   const signUp=document.getElementById('cicAuthSignUp');
+   if(signUp)signUp.style.display='none';
+   const msg=document.getElementById('cicAuthMessage');
+   if(msg){msg.textContent='Use the existing approved owner account. Public customer sign-up does not grant staff or owner access.';msg.style.color='#7c6d63'}
+   window.openModal('cicAuthModal');
+ }
+ window.renderAdminProducts=async function(){
+   const el=document.getElementById('adminProductTable');if(!el)return;
+   const access=await ownerAccess();
+   if(!access.ok){el.innerHTML='<div class="admin-note">Live catalogue management is restricted to an approved owner account. Sign in with the existing owner account to view or change products.</div>';return}
+   const result=await access.client.from('products').select('id,name,category,price,is_active').order('created_at',{ascending:false});
+   if(result.error){el.innerHTML='<div class="admin-note">Could not load live products. Check your owner permissions and try again.</div>';return}
+   const rows=result.data||[];
+   if(!rows.length){el.innerHTML='<div class="admin-note">No live database products yet. Add the verified products you are ready to sell.</div>';return}
+   el.innerHTML=rows.map(p=>'<div class="table-row"><b>'+esc(p.name)+'</b><span>'+esc(p.category||'Uncategorised')+'</span><span>LKR '+Number(p.price).toLocaleString()+'</span><span>'+(p.is_active?'Active':'Inactive')+'</span>'+(p.is_active?'<button class="danger-btn" onclick="adminDeleteProduct(\''+p.id+'\')">Deactivate</button>':'')+'</div>').join('');
+ };
+ window.adminAddProduct=async function(){
+   const access=await ownerAccess();
+   if(!access.ok){
+     if(access.reason==='signin'||access.reason==='session'){showOwnerSignIn();toast('Sign in with the approved owner account first')}
+     else toast(access.reason==='connection'?'Store connection is not ready. Reload and try again.':'This account is not approved for owner catalogue management.');
+     return;
+   }
+   const name=document.getElementById('adminPName').value.trim();
+   const price=Number(document.getElementById('adminPPrice').value);
+   const category=document.getElementById('adminPCat').value.trim();
+   const imageUrl=document.getElementById('adminPImg').value.trim();
+   const description=document.getElementById('adminPDesc').value.trim();
+   if(!name||!category||!Number.isFinite(price)||price<=0){toast('Enter a product name, category and a price above zero.');return}
+   if(imageUrl&&!/^https:\/\//i.test(imageUrl)){toast('Use a secure https:// image URL.');return}
+   const button=document.querySelector('#admin-catalog button[onclick="adminAddProduct()"]');
+   if(button){button.disabled=true;button.textContent='Saving…'}
+   try{
+     const client=access.client;
+     const existing=await client.from('categories').select('id').eq('name',category).maybeSingle();
+     if(existing.error)throw existing.error;
+     if(!existing.data){
+       const addedCategory=await client.from('categories').insert({name:category,description:'Curated CRAVE ISLAND CEYLON collection.',is_active:true}).select('id').single();
+       if(addedCategory.error)throw addedCategory.error;
+     }
+     const added=await client.from('products').insert({
+       name,price,currency:'LKR',category,image_url:imageUrl||null,
+       description:description||null,is_active:true
+     }).select('id').single();
+     if(added.error)throw added.error;
+     ['adminPName','adminPPrice','adminPCat','adminPImg','adminPDesc'].forEach(id=>{const input=document.getElementById(id);if(input)input.value=''});
+     if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==='function')await window.CIC_SUPABASE.refreshCatalogue();
+     await window.renderAdminProducts();
+     toast('Product saved to the live CRAVE ISLAND CEYLON catalogue.');
+   }catch(e){console.error('[CIC Admin catalogue]',e);toast(e.message||'Could not save product. Check the database and owner permissions.')}
+   finally{if(button){button.disabled=false;button.textContent='Add Product'}}
+ };
+ window.adminDeleteProduct=async function(id){
+   if(!/^[0-9a-f-]{36}$/i.test(String(id))){toast('This is not a live database product ID.');return}
+   const access=await ownerAccess();
+   if(!access.ok){toast('Sign in with the approved owner account to change catalogue products.');return}
+   if(!window.confirm('Deactivate this product? It will no longer appear in the customer catalogue, but existing order records will be kept.'))return;
+   try{
+     const result=await access.client.from('products').update({is_active:false}).eq('id',id);
+     if(result.error)throw result.error;
+     if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==='function')await window.CIC_SUPABASE.refreshCatalogue();
+     await window.renderAdminProducts();
+     toast('Product deactivated. Existing order records are preserved.');
+   }catch(e){console.error('[CIC Admin catalogue]',e);toast(e.message||'Could not deactivate product.')}
+ };
+})();
+</script>
+
 </body>
 </html>
