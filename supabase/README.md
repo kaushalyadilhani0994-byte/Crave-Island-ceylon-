@@ -5,11 +5,12 @@ This folder contains a **draft database migration** for CRAVE ISLAND CEYLON.
 ## Important status
 
 - The migration is committed on the `chatgpt-fix-work` branch only.
-- It has **not** been applied to the Supabase project.
+- The user has run the foundation SQL in the Supabase SQL Editor; confirm the resulting tables exist before any re-run.
 - It does not modify the existing `categories` or `products` tables because their exact column types and current policies must be inspected first.
-- The current `index.html` still uses browser `localStorage` for cart/order demo state. This migration alone does not connect the storefront to Supabase or make the current checkout production-ready.
+- The storefront now loads a Supabase catalogue bridge from `supabase-store.js`. Live catalogue sync remains inactive until the project publishable/anon key is added to `supabase/client-config.js`.
+- Cart persistence is still browser-local and checkout is still a WhatsApp request flow; this is not yet a production order/payment system.
 
-## Before applying the migration
+## Remaining production steps
 
 1. In Supabase, open **SQL Editor** and inspect the definitions of the existing `public.categories` and `public.products` tables, including the type of each `id` column and current RLS policies.
 2. Review the SQL migration with those existing definitions in mind.
