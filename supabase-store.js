@@ -7,16 +7,21 @@
   const config = window.CIC_SUPABASE_CONFIG || {};
   const placeholder = !config.anonKey || /PASTE_|YOUR_|REPLACE_ME/i.test(config.anonKey);
   const state = { client: null, connected: false, lastError: null, lastSyncAt: null };
+  let statusTimer = null;
 
   function announce(message, type) {
     state.lastError = type === "error" ? message : null;
     window.CIC_SUPABASE_STATUS = { connected: state.connected, message, type, lastSyncAt: state.lastSyncAt };
     console.info("[CIC Supabase]", message);
     const el = document.getElementById("cicSupabaseStatus");
-    if (el) {
-      el.textContent = message;
-      el.dataset.state = type || "info";
-      el.hidden = false;
+    if (!el) return;
+    if (statusTimer) window.clearTimeout(statusTimer);
+    el.textContent = message;
+    el.dataset.state = type || "info";
+    el.hidden = false;
+    // A successful connection should not leave a permanent banner over the shop.
+    if (type === "success") {
+      statusTimer = window.setTimeout(() => { el.hidden = true; }, 6000);
     }
   }
 
@@ -49,25 +54,30 @@
       const rows = productsResult.data || [];
       const categoryRows = categoriesResult.data || [];
 
-      if (rows.length && typeof PRODUCTS !== "undefined" && Array.isArray(PRODUCTS)) {
-        const mapped = rows.map(toProduct);
-        PRODUCTS.splice(0, PRODUCTS.length, ...mapped);
+      // The database is the source of truth after a successful read, including
+      // when it contains zero active rows. Never silently show demo products.
+      if (typeof PRODUCTS !== "undefined" && Array.isArray(PRODUCTS)) {
+        PRODUCTS.splice(0, PRODUCTS.length, ...rows.map(toProduct));
       }
-      if (categoryRows.length && typeof CATS !== "undefined" && Array.isArray(CATS)) {
-        const mappedCategories = categoryRows.map((row) => ({
+      if (typeof CATS !== "undefined" && Array.isArray(CATS)) {
+        CATS.splice(0, CATS.length, ...categoryRows.map((row) => ({
           name: row.name,
           kicker: "CRAVE ISLAND CEYLON",
           desc: row.description || "Curated Ceylon-inspired collection.",
           img: row.image_url || ""
-        }));
-        CATS.splice(0, CATS.length, ...mappedCategories);
+        })));
       }
 
       state.connected = true;
       state.lastSyncAt = new Date().toISOString();
-      announce("Supabase connected · " + rows.length + " active products · " + categoryRows.length + " active categories", "success");
+      const summary = "Supabase connected · " + rows.length + " active products · " + categoryRows.length + " active categories";
+      announce(summary, "success");
       if (typeof window.renderCats === "function") window.renderCats();
       if (typeof window.renderProducts === "function") window.renderProducts();
+      if (!rows.length) {
+        const productsEl = document.getElementById("products");
+        if (productsEl) productsEl.innerHTML = '<p style="font-size:13px;color:#7c6d63;padding:18px">Our catalogue is being prepared. Please check back soon.</p>';
+      }
       if (typeof window.updateCartBadge === "function") window.updateCartBadge();
       return true;
     } catch (error) {
@@ -84,7 +94,7 @@
   };
 
   if (placeholder) {
-    announce("Supabase integration added — add the project's publishable/anon key in supabase/client-config.js to activate live catalogue sync.", "setup");
+    announce("Supabase setup is incomplete: add the project's publishable key in supabase/client-config.js.", "setup");
     return;
   }
   if (!window.supabase || typeof window.supabase.createClient !== "function") {
