@@ -143,4 +143,9 @@
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
   });
   syncCatalogue();
+  // Load the live owner order panel only after the authenticated Supabase client is configured.
+  const ownerOrdersScript = document.createElement("script");
+  ownerOrdersScript.src = "supabase-admin-orders.js";
+  ownerOrdersScript.defer = true;
+  document.body.appendChild(ownerOrdersScript);
 })();
