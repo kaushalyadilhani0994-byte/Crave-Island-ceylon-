@@ -148,4 +148,8 @@
   ownerOrdersScript.src = "supabase-admin-orders.js";
   ownerOrdersScript.defer = true;
   document.body.appendChild(ownerOrdersScript);
+  const ownerProductsScript = document.createElement("script");
+  ownerProductsScript.src = "supabase-admin-products.js";
+  ownerProductsScript.defer = true;
+  document.body.appendChild(ownerProductsScript);
 })();
