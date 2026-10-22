@@ -18,6 +18,8 @@
 - The owner catalogue panel is intended to add products, create/reactivate categories, list live products, and deactivate products. Owner login and actual product management still need a live user-session test. Category editing, image uploads to Storage, and full order-management screens remain incomplete.
 - The deployed `create-store-order` Edge Function requires a valid JWT, validates active product IDs and current LKR prices server-side, calculates totals server-side, and stores order/item snapshots. It rejects unsupported payment methods. Delivery fee is currently zero. A successful end-to-end order has not yet been verified with an authenticated customer and real product row.
 - The approved-owner order policies are read-only. No browser policy grants owners permission to edit order totals or payment state.
+- An owner-verified `update-order-status` Edge Function is now deployed with JWT verification. It checks the signed-in user's approved `owner` staff profile and permits only valid order-status transitions (pending → confirmed/cancelled → processing → shipped → delivered). It does not alter prices or payment status. The storefront UI is not yet wired to call this endpoint, and the function source still needs to be committed into this repository.
+
 
 ## Database foundation migration
 `migrations/202610220001_store_foundation.sql` was previously run by the project owner in Supabase SQL Editor. **Do not run it again unless checking the table state first.** It intentionally does not alter existing `categories` or `products` tables.
