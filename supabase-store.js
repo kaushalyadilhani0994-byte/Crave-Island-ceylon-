@@ -49,18 +49,18 @@
       const rows = productsResult.data || [];
       const categoryRows = categoriesResult.data || [];
 
-      if (rows.length && Array.isArray(window.PRODUCTS)) {
+      if (rows.length && typeof PRODUCTS !== "undefined" && Array.isArray(PRODUCTS)) {
         const mapped = rows.map(toProduct);
-        window.PRODUCTS.splice(0, window.PRODUCTS.length, ...mapped);
+        PRODUCTS.splice(0, PRODUCTS.length, ...mapped);
       }
-      if (categoryRows.length && Array.isArray(window.CATS)) {
+      if (categoryRows.length && typeof CATS !== "undefined" && Array.isArray(CATS)) {
         const mappedCategories = categoryRows.map((row) => ({
           name: row.name,
           kicker: "CRAVE ISLAND CEYLON",
           desc: row.description || "Curated Ceylon-inspired collection.",
           img: row.image_url || ""
         }));
-        window.CATS.splice(0, window.CATS.length, ...mappedCategories);
+        CATS.splice(0, CATS.length, ...mappedCategories);
       }
 
       state.connected = true;
