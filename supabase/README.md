@@ -10,9 +10,9 @@
 - The storefront rendering hook and connection-error state have been corrected in code; deployment is READY, but browser-level runtime behaviour still needs a final live smoke test.
 - The Supabase project currently has zero products and zero categories, so the storefront correctly shows an empty catalogue until real catalogue rows are added.
 - Security advisor findings for the staff profile RLS policy and publicly callable `rls_auto_enable()` function were addressed; the remaining security advisor finding is leaked-password protection being disabled in Auth.
-- The cart still uses browser-local storage and the current storefront checkout is still a WhatsApp request flow; the new secure order endpoint is deployed but is not wired into the storefront yet.
-- Customer sign-up/sign-in UI, checkout integration with the order endpoint, payment handling, customer order history, and admin product/category write workflows are not yet complete.
-- The `create-store-order` Edge Function is deployed with JWT verification enabled. It validates the signed-in user, active products, quantities, and current database prices server-side; only COD and bank transfer are accepted for now. The endpoint is not yet called by the existing checkout UI. `staff_profiles` has a self-read RLS policy, while its existing owner-management policies still require an approved owner row to be seeded securely.
+- The cart is still stored in browser-local storage; confirmed orders are now created through the authenticated `create-store-order` Edge Function, but customer order history and real admin product/category write screens remain incomplete.
+- Customer email/password sign-up and sign-in UI is wired to Supabase Auth. Email confirmation may be required depending on the project's Auth settings. Checkout requires a signed-in customer and accepts only COD or bank transfer; online card payment remains disabled.
+- The `create-store-order` Edge Function is deployed with JWT verification enabled and is called by checkout. It validates the signed-in user, active products, quantities, and current database prices server-side; only COD and bank transfer are accepted. `staff_profiles` has a self-read RLS policy. Product/category owner policies use a `SECURITY DEFINER` helper in the non-public `private` schema to avoid recursive RLS checks; the first approved owner profile still needs to be seeded securely.
 - The existing products/categories schema and RLS policies must be kept compatible with the current integration.
 
 ## Database foundation migration
@@ -24,19 +24,19 @@ Tables introduced:
 - `store_order_items`: item snapshots for each order.
 - `product_passports`: public traceability details, readable only when published.
 
-Order and item tables intentionally have no browser-side insert policy. The next checkout implementation must be a trusted Edge Function that verifies product IDs and current database prices, validates quantities and delivery fee, calculates totals server-side, and does not trust a client-supplied payment status.
+Order and item tables intentionally have no browser-side insert policy. The checkout calls a trusted Edge Function that verifies product IDs and current database prices, validates quantities, calculates totals server-side, and does not trust a client-supplied payment status.
 
 ## Secure order endpoint
-Source: `functions/create-store-order/index.ts`. The deployed `create-store-order` function requires a valid Supabase user JWT, checks the requested active products and current LKR prices server-side, calculates totals on the server, and stores the order plus item snapshots. It rejects online payments until a real payment provider is integrated. Delivery fee is temporarily set to zero and must be configured before public launch. The existing storefront checkout still needs to be connected to this endpoint and tested with a real signed-in test account.
+Source: `functions/create-store-order/index.ts`. The deployed `create-store-order` function requires a valid Supabase user JWT, checks the requested active products and current LKR prices server-side, calculates totals on the server, and stores the order plus item snapshots. It rejects online payments until a real payment provider is integrated. Delivery fee is temporarily set to zero and must be configured before public launch. The storefront checkout is now connected to this endpoint. A real end-to-end order still needs testing with an authenticated customer and at least one real product row.
 
 ## Latest security fix
-A follow-up migration added `Staff read own profile` for authenticated users and revoked direct `EXECUTE` grants on `public.rls_auto_enable()` for `PUBLIC`, `anon`, and `authenticated`. A fresh Supabase security-advisor check no longer reports the earlier RLS/function exposure findings. The remaining warning is leaked-password protection being disabled.
+A follow-up migration added `Staff read own profile` for authenticated users and revoked direct `EXECUTE` grants on `public.rls_auto_enable()` for `PUBLIC`, `anon`, and `authenticated`. A fresh Supabase security-advisor check no longer reports the earlier RLS/function exposure findings or public-schema security-definer helper exposure. The remaining warning is leaked-password protection being disabled. Owner catalogue policies were moved to a helper in the non-public `private` schema and use init-plan-safe `(select ...)` calls.
 
 ## Recommended build sequence
-1. Verify deployment and live catalogue reads.
-2. Inspect current database schema and RLS policies; test empty catalogue and populated catalogue.
-3. Implement and test Supabase Auth and server-enforced admin authorization.
-4. Implement a secure order-creation Edge Function and customer order history.
-5. Complete real admin product/category management and image storage.
+1. Verify the latest deployment and live catalogue reads in a real browser.
+2. Add verified categories and products with actual prices, ingredients, images, allergens, and traceability data.
+3. Test sign-up/sign-in and a secure order using an authenticated test customer.
+4. Seed the first approved owner profile securely; complete real admin product/category management and image storage.
+5. Configure delivery fees and enable leaked-password protection in Supabase Auth.
 6. Add payment integration only after order validation and security checks pass.
 7. Run mobile, desktop, accessibility, and security smoke tests before launch.
