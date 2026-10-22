@@ -509,9 +509,158 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
 <!-- V14 final blank-space fix: V13 design retained; only startup/layout guard changed. -->
 
 <!-- CRAVE ISLAND CEYLON — Supabase catalogue integration -->
+
+<div class="modal" id="cicAuthModal" role="dialog" aria-modal="true" aria-labelledby="cicAuthTitle">
+ <div class="sheet" style="max-width:480px">
+  <div class="sheet-head"><h3 id="cicAuthTitle">Your CRAVE Account</h3><button class="close" onclick="closeModal('cicAuthModal')" aria-label="Close">×</button></div>
+  <p class="muted-note">Sign in or create an account to place and track secure orders.</p>
+  <div class="field" id="cicAuthNameWrap"><label for="cicAuthName">Your name (for a new account)</label><input id="cicAuthName" autocomplete="name" maxlength="120" placeholder="Full name"></div>
+  <div class="field" style="margin-top:10px"><label for="cicAuthEmail">Email address</label><input id="cicAuthEmail" type="email" autocomplete="email" maxlength="254" required></div>
+  <div class="field" style="margin-top:10px"><label for="cicAuthPassword">Password</label><input id="cicAuthPassword" type="password" autocomplete="current-password" minlength="8" maxlength="128" required></div>
+  <div id="cicAuthMessage" role="status" aria-live="polite" style="font-size:12px;line-height:1.5;margin:10px 0;color:#7c6d63"></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="goldbtn" id="cicAuthSignIn" onclick="cicSignIn()">Sign in</button><button class="gold-outline" id="cicAuthSignUp" onclick="cicSignUp()">Create account</button></div>
+  <p class="admin-note">Online card payments are not enabled yet. Choose Cash on Delivery or Bank Transfer at checkout.</p>
+ </div>
+</div>
+
 <div id="cicSupabaseStatus" role="status" aria-live="polite" hidden style="position:fixed;left:12px;right:12px;bottom:12px;z-index:99999;padding:10px 14px;border-radius:10px;background:#2C1A14;color:#FFF8E7;border:1px solid #D4AF37;font:12px/1.4 system-ui;box-shadow:0 4px 24px #0003"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase/client-config.js"></script>
 <script src="supabase-store.js"></script>
+
+<script>
+/* CIC secure customer auth + server-validated order checkout */
+(function(){
+ 'use strict';
+ const authMessage=(msg,kind)=>{
+   const el=document.getElementById('cicAuthMessage');
+   if(el){el.textContent=msg;el.style.color=kind==='error'?'#a12626':kind==='success'?'#287044':'#7c6d63'}
+ };
+ const authClient=()=>window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
+ const setBusy=(busy)=>{
+   ['cicAuthSignIn','cicAuthSignUp'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=busy});
+ };
+ async function saveCustomerProfile(user,displayName,phone){
+   const client=authClient(); if(!client||!user)return;
+   const name=(displayName||user.user_metadata?.display_name||'').trim().slice(0,120);
+   const payload={user_id:user.id,display_name:name||null,phone:(phone||'').trim().slice(0,40)||null};
+   const result=await client.from('customer_profiles').upsert(payload,{onConflict:'user_id'});
+   if(result.error) console.warn('[CIC Auth] Profile save did not complete:',result.error.message);
+ }
+ window.cicSignIn=async function(){
+   const client=authClient(); if(!client){authMessage('Secure sign-in is unavailable because the store connection has not loaded. Reload and try again.','error');return}
+   const email=document.getElementById('cicAuthEmail').value.trim();
+   const password=document.getElementById('cicAuthPassword').value;
+   if(!email||!password){authMessage('Enter your email address and password.','error');return}
+   setBusy(true);authMessage('Signing in…');
+   try{
+     const {data,error}=await client.auth.signInWithPassword({email,password});
+     if(error)throw error;
+     await saveCustomerProfile(data.user,document.getElementById('cicAuthName').value,document.getElementById('cPhone')?.value||'');
+     authMessage('Signed in successfully. You can now place your order.','success');
+     if(document.getElementById('cEmail'))document.getElementById('cEmail').value=data.user.email||email;
+     setTimeout(()=>window.closeModal('cicAuthModal'),450);
+   }catch(e){authMessage(e.message||'Sign-in failed. Check your details and try again.','error')}
+   finally{setBusy(false)}
+ };
+ window.cicSignUp=async function(){
+   const client=authClient(); if(!client){authMessage('Secure sign-up is unavailable because the store connection has not loaded. Reload and try again.','error');return}
+   const name=document.getElementById('cicAuthName').value.trim();
+   const email=document.getElementById('cicAuthEmail').value.trim();
+   const password=document.getElementById('cicAuthPassword').value;
+   if(!name){authMessage('Enter your name to create an account.','error');return}
+   if(!email||!password){authMessage('Enter your email address and password.','error');return}
+   if(password.length<8){authMessage('Use a password with at least 8 characters.','error');return}
+   setBusy(true);authMessage('Creating your account…');
+   try{
+     const {data,error}=await client.auth.signUp({email,password,options:{data:{display_name:name}}});
+     if(error)throw error;
+     if(data.session&&data.user){
+       await saveCustomerProfile(data.user,name,document.getElementById('cPhone')?.value||'');
+       authMessage('Account created. You can now place your order.','success');
+       if(document.getElementById('cEmail'))document.getElementById('cEmail').value=data.user.email||email;
+       setTimeout(()=>window.closeModal('cicAuthModal'),450);
+     }else{
+       authMessage('Account request received. Check your email for the confirmation link, then sign in here before ordering.','success');
+     }
+   }catch(e){authMessage(e.message||'Account creation failed. Please try again.','error')}
+   finally{setBusy(false)}
+ };
+ window.CIC_SIGN_OUT=async function(){
+   const client=authClient();if(!client)return;
+   const {error}=await client.auth.signOut();
+   if(error)toast('Could not sign out. Please try again.');else toast('Signed out securely.');
+ };
+ window.submitCheckout=async function(){
+   const required=['cFirst','cLast','cPhone','cAddress','cCity'];
+   for(const id of required){const el=document.getElementById(id);if(!el||!el.value.trim()){if(el)el.focus();toast('Please complete the delivery details');return}}
+   if(!Array.isArray(cart)||!cart.length){toast('Your basket is empty. Add a product first.');return}
+   const client=authClient();
+   if(!client){toast('Secure store connection is not ready. Please reload and try again.');return}
+   const {data:sessionData,error:sessionError}=await client.auth.getSession();
+   if(sessionError){toast('Could not verify your sign-in. Please try again.');return}
+   const user=sessionData.session?.user;
+   if(!user){
+     document.getElementById('cicAuthEmail').value=document.getElementById('cEmail')?.value.trim()||'';
+     document.getElementById('cicAuthName').value=(document.getElementById('cFirst').value+' '+document.getElementById('cLast').value).trim();
+     authMessage('Sign in or create an account, then return to checkout.');window.openModal('cicAuthModal');return;
+   }
+   const selected=document.querySelector('input[name="pay"]:checked')?.value||'cod';
+   if(selected==='gateway'){toast('Online card payments are not enabled yet. Choose Bank Transfer or Cash on Delivery.');return}
+   const payment_method=selected==='bank'?'bank_transfer':'cod';
+   const items=cart.map(x=>({product_id:String(x.id),quantity:Number(x.qty)}));
+   if(items.some(x=>!/^[0-9a-f-]{36}$/i.test(x.product_id)||!Number.isInteger(x.quantity)||x.quantity<1)){
+     toast('Your basket contains an item that is not in the live catalogue. Refresh the page and add the product again.');return;
+   }
+   const customerName=(document.getElementById('cFirst').value.trim()+' '+document.getElementById('cLast').value.trim()).trim();
+   const phone=document.getElementById('cPhone').value.trim();
+   const address=document.getElementById('cAddress').value.trim();
+   const city=document.getElementById('cCity').value.trim();
+   const district=(document.getElementById('cDistrict')?.value||city).trim();
+   const postal=document.getElementById('cPostal').value.trim();
+   const note=document.getElementById('cNote')?.value.trim()||'';
+   const button=document.querySelector('#checkoutModal button[onclick="submitCheckout()"]');
+   if(button){button.disabled=true;button.textContent='Submitting securely…'}
+   try{
+     await saveCustomerProfile(user,customerName,phone);
+     const {data,error}=await client.functions.invoke('create-store-order',{body:{
+       customer_name:customerName,phone,shipping_address:{line1:address,city,district,postal_code:postal},
+       payment_method,customer_note:note,items
+     }});
+     if(error)throw new Error(error.message||'Order service could not be reached.');
+     if(!data||!data.order||!data.order.order_number)throw new Error(data?.error||'The order service returned an unexpected response.');
+     const order=data.order;
+     const invoiceOrder={
+       orderId:order.order_number,
+       customer:{first:document.getElementById('cFirst').value.trim(),last:document.getElementById('cLast').value.trim(),phone,email:user.email||'',address,city,postal},
+       payment:payment_method==='cod'?'Cash on Delivery':'Bank Transfer',
+       total:Number(order.total),
+       items:cart.map(x=>({...x})),
+       status:'Order received · pending confirmation',
+       createdAt:order.created_at||new Date().toISOString()
+     };
+     localStorage.setItem('cic_last_order',JSON.stringify(invoiceOrder));
+     const prior=JSON.parse(localStorage.getItem(ORD)||'[]');
+     prior.unshift(invoiceOrder);localStorage.setItem(ORD,JSON.stringify(prior));
+     cart.splice(0,cart.length);localStorage.setItem('cic_cart_v4',JSON.stringify(cart));
+     if(typeof window.updateCartBadge==='function')window.updateCartBadge();
+     if(typeof window.renderCart==='function')window.renderCart();
+     if(typeof window.renderInvoice==='function')window.renderInvoice(invoiceOrder);
+     window.closeModal('checkoutModal');toast('Order '+order.order_number+' saved securely.');
+     setTimeout(()=>window.openModal('invoiceModal'),250);
+   }catch(e){
+     console.error('[CIC Checkout]',e);
+     toast(e.message||'Could not save your order. Your basket has been kept; please try again.');
+   }finally{if(button){button.disabled=false;button.textContent='Create Order Request'}}
+ };
+ if(authClient()){
+   authClient().auth.getSession().then(({data})=>{
+     const email=document.getElementById('cEmail');
+     if(email&&data.session?.user?.email)email.value=data.session.user.email;
+   }).catch(()=>{});
+ }
+})();
+</script>
+
 </body>
 </html>
