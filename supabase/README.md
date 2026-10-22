@@ -7,9 +7,12 @@
 - The database foundation migration defines customer profiles, orders, order items, and product passports with row-level security.
 
 ## Current limitations — not production-ready yet
-- The browser connection has been configured, but the deployed site still needs an end-to-end runtime check against the actual Supabase project.
+- The storefront rendering hook and connection-error state have been corrected in code; deployment is READY, but browser-level runtime behaviour still needs a final live smoke test.
+- The Supabase project currently has zero products and zero categories, so the storefront correctly shows an empty catalogue until real catalogue rows are added.
+- Security advisor findings for the staff profile RLS policy and publicly callable `rls_auto_enable()` function were addressed; the remaining security advisor finding is leaked-password protection being disabled in Auth.
 - The cart still uses browser-local storage and checkout is still a WhatsApp request flow.
-- Customer authentication, trusted order creation, payment handling, real admin permissions, and product/category writes are not yet complete.
+- Customer sign-up/sign-in UI, trusted order creation, payment handling, customer order history, and admin product/category write workflows are not yet complete.
+- The current database has no Edge Functions deployed. `staff_profiles` has a self-read RLS policy, while its existing owner-management policies still require an approved owner row to be seeded securely.
 - The existing products/categories schema and RLS policies must be kept compatible with the current integration.
 
 ## Database foundation migration
@@ -22,6 +25,9 @@ Tables introduced:
 - `product_passports`: public traceability details, readable only when published.
 
 Order and item tables intentionally have no browser-side insert policy. The next checkout implementation must be a trusted Edge Function that verifies product IDs and current database prices, validates quantities and delivery fee, calculates totals server-side, and does not trust a client-supplied payment status.
+
+## Latest security fix
+A follow-up migration added `Staff read own profile` for authenticated users and revoked direct `EXECUTE` grants on `public.rls_auto_enable()` for `PUBLIC`, `anon`, and `authenticated`. A fresh Supabase security-advisor check no longer reports the earlier RLS/function exposure findings. The remaining warning is leaked-password protection being disabled.
 
 ## Recommended build sequence
 1. Verify deployment and live catalogue reads.
