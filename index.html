@@ -608,7 +608,7 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
    const selected=document.querySelector('input[name="pay"]:checked')?.value||'cod';
    if(selected==='gateway'){toast('Online card payments are not enabled yet. Choose Bank Transfer or Cash on Delivery.');return}
    const payment_method=selected==='bank'?'bank_transfer':'cod';
-   const items=cart.map(x=>({product_id:String(x.id),quantity:Number(x.qty)}));
+   const groupedItems=new Map();for(const x of cart){const id=String(x.id);groupedItems.set(id,(groupedItems.get(id)||0)+Number(x.qty))}const items=Array.from(groupedItems,([product_id,quantity])=>({product_id,quantity}));
    if(items.some(x=>!/^[0-9a-f-]{36}$/i.test(x.product_id)||!Number.isInteger(x.quantity)||x.quantity<1)){
      toast('Your basket contains an item that is not in the live catalogue. Refresh the page and add the product again.');return;
    }
@@ -650,7 +650,9 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
      setTimeout(()=>window.openModal('invoiceModal'),250);
    }catch(e){
      console.error('[CIC Checkout]',e);
-     toast(e.message||'Could not save your order. Your basket has been kept; please try again.');
+     let message=e.message||'Could not save your order. Your basket has been kept; please try again.';
+     if(e.context&&typeof e.context.json==='function'){try{const body=await e.context.json();if(body&&body.error)message=body.error}catch(_){}}
+     toast(message);
    }finally{if(button){button.disabled=false;button.textContent='Create Order Request'}}
  };
  if(authClient()){
