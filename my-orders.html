@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#2C1A14">
+<title>My Orders | CRAVE ISLAND CEYLON</title>
+<style>
+:root{--cocoa:#2C1A14;--gold:#D4AF37;--cream:#FFF8E7;--ink:#38251e;--muted:#806f63;--line:#eadfca}
+*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font-family:Georgia,'Times New Roman',serif}
+header{background:var(--cocoa);color:var(--cream);padding:20px 16px;border-bottom:3px solid var(--gold)}
+.head{max-width:920px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{font-size:17px;letter-spacing:.12em;font-weight:bold}.sub{font:12px Arial,sans-serif;color:#e4d4a5;margin-top:5px}
+a{color:inherit}.back{font:13px Arial,sans-serif;color:var(--cream);text-decoration:none;border:1px solid #b99a48;border-radius:30px;padding:10px 14px}
+main{max-width:920px;margin:30px auto;padding:0 16px 50px}.intro h1{font-size:clamp(28px,5vw,42px);font-weight:normal;margin:0 0 8px}.intro p{font:14px/1.6 Arial,sans-serif;color:var(--muted);margin:0 0 24px}
+.panel,.order{background:white;border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 8px 24px #2c1a1408}
+label{display:block;font:12px Arial,sans-serif;margin:12px 0 6px;color:var(--muted)}input{width:100%;padding:13px;border:1px solid #d9cbb4;border-radius:9px;font:15px Arial,sans-serif;background:#fffdf8}
+button{border:0;border-radius:9px;background:var(--cocoa);color:var(--cream);padding:13px 17px;font:600 13px Arial,sans-serif;cursor:pointer}button:disabled{opacity:.6;cursor:wait}.secondary{background:#f4ead3;color:var(--cocoa);border:1px solid #e2d0a6}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.row button{margin-top:15px}
+#message{font:13px/1.5 Arial,sans-serif;color:var(--muted);margin-top:12px;overflow-wrap:anywhere}.hidden{display:none!important}
+.order-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px}
+.order-no{font:700 14px Arial,sans-serif}.date{font:12px Arial,sans-serif;color:var(--muted);margin-top:5px}
+.badge{font:11px Arial,sans-serif;text-transform:uppercase;letter-spacing:.06em;padding:7px 10px;border-radius:20px;background:#f4ead3;color:var(--cocoa)}
+.items{font:13px/1.7 Arial,sans-serif;padding:12px 0;color:#5d4a40}.item{display:flex;justify-content:space-between;gap:12px}
+.total{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:12px;font:700 15px Arial,sans-serif}
+.note{font:12px/1.5 Arial,sans-serif;color:var(--muted);margin-top:12px}
+@media(min-width:650px){.panel{padding:26px}.auth-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}}
+</style>
+</head>
+<body>
+<header><div class="head"><div><div class="brand">CRAVE ISLAND CEYLON</div><div class="sub">LUXURY CEYLON FOOD & HERITAGE</div></div><a class="back" href="index.html">← Back to shop</a></div></header>
+<main>
+<section class="intro"><h1>My Orders</h1><p>Sign in to securely view orders placed with your account.</p></section>
+<section class="panel" id="authPanel">
+<div class="auth-grid">
+<div><label for="email">Email address</label><input id="email" type="email" autocomplete="username" placeholder="you@example.com"></div>
+<div><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" placeholder="Your account password"></div>
+</div>
+<div class="row"><button id="signIn">Sign in to view orders</button><button id="refresh" class="secondary hidden">Refresh orders</button><button id="signOut" class="secondary hidden">Sign out</button></div>
+<div id="message" role="status" aria-live="polite">Your orders are private to your signed-in account.</div>
+</section>
+<section id="orders" aria-live="polite"></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase/client-config.js"></script>
+<script>
+(function(){
+  "use strict";
+  const byId=(id)=>document.getElementById(id);
+  const msg=(text)=>{byId("message").textContent=text;};
+  const escapeText=(value)=>String(value==null?"":value);
+  const config=window.CIC_SUPABASE_CONFIG||{};
+  if(!window.supabase||!config.url||!config.anonKey){
+    msg("The secure order service could not load. Please check your connection and try again.");
+    byId("signIn").disabled=true;return;
+  }
+  const client=window.supabase.createClient(config.url,config.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  function showSignedIn(signedIn){
+    byId("signIn").classList.toggle("hidden",signedIn);
+    byId("refresh").classList.toggle("hidden",!signedIn);
+    byId("signOut").classList.toggle("hidden",!signedIn);
+    byId("email").disabled=signedIn;byId("password").disabled=signedIn;
+  }
+  function addText(parent,tag,className,text){
+    const el=document.createElement(tag);if(className)el.className=className;el.textContent=escapeText(text);parent.appendChild(el);return el;
+  }
+  function renderOrders(orders,items){
+    const root=byId("orders");root.replaceChildren();
+    if(!orders.length){addText(root,"div","panel","No orders are linked to this account yet.");return;}
+    orders.forEach(order=>{
+      const card=document.createElement("article");card.className="order";
+      const top=document.createElement("div");top.className="order-top";
+      const left=document.createElement("div");addText(left,"div","order-no","Order "+order.order_number);addText(left,"div","date",new Date(order.created_at).toLocaleString());top.appendChild(left);
+      addText(top,"span","badge",order.order_status||"pending");card.appendChild(top);
+      const list=document.createElement("div");list.className="items";
+      (items[order.id]||[]).forEach(item=>{
+        const line=document.createElement("div");line.className="item";
+        addText(line,"span","",String(item.quantity)+" × "+item.product_name);
+        addText(line,"span","", "LKR "+Number(item.line_total||0).toLocaleString("en-LK",{minimumFractionDigits:2,maximumFractionDigits:2}));
+        list.appendChild(line);
+      });
+      card.appendChild(list);
+      const totals=document.createElement("div");totals.className="total";
+      addText(totals,"span","","Total");addText(totals,"span","","LKR "+Number(order.total||0).toLocaleString("en-LK",{minimumFractionDigits:2,maximumFractionDigits:2}));card.appendChild(totals);
+      addText(card,"p","note","Payment: "+String(order.payment_method||"").replaceAll("_"," ")+" · Payment status: "+(order.payment_status||"pending"));
+      root.appendChild(card);
+    });
+  }
+  async function loadOrders(){
+    byId("refresh").disabled=true;msg("Loading your orders securely…");
+    try{
+      const {data:{user},error:userError}=await client.auth.getUser();
+      if(userError)throw userError;if(!user){showSignedIn(false);msg("Please sign in to see your orders.");return;}
+      const {data:orders,error}=await client.from("store_orders").select("id,order_number,created_at,order_status,payment_method,payment_status,total").eq("customer_id",user.id).order("created_at",{ascending:false});
+      if(error)throw error;
+      const ids=(orders||[]).map(o=>o.id);const grouped={};
+      if(ids.length){
+        const {data:rows,error:itemError}=await client.from("store_order_items").select("order_id,product_name,quantity,line_total").in("order_id",ids);
+        if(itemError)throw itemError;(rows||[]).forEach(item=>(grouped[item.order_id]||(grouped[item.order_id]=[])).push(item));
+      }
+      renderOrders(orders||[],grouped);msg("Showing "+(orders||[]).length+" order(s) for your account.");
+    }catch(error){msg("Could not load orders: "+(error&&error.message?error.message:"Please try again."));}
+    finally{byId("refresh").disabled=false;}
+  }
+  byId("signIn").addEventListener("click",async()=>{
+    const email=byId("email").value.trim(),password=byId("password").value;
+    if(!email||!password){msg("Enter your email address and password.");return;}
+    byId("signIn").disabled=true;msg("Signing in…");
+    try{
+      const {error}=await client.auth.signInWithPassword({email,password});if(error)throw error;
+      showSignedIn(true);await loadOrders();
+    }catch(error){msg("Sign-in failed: "+(error&&error.message?error.message:"Please check your details."));}
+    finally{byId("signIn").disabled=false;}
+  });
+  byId("refresh").addEventListener("click",loadOrders);
+  byId("signOut").addEventListener("click",async()=>{
+    await client.auth.signOut();showSignedIn(false);byId("orders").replaceChildren();byId("password").value="";msg("You have signed out.");
+  });
+  client.auth.getSession().then(({data})=>{if(data.session){showSignedIn(true);loadOrders();}});
+  client.auth.onAuthStateChange((event,session)=>{if(event==="SIGNED_OUT"){showSignedIn(false);byId("orders").replaceChildren();}});
+})();
+</script>
+</body>
+</html>
