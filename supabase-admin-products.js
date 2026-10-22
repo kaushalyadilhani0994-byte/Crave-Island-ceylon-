@@ -1,0 +1,146 @@
+/* CRAVE ISLAND CEYLON — approved-owner catalogue manager.
+ * Uses the existing Supabase browser client and database RLS; no service key.
+ */
+(function () {
+  "use strict";
+  const $ = (s, root=document) => root.querySelector(s);
+  const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const money = v => "LKR " + Number(v || 0).toLocaleString("en-LK", {maximumFractionDigits:2});
+  let root, client, allowed = false;
+
+  function style() {
+    if ($("#cic-catalogue-admin-style")) return;
+    const s=document.createElement("style"); s.id="cic-catalogue-admin-style";
+    s.textContent=`
+      #cicOwnerCatalogueButton{position:fixed;right:14px;bottom:14px;z-index:9998;background:#2C1A14;color:#FFF8E7;border:1px solid #D4AF37;border-radius:999px;padding:11px 15px;font:600 12px system-ui;box-shadow:0 5px 22px #2C1A1433}
+      #cicOwnerCatalogue{position:fixed;inset:0;z-index:9999;background:#1c110ed9;display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:18px}
+      #cicOwnerCatalogue .cic-panel{background:#FFF8E7;color:#2C1A14;border:1px solid #D4AF37;border-radius:16px;width:min(900px,100%);margin:auto;padding:20px;box-shadow:0 15px 50px #0005;font:14px system-ui}
+      #cicOwnerCatalogue h2,#cicOwnerCatalogue h3{margin:0 0 12px;color:#2C1A14}
+      #cicOwnerCatalogue .cic-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+      #cicOwnerCatalogue label{display:block;font-size:12px;font-weight:650;margin:8px 0 4px}
+      #cicOwnerCatalogue input,#cicOwnerCatalogue textarea,#cicOwnerCatalogue select{box-sizing:border-box;width:100%;padding:10px;border:1px solid #d6c7b5;border-radius:8px;background:white;color:#2C1A14;font:14px system-ui}
+      #cicOwnerCatalogue textarea{min-height:64px;resize:vertical}
+      #cicOwnerCatalogue button{border:1px solid #D4AF37;border-radius:8px;padding:10px 13px;background:#2C1A14;color:#FFF8E7;font-weight:650;cursor:pointer}
+      #cicOwnerCatalogue button[disabled]{opacity:.55;cursor:wait}
+      #cicOwnerCatalogue .cic-muted{color:#77665b;font-size:12px;line-height:1.5}
+      #cicOwnerCatalogue .cic-card{border:1px solid #e2d5c4;border-radius:10px;padding:12px;margin:8px 0;display:flex;gap:12px;align-items:center;justify-content:space-between}
+      #cicOwnerCatalogue .cic-message{padding:10px;border-radius:8px;background:#f0e5d4;margin:10px 0;white-space:pre-wrap}
+      #cicOwnerCatalogue .cic-section{border-top:1px solid #e3d5c3;margin-top:18px;padding-top:16px}
+      @media(max-width:600px){#cicOwnerCatalogue{padding:8px}#cicOwnerCatalogue .cic-panel{padding:14px}#cicOwnerCatalogue .cic-grid{grid-template-columns:1fr}#cicOwnerCatalogue .cic-card{align-items:flex-start;flex-direction:column}}
+    `;
+    document.head.appendChild(s);
+  }
+
+  function mount() {
+    if ($("#cicOwnerCatalogue")) return;
+    style();
+    const b=document.createElement("button"); b.id="cicOwnerCatalogueButton"; b.type="button"; b.textContent="Owner · Catalogue"; b.hidden=true;
+    b.addEventListener("click",()=>{ const m=$("#cicOwnerCatalogue"); if(m){m.style.display="flex"; loadAll();} });
+    document.body.appendChild(b);
+    const m=document.createElement("div"); m.id="cicOwnerCatalogue"; m.setAttribute("role","dialog"); m.setAttribute("aria-modal","true"); m.setAttribute("aria-label","Owner catalogue management");
+    m.innerHTML=`<section class="cic-panel">
+      <div style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between"><div><h2>CRAVE ISLAND CEYLON</h2><div class="cic-muted">Live catalogue management · changes save to Supabase</div></div><button type="button" id="cicOwnerCatalogueClose" aria-label="Close">Close ✕</button></div>
+      <div id="cicOwnerCatalogueMessage" class="cic-message" role="status">Checking owner access…</div>
+      <div class="cic-section"><h3>1. Add a collection</h3><form id="cicCategoryForm">
+        <div class="cic-grid"><div><label for="cicCatName">Collection name *</label><input id="cicCatName" maxlength="80" required></div><div><label for="cicCatImage">Collection image URL (optional)</label><input id="cicCatImage" type="url" maxlength="1500"></div></div>
+        <label for="cicCatDesc">Description</label><textarea id="cicCatDesc" maxlength="500"></textarea>
+        <button type="submit">Save collection</button>
+      </form></div>
+      <div class="cic-section"><h3>2. Add a real product</h3><p class="cic-muted">Only enter products that are actually ready to sell. Price is in LKR. Product image URL must be a publicly accessible HTTPS image URL.</p>
+      <form id="cicProductForm">
+        <div class="cic-grid"><div><label for="cicProdName">Product name *</label><input id="cicProdName" maxlength="160" required></div><div><label for="cicProdPrice">Price (LKR) *</label><input id="cicProdPrice" type="number" min="0.01" max="2000000" step="0.01" required></div>
+        <div><label for="cicProdCategory">Collection *</label><select id="cicProdCategory" required><option value="">Create a collection first</option></select></div><div><label for="cicProdImage">Product image URL (optional)</label><input id="cicProdImage" type="url" maxlength="1500"></div></div>
+        <label for="cicProdDesc">Product description</label><textarea id="cicProdDesc" maxlength="3000"></textarea>
+        <label for="cicProdIngredients">Ingredients / allergen information *</label><textarea id="cicProdIngredients" maxlength="5000" required placeholder="Enter the verified ingredient list and clear allergen information"></textarea>
+        <div class="cic-grid"><div><label for="cicProdBatch">Batch number (optional)</label><input id="cicProdBatch" maxlength="100"></div><div><label for="cicProdQr">QR code / traceability value (optional)</label><input id="cicProdQr" maxlength="500"></div></div>
+        <button type="submit">Save product to live shop</button>
+      </form></div>
+      <div class="cic-section"><div style="display:flex;gap:10px;align-items:center;justify-content:space-between"><h3>3. Live catalogue</h3><button type="button" id="cicOwnerCatalogueRefresh">Refresh</button></div><div id="cicOwnerCatalogueList" aria-live="polite"></div></div>
+    </section>`;
+    m.addEventListener("click",e=>{if(e.target===m)m.style.display="none";});
+    $("#cicOwnerCatalogueClose",m).addEventListener("click",()=>m.style.display="none");
+    $("#cicOwnerCatalogueRefresh",m).addEventListener("click",loadAll);
+    $("#cicCategoryForm",m).addEventListener("submit",saveCategory);
+    $("#cicProductForm",m).addEventListener("submit",saveProduct);
+    document.body.appendChild(m); root=m;
+  }
+
+  function say(message, bad=false) {
+    const el=$("#cicOwnerCatalogueMessage"); if(!el)return;
+    el.textContent=message; el.style.background=bad?"#f8deda":"#f0e5d4";
+  }
+
+  async function checkAccess() {
+    client=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
+    if(!client){allowed=false;return false;}
+    const {data:{session},error}=await client.auth.getSession();
+    if(error||!session){allowed=false;return false;}
+    const {data:staff,error:staffError}=await client.from("staff_profiles").select("role,approved").eq("id",session.user.id).maybeSingle();
+    allowed=!staffError&&!!staff&&staff.role==="owner"&&staff.approved===true;
+    return allowed;
+  }
+
+  async function loadAll() {
+    if(!await checkAccess()){say("Sign in using the approved owner account to manage the catalogue.",true);return;}
+    say("Loading collections and products…");
+    const [cats,products]=await Promise.all([
+      client.from("categories").select("id,name,description,image_url,is_active,sort_order").order("sort_order").order("name"),
+      client.from("products").select("id,name,category,price,currency,is_active,ingredients,batch_number,qr_code").order("created_at",{ascending:false})
+    ]);
+    if(cats.error||products.error){say("Catalogue could not be loaded. Check the categories/products table access and try Refresh.",true);return;}
+    const select=$("#cicProdCategory");
+    select.innerHTML='<option value="">Choose a collection</option>'+(cats.data||[]).filter(c=>c.is_active).map(c=>'<option value="'+esc(c.name)+'">'+esc(c.name)+'</option>').join("");
+    const catList=(cats.data||[]).map(c=>'<div class="cic-card"><div><b>'+esc(c.name)+'</b><div class="cic-muted">'+(c.is_active?"Active collection":"Hidden collection")+'</div></div><button type="button" data-cic-category-toggle="'+esc(c.id)+'" data-active="'+String(!!c.is_active)+'">'+(c.is_active?"Hide":"Activate")+'</button></div>').join("");
+    const prodList=(products.data||[]).map(p=>'<div class="cic-card"><div><b>'+esc(p.name)+'</b><div class="cic-muted">'+esc(p.category||"Uncategorised")+' · '+money(p.price)+' · '+(p.is_active?"Active":"Hidden")+'</div></div><button type="button" data-cic-product-toggle="'+esc(p.id)+'" data-active="'+String(!!p.is_active)+'">'+(p.is_active?"Hide product":"Activate")+'</button></div>').join("");
+    $("#cicOwnerCatalogueList").innerHTML='<h3 style="margin-top:14px">Collections ('+(cats.data||[]).length+')</h3>'+(catList||'<p class="cic-muted">No collections yet. Create one above.</p>')+'<h3 style="margin-top:18px">Products ('+(products.data||[]).length+')</h3>'+(prodList||'<p class="cic-muted">No products yet. Add verified product details above.</p>');
+    $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-category-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("categories",btn.getAttribute("data-cic-category-toggle"),btn.getAttribute("data-active")==="true")));
+    $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-product-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("products",btn.getAttribute("data-cic-product-toggle"),btn.getAttribute("data-active")==="true")));
+    say("Connected. "+(cats.data||[]).length+" collections and "+(products.data||[]).length+" products loaded.");
+  }
+
+  async function toggleRow(table,id,isActive) {
+    if(!await checkAccess()){say("Owner session expired. Please sign in again.",true);return;}
+    const {error}=await client.from(table).update({is_active:!isActive}).eq("id",id);
+    if(error){say("Could not update this item. Confirm owner permissions and try again.",true);return;}
+    say((isActive?"Hidden":"Activated")+" successfully."); await loadAll();
+    if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function") await window.CIC_SUPABASE.refreshCatalogue();
+  }
+
+  async function saveCategory(event) {
+    event.preventDefault(); if(!await checkAccess()){say("Owner access required.",true);return;}
+    const name=$("#cicCatName").value.trim();
+    if(!name){say("Enter a collection name.",true);return;}
+    const btn=event.submitter; if(btn){btn.disabled=true;btn.textContent="Saving…";}
+    const {error}=await client.from("categories").insert({name,description:$("#cicCatDesc").value.trim()||null,image_url:$("#cicCatImage").value.trim()||null,is_active:true});
+    if(btn){btn.disabled=false;btn.textContent="Save collection";}
+    if(error){say(error.code==="23505"?"That collection name already exists.":"Could not save collection. Check the fields and owner permissions.",true);return;}
+    event.target.reset(); say("Collection saved."); await loadAll();
+    if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function") await window.CIC_SUPABASE.refreshCatalogue();
+  }
+
+  async function saveProduct(event) {
+    event.preventDefault(); if(!await checkAccess()){say("Owner access required.",true);return;}
+    const name=$("#cicProdName").value.trim(), category=$("#cicProdCategory").value, price=Number($("#cicProdPrice").value);
+    const ingredients=$("#cicProdIngredients").value.trim(), imageUrl=$("#cicProdImage").value.trim();
+    if(!name||!category||!ingredients||!Number.isFinite(price)||price<=0||price>2000000){say("Enter product name, collection, verified ingredients/allergens, and a valid LKR price.",true);return;}
+    if(imageUrl&&!/^https:\/\//i.test(imageUrl)){say("Product image URL must start with https://.",true);return;}
+    const btn=event.submitter; if(btn){btn.disabled=true;btn.textContent="Saving…";}
+    const row={name,category,price,currency:"LKR",description:$("#cicProdDesc").value.trim()||null,image_url:imageUrl||null,ingredients,batch_number:$("#cicProdBatch").value.trim()||null,qr_code:$("#cicProdQr").value.trim()||null,is_active:true};
+    const {error}=await client.from("products").insert(row);
+    if(btn){btn.disabled=false;btn.textContent="Save product to live shop";}
+    if(error){say("Could not save product. Check that this QR value is unique and owner permissions are active.",true);return;}
+    event.target.reset(); say("Product saved to the live catalogue."); await loadAll();
+    if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function") await window.CIC_SUPABASE.refreshCatalogue();
+  }
+
+  function init() {
+    if(!window.CIC_SUPABASE_CONFIG||!window.CIC_SUPABASE_CONFIG.anonKey)return;
+    mount();
+    const update=async()=>{const ok=await checkAccess(); const b=$("#cicOwnerCatalogueButton"); if(b)b.hidden=!ok;};
+    update();
+    const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
+    if(db)db.auth.onAuthStateChange(()=>window.setTimeout(update,150));
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>window.setTimeout(init,250));
+  else window.setTimeout(init,250);
+})();
