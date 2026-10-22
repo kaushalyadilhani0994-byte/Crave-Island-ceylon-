@@ -21,7 +21,7 @@
     const {data:orders,error}=await a.db.from("store_orders").select("id,order_number,customer_name,email,phone,shipping_address,subtotal,delivery_fee,total,currency,payment_method,payment_status,order_status,customer_note,created_at").order("created_at",{ascending:false}).limit(100);
     if(error){notice(el,"Could not load live orders. Check the owner access policy and try again.");return;}
     if(!orders||!orders.length){notice(el,"No real customer orders yet. New successful checkouts will appear here.");return;}
-    const {data:items,itemError}=await a.db.from("store_order_items").select("order_id,product_name,quantity,unit_price,line_total").in("order_id",orders.map(o=>o.id));
+    const {data:items,error:itemError}=await a.db.from("store_order_items").select("order_id,product_name,quantity,unit_price,line_total").in("order_id",orders.map(o=>o.id));
     if(itemError){notice(el,"Orders loaded, but item details could not be retrieved.");return;}
     const byOrder={}; (items||[]).forEach(i=>(byOrder[i.order_id]||(byOrder[i.order_id]=[])).push(i));
     el.innerHTML=orders.map(o=>{
