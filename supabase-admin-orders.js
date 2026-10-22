@@ -55,5 +55,6 @@
   });
   const old=window.openAdmin;
   if(typeof old==="function") window.openAdmin=function(){const r=old.apply(this,arguments);window.setTimeout(refresh,120);return r;};
+  if(client()) client().auth.onAuthStateChange((event,session)=>{ if(session) window.setTimeout(refresh,350); });
   window.addEventListener("cic:owner-orders-refresh",refresh);
 })();
