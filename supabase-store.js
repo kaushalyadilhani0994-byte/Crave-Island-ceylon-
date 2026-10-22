@@ -152,6 +152,11 @@
   ownerProductsScript.src = "supabase-admin-products.js";
   ownerProductsScript.defer = true;
   document.body.appendChild(ownerProductsScript);
+  const secureCheckoutScript = document.createElement("script");
+  secureCheckoutScript.src = "supabase-checkout.js";
+  secureCheckoutScript.defer = true;
+  document.body.appendChild(secureCheckoutScript);
+
   const ownerPassportsScript = document.createElement("script");
   ownerPassportsScript.src = "supabase-admin-passports.js";
   ownerPassportsScript.defer = true;
