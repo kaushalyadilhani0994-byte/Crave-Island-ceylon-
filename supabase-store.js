@@ -188,11 +188,6 @@
   ownerPassportsScript.defer = true;
   document.body.appendChild(ownerPassportsScript);
 
-  // Give customers a visible route to their private order history.
-  const myOrdersLink = document.createElement("a");
-  myOrdersLink.href = "my-orders.html";
-  myOrdersLink.textContent = "My Orders";
-  myOrdersLink.setAttribute("aria-label", "View my orders");
-  myOrdersLink.style.cssText = "position:fixed;left:14px;bottom:14px;z-index:9997;padding:11px 15px;border:1px solid #D4AF37;border-radius:999px;background:#FFF8E7;color:#2C1A14;text-decoration:none;font:600 12px system-ui;box-shadow:0 5px 22px #2C1A1433";
-  document.body.appendChild(myOrdersLink);
+  // My Orders remains available through the storefront navigation/page link;
+  // do not add a second fixed floating button on every screen.
 })();
