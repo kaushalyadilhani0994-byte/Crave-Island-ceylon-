@@ -58,7 +58,7 @@ function renderProducts(list){
 }
 function renderCategories(){
  const root=document.getElementById("categoryList");if(!root)return;
- root.innerHTML='<button type="button" class="category '+(!selectedCategory?'active':'')+'" onclick="selectedCategory='';renderCategories();renderProducts()">All collections</button>'+CATS.map(c=>'<button type="button" class="category '+(selectedCategory===c.name?'active':'')+'" onclick="filterCategory(\''+cicEsc(c.name).replace(/\\/g,"\\\\").replace(/'/g,"\\'")+'\')">'+cicEsc(c.name)+'</button>').join("");
+ root.innerHTML='<button type="button" class="category '+(!selectedCategory?'active':'')+'" onclick="selectedCategory=\'\';renderCategories();renderProducts()">All collections</button>'+CATS.map(c=>'<button type="button" class="category '+(selectedCategory===c.name?'active':'')+'" onclick="filterCategory(\''+cicEsc(c.name).replace(/\\/g,"\\\\").replace(/'/g,"\\'")+'\')">'+cicEsc(c.name)+'</button>').join("");
 }
 window.CIC_RENDER_CARD=cicRenderCard;
 window.CIC_RENDER_CATS=renderCategories;
