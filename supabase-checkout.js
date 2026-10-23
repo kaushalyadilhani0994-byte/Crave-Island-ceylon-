@@ -212,6 +212,9 @@
   function init() {
     if (!config.url || !config.anonKey) return;
     ensureModal();
+    // The original V18 cart calls openCheckout() from its existing Checkout button.
+    // Override that legacy demo handler so it opens the authenticated Supabase checkout.
+    window.openCheckout = openCheckout;
     window.checkout = openCheckout;
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, {once:true});
