@@ -41,6 +41,34 @@
     };
   }
 
+  function showCatalogueMessage(message, canRetry) {
+    const root = document.getElementById("products");
+    if (!root) return;
+    root.replaceChildren();
+    const text = document.createElement("p");
+    text.style.cssText = "font-size:13px;color:#7c6d63;padding:18px;grid-column:1/-1";
+    text.textContent = message;
+    root.appendChild(text);
+    if (canRetry) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "btn dark";
+      button.textContent = "Retry loading products";
+      button.style.cssText = "margin:0 18px 18px;grid-column:1/-1;width:max-content";
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        button.textContent = "Retrying…";
+        announce("Retrying the live catalogue connection…", "info");
+        const ok = await syncCatalogue();
+        if (!ok) {
+          button.disabled = false;
+          button.textContent = "Retry loading products";
+        }
+      });
+      root.appendChild(button);
+    }
+  }
+
   async function syncCatalogue() {
     if (!state.client) return false;
     try {
@@ -83,8 +111,7 @@
     } catch (error) {
       state.connected = false;
       announce("Supabase catalogue connection failed: " + (error && error.message ? error.message : "unknown error"), "error");
-      const productsEl = document.getElementById("products");
-      if (productsEl) productsEl.innerHTML = '<p style="font-size:13px;color:#7c6d63;padding:18px">We could not load the live catalogue. Please try again shortly.</p>';
+      showCatalogueMessage("We could not load the live catalogue. Check your connection and try again.", true);
       return false;
     }
   }
@@ -134,8 +161,7 @@
   announce("Connecting to the CRAVE ISLAND CEYLON catalogue…", "info");
   if (!window.supabase || typeof window.supabase.createClient !== "function") {
     announce("Supabase library did not load. Check the network connection and reload.", "error");
-    const productsEl = document.getElementById("products");
-    if (productsEl) productsEl.innerHTML = '<p style="font-size:13px;color:#7c6d63;padding:18px">The live catalogue could not be loaded. Check your connection and reload.</p>';
+    showCatalogueMessage("The catalogue service did not load. Check your connection and retry.", true);
     return;
   }
 
