@@ -134,7 +134,7 @@
     window.searchProducts = function (query) {
       const q = String(query || "").toLowerCase().trim();
       const list = q ? PRODUCTS.filter((product) =>
-        (product.name + " " + product.cat + " " + product.desc).toLowerCase().includes(q)
+        (product.name + " " + product.cat + " " + product.desc + " " + (product.ingredients || "") + " " + (product.batch_number || "")).toLowerCase().includes(q)
       ) : PRODUCTS;
       const el = document.getElementById("products");
       if (!el) return;
