@@ -64,7 +64,7 @@
           <div><label for="cicCheckoutAddress2">Address line 2 (optional)</label><input id="cicCheckoutAddress2" autocomplete="address-line2" maxlength="180"></div>
           <div><label for="cicCheckoutPostal">Postal code (optional)</label><input id="cicCheckoutPostal" autocomplete="postal-code" maxlength="20"></div>
         </div>
-        <label for="cicCheckoutPayment">Payment method *</label><select id="cicCheckoutPayment" required><option value="cod">Cash on delivery</option><option value="bank_transfer">Bank transfer (details provided after order confirmation)</option></select>
+        <label for="cicCheckoutPayment">Payment method *</label><select id="cicCheckoutPayment" required><option value="cod">Cash on delivery</option></select><p style="font-size:12px;color:#77665b">Bank transfer will be enabled once the store’s verified bank details and payment instructions are configured. For now, please choose cash on delivery.</p>
         <label for="cicCheckoutNote">Order note (optional)</label><textarea id="cicCheckoutNote" maxlength="500" placeholder="Delivery instructions"></textarea>
         <p style="font-size:12px;color:#77665b">Delivery fee is currently set to LKR 0 until the store configures delivery rates. Please confirm delivery charges with the store before public launch.</p>
         <div class="cic-checkout-actions"><button id="cicCheckoutPlace" type="submit">Place order securely</button><button id="cicCheckoutCancel" class="secondary" type="button">Cancel</button></div>
