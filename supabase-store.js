@@ -188,6 +188,11 @@
   ownerPassportsScript.defer = true;
   document.body.appendChild(ownerPassportsScript);
 
+  const ownerAuthScript = document.createElement("script");
+  ownerAuthScript.src = "supabase-admin-auth.js";
+  ownerAuthScript.defer = true;
+  document.body.appendChild(ownerAuthScript);
+
   // My Orders remains available through the storefront navigation/page link;
   // do not add a second fixed floating button on every screen.
 })();
