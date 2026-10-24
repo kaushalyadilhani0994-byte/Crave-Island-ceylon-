@@ -185,7 +185,7 @@
       // The database remains the source of truth; a local-storage failure must not undo an order.
       try {
         const fullName = document.getElementById("cicCheckoutName").value.trim();
-        const nameParts = fullName.split(/\\s+/).filter(Boolean);
+        const nameParts = fullName.split(/\s+/).filter(Boolean);
         const invoiceItems = basket.map(item => {
           const product = (typeof PRODUCTS !== "undefined" && Array.isArray(PRODUCTS) ? PRODUCTS : []).find(p => String(p.id) === String(item.id));
           return { id: String(item.id), qty: Number(item.q || item.quantity), name: product ? product.name : "Product", price: Number(product ? (product.price ?? product.p) : 0) };
