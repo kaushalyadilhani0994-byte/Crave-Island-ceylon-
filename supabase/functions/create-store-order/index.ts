@@ -35,6 +35,8 @@ Deno.serve(async (req: Request) => {
     const { data: authData, error: authError } = await admin.auth.getUser(token);
     if (authError || !authData.user) return respond(401, { error: "Your session is invalid or expired. Please sign in again." });
     const user = authData.user;
+    // Anonymous Supabase sessions are not eligible to place store orders.
+    if (user.is_anonymous) return respond(401, { error: "Please sign in with a registered account before placing an order." });
 
     let body: Record<string, unknown>;
     try { body = await req.json(); } catch { return respond(400, { error: "Invalid JSON request." }); }
