@@ -53,7 +53,7 @@
         <label for="cicProdDesc">Product description</label><textarea id="cicProdDesc" maxlength="3000"></textarea>
         <label for="cicProdIngredients">Ingredients / allergen information *</label><textarea id="cicProdIngredients" maxlength="5000" required placeholder="Enter the verified ingredient list and clear allergen information"></textarea>
         <div class="cic-grid"><div><label for="cicProdBatch">Batch number (optional)</label><input id="cicProdBatch" maxlength="100"></div><div><label for="cicProdQr">QR code / traceability value (optional)</label><input id="cicProdQr" maxlength="500"></div></div>
-        <button type="submit">Save product to live shop</button>
+        <button type="submit">Save product as draft</button>
       </form></div>
       <div class="cic-section"><div style="display:flex;gap:10px;align-items:center;justify-content:space-between"><h3>3. Live catalogue</h3><button type="button" id="cicOwnerCatalogueRefresh">Refresh</button></div><div id="cicOwnerCatalogueList" aria-live="polite"></div></div>
     </section>`;
@@ -138,13 +138,16 @@
     if(!name||!category||!ingredients||!Number.isFinite(price)||price<=0||price>2000000){say("Enter product name, collection, verified ingredients/allergens, and a valid LKR price.",true);return;}
     if(imageUrl&&!/^https:\/\//i.test(imageUrl)){say("Product image URL must start with https://.",true);return;}
     const btn=event.submitter; if(btn){btn.disabled=true;btn.textContent="Saving…";}
-    const row={name,category,price,currency:"LKR",description:$("#cicProdDesc").value.trim()||null,image_url:imageUrl||null,ingredients,batch_number:$("#cicProdBatch").value.trim()||null,qr_code:$("#cicProdQr").value.trim()||null,is_active:true};
     const editId=event.target.dataset.editId||"";
+    const existingProduct=productRows.find(row=>String(row.id)===String(editId));
+    // New products remain hidden drafts until an owner explicitly activates them after review.
+    // Editing an existing product must preserve its current visibility state.
+    const row={name,category,price,currency:"LKR",description:$("#cicProdDesc").value.trim()||null,image_url:imageUrl||null,ingredients,batch_number:$("#cicProdBatch").value.trim()||null,qr_code:$("#cicProdQr").value.trim()||null,is_active:editId?Boolean(existingProduct&&existingProduct.is_active):false};
     const result=editId?await client.from("products").update(row).eq("id",editId):await client.from("products").insert(row);
     if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product to live shop";}
     if(result.error){say("Could not save changes. Check the fields and owner permissions.",true);return;}
-    event.target.reset(); delete event.target.dataset.editId; const saveButton=event.target.querySelector("button[type=submit]"); if(saveButton)saveButton.textContent="Save product to live shop";
-    say(editId?"Product updated in the live catalogue.":"Product saved to the live catalogue."); await loadAll();
+    event.target.reset(); delete event.target.dataset.editId; const saveButton=event.target.querySelector("button[type=submit]"); if(saveButton)saveButton.textContent="Save product as draft";
+    say(editId?"Product details updated; its previous visibility setting was preserved.":"Product saved as a hidden draft. Review the details and activate it only when ready to sell."); await loadAll();
     if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function") await window.CIC_SUPABASE.refreshCatalogue();
   }
 
