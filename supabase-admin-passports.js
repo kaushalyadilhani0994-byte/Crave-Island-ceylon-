@@ -58,7 +58,20 @@ btn.disabled=false;btn.textContent="Save product passport";
 if(error){message("Could not save passport. Confirm the latest store migration and owner permissions are active.");return}
 const url=location.origin+"/passport.html?slug="+encodeURIComponent(slug);
 const result=$("#cicPassResult");
-result.innerHTML='<div class="msg">'+(row.published?"Passport saved and published.":"Passport saved as unpublished; public QR page will not reveal it yet.")+'<br><a href="'+esc(url)+'" target="_blank" rel="noopener">Open product passport</a><br><label>QR destination</label><input readonly value="'+esc(url)+'"><button type="button" id="cicPassCopy">Copy QR destination</button>'+(row.published?'<p><img alt="QR code for this product passport" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url)+'"></p>':"")+'</div>';
+result.innerHTML='<div class="msg">'+(row.published?"Passport saved and published.":"Passport saved as unpublished; public QR page will not reveal it yet.")+'<br><a href="'+esc(url)+'" target="_blank" rel="noopener">Open product passport</a><br><label>QR destination</label><input readonly value="'+esc(url)+'"><button type="button" id="cicPassCopy">Copy QR destination</button>'+(row.published?'<p><img alt="QR code for this product passport" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='+encodeURIComponent(url)+'"></p><button type="button" id="cicPassPrint">Print product QR label</button><p>Print label includes CRAVE ISLAND CEYLON with the QR code underneath.</p>':"")+'</div>';
+$("#cicPassCopy").onclick=async()=>{try{await navigator.clipboard.writeText(url);message("QR destination copied.")}catch(e){message("Select and copy the QR destination from the field.")}};
+const printButton=$("#cicPassPrint");
+if(printButton)printButton.onclick=()=>{
+const productName=$("#cicPassProduct").selectedOptions[0]?.textContent||"Product";
+const batch=$("#cicPassBatch").value.trim();
+const qr="https://api.qrserver.com/v1/create-qr-code/?size=360x360&data="+encodeURIComponent(url);
+const win=window.open("","_blank","width=480,height=640");
+if(!win){message("Allow pop-ups to print the QR label.");return}
+const safe=v=>String(v||"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+win.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CRAVE ISLAND CEYLON QR Label</title><style>@page{size:50mm 70mm;margin:3mm}*{box-sizing:border-box}body{margin:0;width:44mm;min-height:64mm;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;color:#2C1A14;font-family:Arial,sans-serif;padding:2mm}.brand{font:700 12pt Georgia,serif;letter-spacing:.4px;border-bottom:1px solid #D4AF37;padding-bottom:2mm;width:100%}.tag{font-size:6.5pt;letter-spacing:1px;margin-top:1.5mm}.name{font-size:9pt;font-weight:700;margin:3mm 0 1mm;overflow-wrap:anywhere}.qr{width:34mm;height:34mm;object-fit:contain;margin:1mm auto}.batch{font-size:7pt;margin-top:1mm}.note{font-size:6pt;margin-top:2mm;color:#65554b}@media screen{body{margin:15px auto;border:1px dashed #bbb;padding:10px;width:44mm}}</style></head><body><div class="brand">CRAVE ISLAND CEYLON</div><div class="tag">PRODUCT PASSPORT</div><div class="name">'+safe(productName)+'</div><img class="qr" alt="Product passport QR code" src="'+safe(qr)+'"><div class="batch">'+(batch?"Batch / Lot: "+safe(batch):"Scan to verify product details")+'</div><div class="note">Scan for verified ingredients and product information</div><script>const q=document.querySelector(".qr");q.onload=()=>setTimeout(()=>window.print(),250);q.onerror=()=>document.body.insertAdjacentHTML("beforeend","<p>QR image could not load. Close and try again.</p>");<\/script></body></html>');
+win.document.close();
+};
+
 $("#cicPassCopy").onclick=async()=>{try{await navigator.clipboard.writeText(url);message("QR destination copied.")}catch(e){message("Select and copy the QR destination from the field.")}};
 message("Passport saved successfully.");
 }
