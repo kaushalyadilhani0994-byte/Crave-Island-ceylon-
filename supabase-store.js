@@ -112,8 +112,12 @@
       state.lastSyncAt = new Date().toISOString();
       const summary = "Supabase connected · " + rows.length + " active products · " + categoryRows.length + " active categories";
       announce(summary, "success");
+      // The legacy page exposes renderCats/renderProducts, not CIC_RENDER_* aliases.
+      // Re-render after the async Supabase fetch so newly loaded categories actually appear.
       if (typeof window.CIC_RENDER_CATS === "function") window.CIC_RENDER_CATS();
+      else if (typeof window.renderCats === "function") window.renderCats();
       if (typeof window.CIC_RENDER_PRODUCTS === "function") window.CIC_RENDER_PRODUCTS(rows.map(toProduct));
+      else if (typeof window.renderProducts === "function") window.renderProducts();
       if (!rows.length) {
         const productsEl = document.getElementById("products");
         if (productsEl) productsEl.innerHTML = '<p style="font-size:13px;color:#7c6d63;padding:18px">Our catalogue is being prepared. Please check back soon.</p>';
