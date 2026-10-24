@@ -6,7 +6,7 @@
   const $ = (s, root=document) => root.querySelector(s);
   const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const money = v => "LKR " + Number(v || 0).toLocaleString("en-LK", {maximumFractionDigits:2});
-  let root, client, allowed = false;
+  let root, client, allowed = false, productRows = [];
 
   function style() {
     if ($("#cic-catalogue-admin-style")) return;
@@ -85,17 +85,30 @@
     say("Loading collections and products…");
     const [cats,products]=await Promise.all([
       client.from("categories").select("id,name,description,image_url,is_active,sort_order").order("sort_order").order("name"),
-      client.from("products").select("id,name,category,price,currency,is_active,ingredients,batch_number,qr_code").order("created_at",{ascending:false})
+      client.from("products").select("id,name,category,price,currency,is_active,ingredients,batch_number,qr_code,description,image_url").order("created_at",{ascending:false})
     ]);
     if(cats.error||products.error){say("Catalogue could not be loaded. Check the categories/products table access and try Refresh.",true);return;}
+    productRows=products.data||[];
     const select=$("#cicProdCategory");
     select.innerHTML='<option value="">Choose a collection</option>'+(cats.data||[]).filter(c=>c.is_active).map(c=>'<option value="'+esc(c.name)+'">'+esc(c.name)+'</option>').join("");
     const catList=(cats.data||[]).map(c=>'<div class="cic-card"><div><b>'+esc(c.name)+'</b><div class="cic-muted">'+(c.is_active?"Active collection":"Hidden collection")+'</div></div><button type="button" data-cic-category-toggle="'+esc(c.id)+'" data-active="'+String(!!c.is_active)+'">'+(c.is_active?"Hide":"Activate")+'</button></div>').join("");
-    const prodList=(products.data||[]).map(p=>'<div class="cic-card"><div><b>'+esc(p.name)+'</b><div class="cic-muted">'+esc(p.category||"Uncategorised")+' · '+money(p.price)+' · '+(p.is_active?"Active":"Hidden")+'</div></div><button type="button" data-cic-product-toggle="'+esc(p.id)+'" data-active="'+String(!!p.is_active)+'">'+(p.is_active?"Hide product":"Activate")+'</button></div>').join("");
+    const prodList=productRows.map(p=>'<div class="cic-card"><div><b>'+esc(p.name)+'</b><div class="cic-muted">'+esc(p.category||"Uncategorised")+' · '+money(p.price)+' · '+(p.is_active?"Active":"Hidden")+'</div></div><div><button type="button" data-cic-product-edit="'+esc(p.id)+'">Edit details</button> <button type="button" data-cic-product-toggle="'+esc(p.id)+'" data-active="'+String(!!p.is_active)+'">'+(p.is_active?"Hide product":"Activate")+'</button></div></div>').join("");
     $("#cicOwnerCatalogueList").innerHTML='<h3 style="margin-top:14px">Collections ('+(cats.data||[]).length+')</h3>'+(catList||'<p class="cic-muted">No collections yet. Create one above.</p>')+'<h3 style="margin-top:18px">Products ('+(products.data||[]).length+')</h3>'+(prodList||'<p class="cic-muted">No products yet. Add verified product details above.</p>');
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-category-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("categories",btn.getAttribute("data-cic-category-toggle"),btn.getAttribute("data-active")==="true")));
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-product-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("products",btn.getAttribute("data-cic-product-toggle"),btn.getAttribute("data-active")==="true")));
+    $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-product-edit]").forEach(btn=>btn.addEventListener("click",()=>editProduct(btn.getAttribute("data-cic-product-edit"))));
     say("Connected. "+(cats.data||[]).length+" collections and "+(products.data||[]).length+" products loaded.");
+  }
+
+  function editProduct(id) {
+    const p=productRows.find(row=>String(row.id)===String(id)); if(!p)return;
+    const form=$("#cicProductForm"); form.dataset.editId=p.id;
+    $("#cicProdName").value=p.name||""; $("#cicProdPrice").value=p.price==null?"":p.price;
+    $("#cicProdCategory").value=p.category||""; $("#cicProdImage").value=p.image_url||"";
+    $("#cicProdDesc").value=p.description||""; $("#cicProdIngredients").value=p.ingredients||"";
+    $("#cicProdBatch").value=p.batch_number||""; $("#cicProdQr").value=p.qr_code||"";
+    const button=form.querySelector("button[type=submit]"); if(button)button.textContent="Update live product";
+    say("Editing "+p.name+". Save changes to update the live catalogue."); form.scrollIntoView({behavior:"smooth",block:"start"});
   }
 
   async function toggleRow(table,id,isActive) {
@@ -126,10 +139,12 @@
     if(imageUrl&&!/^https:\/\//i.test(imageUrl)){say("Product image URL must start with https://.",true);return;}
     const btn=event.submitter; if(btn){btn.disabled=true;btn.textContent="Saving…";}
     const row={name,category,price,currency:"LKR",description:$("#cicProdDesc").value.trim()||null,image_url:imageUrl||null,ingredients,batch_number:$("#cicProdBatch").value.trim()||null,qr_code:$("#cicProdQr").value.trim()||null,is_active:true};
-    const {error}=await client.from("products").insert(row);
-    if(btn){btn.disabled=false;btn.textContent="Save product to live shop";}
-    if(error){say("Could not save product. Check that this QR value is unique and owner permissions are active.",true);return;}
-    event.target.reset(); say("Product saved to the live catalogue."); await loadAll();
+    const editId=event.target.dataset.editId||"";
+    const result=editId?await client.from("products").update(row).eq("id",editId):await client.from("products").insert(row);
+    if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product to live shop";}
+    if(result.error){say("Could not save changes. Check the fields and owner permissions.",true);return;}
+    event.target.reset(); delete event.target.dataset.editId; const saveButton=event.target.querySelector("button[type=submit]"); if(saveButton)saveButton.textContent="Save product to live shop";
+    say(editId?"Product updated in the live catalogue.":"Product saved to the live catalogue."); await loadAll();
     if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function") await window.CIC_SUPABASE.refreshCatalogue();
   }
 
