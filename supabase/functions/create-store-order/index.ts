@@ -133,7 +133,92 @@ Deno.serve(async (req: Request) => {
       return respond(500, { error: "We could not save all order items. No order was kept; please try again." });
     }
 
-    return respond(201, { order, items: orderItems });
+    // Optional external notifications. Order creation must succeed even if an external provider is not configured or is temporarily unavailable.
+    const notificationPayload = {
+      event: "order.created",
+      order: {
+        order_number: order.order_number,
+        created_at: order.created_at,
+        customer_name: customerName,
+        email: user.email || null,
+        phone,
+        shipping_address: { line1: addressLine, line2: cleanText(address?.line2, 180), city, district, postal_code: cleanText(address?.postal_code, 20), country: "Sri Lanka" },
+        currency: "LKR",
+        subtotal,
+        delivery_fee: deliveryFee,
+        total: subtotal + deliveryFee,
+        payment_method: paymentMethod,
+        payment_status: "pending",
+        order_status: "pending",
+        customer_note: note || null,
+      },
+      items: orderItems,
+    };
+
+    const notificationTasks: Promise<void>[] = [];
+    const sheetsUrl = Deno.env.get("GOOGLE_SHEETS_WEBHOOK_URL") || "";
+    const sheetsSecret = Deno.env.get("GOOGLE_SHEETS_WEBHOOK_SECRET") || "";
+    if (sheetsUrl && sheetsSecret) {
+      notificationTasks.push((async () => {
+        try {
+          const target = new URL(sheetsUrl);
+          target.searchParams.set("key", sheetsSecret);
+          const response = await fetch(target.toString(), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(notificationPayload),
+            signal: AbortSignal.timeout(5000),
+          });
+          if (!response.ok) console.error("Google Sheets order sync returned HTTP", response.status);
+        } catch (e) {
+          console.error("Google Sheets order sync failed", e instanceof Error ? e.message : "unknown error");
+        }
+      })());
+    }
+
+    const waToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN") || "";
+    const waPhoneId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID") || "";
+    const waAdmin = Deno.env.get("WHATSAPP_ADMIN_NUMBER") || "";
+    const waTemplate = Deno.env.get("WHATSAPP_ORDER_TEMPLATE") || "";
+    const waLanguage = Deno.env.get("WHATSAPP_TEMPLATE_LANGUAGE") || "en";
+    if (waToken && waPhoneId && waAdmin && waTemplate) {
+      notificationTasks.push((async () => {
+        try {
+          const response = await fetch("https://graph.facebook.com/v21.0/" + encodeURIComponent(waPhoneId) + "/messages", {
+            method: "POST",
+            headers: { "Authorization": "Bearer " + waToken, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              messaging_product: "whatsapp",
+              recipient_type: "individual",
+              to: waAdmin.replace(/[^0-9]/g, ""),
+              type: "template",
+              template: {
+                name: waTemplate,
+                language: { code: waLanguage },
+                components: [{ type: "body", parameters: [
+                  { type: "text", text: String(order.order_number) },
+                  { type: "text", text: customerName },
+                  { type: "text", text: phone },
+                  { type: "text", text: "LKR " + (subtotal + deliveryFee).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) },
+                ] }],
+              },
+            }),
+            signal: AbortSignal.timeout(5000),
+          });
+          if (!response.ok) console.error("WhatsApp owner notification returned HTTP", response.status);
+        } catch (e) {
+          console.error("WhatsApp owner notification failed", e instanceof Error ? e.message : "unknown error");
+        }
+      })());
+    }
+
+    // These integrations are deliberately best-effort; never lose a saved order because a notification provider is down.
+    await Promise.all(notificationTasks);
+
+    return respond(201, { order, items: orderItems, notifications: {
+      google_sheets_configured: Boolean(sheetsUrl && sheetsSecret),
+      whatsapp_owner_configured: Boolean(waToken && waPhoneId && waAdmin && waTemplate),
+    } });
   } catch (error) {
     if (error instanceof Error && error.message === "INVALID_PRICE") {
       return respond(400, { error: "A product has an invalid price or currency." });
