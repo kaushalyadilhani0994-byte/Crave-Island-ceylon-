@@ -169,7 +169,10 @@ Deno.serve(async (req: Request) => {
             body: JSON.stringify(notificationPayload),
             signal: AbortSignal.timeout(5000),
           });
-          if (!response.ok) console.error("Google Sheets order sync returned HTTP", response.status);
+          const result = await response.json().catch(() => null);
+          if (!response.ok || !result || result.ok !== true) {
+            console.error("Google Sheets order sync was not confirmed", response.status, result?.error || "invalid_response");
+          }
         } catch (e) {
           console.error("Google Sheets order sync failed", e instanceof Error ? e.message : "unknown error");
         }
@@ -205,7 +208,10 @@ Deno.serve(async (req: Request) => {
             }),
             signal: AbortSignal.timeout(5000),
           });
-          if (!response.ok) console.error("WhatsApp owner notification returned HTTP", response.status);
+          const result = await response.json().catch(() => null);
+          if (!response.ok || !result || !Array.isArray(result.messages) || result.messages.length === 0) {
+            console.error("WhatsApp owner notification was not confirmed", response.status, result?.error?.message || result?.error?.code || "invalid_response");
+          }
         } catch (e) {
           console.error("WhatsApp owner notification failed", e instanceof Error ? e.message : "unknown error");
         }
