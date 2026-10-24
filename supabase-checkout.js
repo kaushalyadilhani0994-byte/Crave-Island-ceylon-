@@ -210,12 +210,14 @@
     });
   }
   function init() {
-    if (!config.url || !config.anonKey) return;
+    if (!config.url || !config.anonKey || !window.CIC_SUPABASE || !window.CIC_SUPABASE.client) return;
     ensureModal();
-    // The original V18 cart calls openCheckout() from its existing Checkout button.
-    // Override that legacy demo handler so it opens the authenticated Supabase checkout.
+    // Only declare checkout ready once the Supabase client is live.
+    // Never let the old local-only or WhatsApp path pretend an order was saved.
+    window.CIC_SECURE_CHECKOUT_READY = true;
     window.openCheckout = openCheckout;
     window.checkout = openCheckout;
+    window.checkoutWhatsApp = openCheckout;
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, {once:true});
   else init();
