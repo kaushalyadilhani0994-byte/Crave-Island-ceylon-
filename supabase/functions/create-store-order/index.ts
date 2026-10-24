@@ -52,8 +52,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const paymentMethod = cleanText(body.payment_method, 30);
-    if (!["cod", "bank_transfer"].includes(paymentMethod)) {
-      return respond(400, { error: "This payment method is not available yet. Choose cash on delivery or bank transfer." });
+    if (paymentMethod !== "cod") {
+      return respond(400, { error: "This payment method is not available yet. Choose cash on delivery." });
     }
 
     if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > 50) {
