@@ -9,6 +9,18 @@
   const state = { client: null, connected: false, lastError: null, lastSyncAt: null };
   let statusTimer = null;
 
+  // Fail closed: the legacy storefront's submitCheckout() stores demo orders in localStorage.
+  // Route every legacy checkout submit to the trusted Supabase checkout instead.
+  window.submitCheckout = function () {
+    if (!window.CIC_SECURE_CHECKOUT_READY || typeof window.openCheckout !== "function") {
+      if (typeof window.toast === "function") window.toast("Secure checkout is not ready. No order has been placed. Please refresh and try again.");
+      return;
+    }
+    if (typeof window.closeModal === "function") window.closeModal("checkoutModal");
+    window.openCheckout();
+  };
+
+
   function announce(message, type) {
     state.lastError = type === "error" ? message : null;
     window.CIC_SUPABASE_STATUS = { connected: state.connected, message, type, lastSyncAt: state.lastSyncAt };
@@ -178,17 +190,6 @@
   ownerProductsScript.src = "supabase-admin-products.js";
   ownerProductsScript.defer = true;
   document.body.appendChild(ownerProductsScript);
-  // Fail closed: the legacy storefront's submitCheckout() stores demo orders in localStorage.
-  // Route every legacy checkout submit to the trusted Supabase checkout instead.
-  window.submitCheckout = function () {
-    if (!window.CIC_SECURE_CHECKOUT_READY || typeof window.openCheckout !== "function") {
-      if (typeof window.toast === "function") window.toast("Secure checkout is not ready. No order has been placed. Please refresh and try again.");
-      return;
-    }
-    if (typeof window.closeModal === "function") window.closeModal("checkoutModal");
-    window.openCheckout();
-  };
-
   const secureCheckoutScript = document.createElement("script");
   secureCheckoutScript.src = "supabase-checkout.js";
   secureCheckoutScript.defer = true;
