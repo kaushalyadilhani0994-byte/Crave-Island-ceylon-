@@ -17,11 +17,41 @@
     const {data,error}=await client.from("staff_profiles").select("role,approved").eq("id",user.id).maybeSingle();
     return !error&&!!data&&data.role==="owner"&&data.approved===true;
   }
+  let ownerCompletion = false;
+  async function completeOwnerLogin(user) {
+    if (ownerCompletion || !user) return;
+    ownerCompletion = true;
+    try {
+      if (!(await isApprovedOwner(user))) {
+        await db().auth.signOut();
+        status("This account is not marked as an approved CRAVE ISLAND CEYLON owner. Access was denied.", true);
+        return;
+      }
+      status("Owner verified. Opening the live catalogue manager…");
+      if (typeof window.closeModal === "function") window.closeModal("adminAccessModal");
+      else { const m = $("#adminAccessModal"); if (m) m.style.display = "none"; }
+      openLiveCatalogue();
+    } finally {
+      window.setTimeout(() => { ownerCompletion = false; }, 1000);
+    }
+  }
   function install() {
     const modal=$("#adminAccessModal"), email=$("#adminEmail"), otp=$("#adminOtp");
     const actions=modal&&$(".login-actions",modal);
     if(!modal||!email||!otp||!actions||modal.dataset.cicRealOtp==="true")return;
     modal.dataset.cicRealOtp="true";
+    const authClient = db();
+    if (authClient && !window.CIC_OWNER_AUTH_LISTENER_INSTALLED) {
+      window.CIC_OWNER_AUTH_LISTENER_INSTALLED = true;
+      authClient.auth.onAuthStateChange((event, session) => {
+        if (event === "SIGNED_IN" && session && session.user) {
+          window.setTimeout(() => { void completeOwnerLogin(session.user); }, 0);
+        }
+      });
+      authClient.auth.getSession().then(({data}) => {
+        if (data && data.session && data.session.user) void completeOwnerLogin(data.session.user);
+      }).catch(() => {});
+    }
     email.placeholder="Approved owner email";
     email.autocomplete="email";
     otp.type="text"; otp.inputMode="numeric"; otp.maxLength=6; otp.pattern="[0-9]{6}"; otp.autocomplete="one-time-code"; otp.placeholder="6-digit email code";
@@ -45,9 +75,15 @@
     const btn=$(".login-actions button");
     if(btn){btn.disabled=true;btn.textContent="Sending…";}
     try{
-      const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:false}});
-      if(error)status("Could not send a sign-in code. Check the email address and Supabase Auth email configuration, then try again.",true);
-      else status("A real sign-in code was requested from Supabase. Check the owner email inbox and spam folder.");
+      const {error}=await client.auth.signInWithOtp({
+        email,
+        options:{
+          shouldCreateUser:false,
+          emailRedirectTo:"https://craveislandceylonv18supabaseintegra.vercel.app/"
+        }
+      });
+      if(error)status("Supabase could not send the sign-in email: "+(error.message||"Please wait before trying again."),true);
+      else status("Check your email inbox and spam folder. Open the new Sign in link to return to this live website. If you receive a 6-digit code instead, enter it below.");
     }catch(e){status("Could not request a code because of a connection error.",true);}
     finally{if(btn){btn.disabled=false;btn.textContent="Send secure code";}}
   }
@@ -61,15 +97,7 @@
     try{
       const {data,error}=await client.auth.verifyOtp({email,token,type:"email"});
       if(error||!data.user){status("The code could not be verified. Check it or request a fresh code.",true);return;}
-      if(!(await isApprovedOwner(data.user))){
-        await client.auth.signOut();
-        status("This account is not marked as an approved CRAVE ISLAND CEYLON owner. Access was denied.",true);
-        return;
-      }
-      status("Owner verified. Opening the live catalogue manager…");
-      if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
-      else {const m=$("#adminAccessModal");if(m)m.style.display="none";}
-      openLiveCatalogue();
+      await completeOwnerLogin(data.user);
     }catch(e){status("Could not verify the code because of a connection error.",true);}
     finally{if(btn){btn.disabled=false;btn.textContent="Verify & open admin";}}
   }
