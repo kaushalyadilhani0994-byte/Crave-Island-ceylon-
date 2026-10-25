@@ -490,7 +490,7 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
     document.querySelectorAll("[onclick]").forEach(el=>{
       const action=el.getAttribute("onclick")||"";
       const opensDisabled=[...blocked].some(id=>action.includes("openModal('"+id+"')")||action.includes('openModal("'+id+'")'));
-      const legacyAction=/downloadQR\\s*\\(|saveOwnerImageDemo\\s*\\(|clearOwnerImageDemo\\s*\\(|v7SendInvite\\s*\\(|prepareTeamInvite\\s*\\(|previewOwnerImage\\s*\\(/.test(action);
+      const legacyAction=/downloadQR\s*\(|saveOwnerImageDemo\s*\(|clearOwnerImageDemo\s*\(|v7SendInvite\s*\(|prepareTeamInvite\s*\(|previewOwnerImage\s*\(/.test(action);
       if(opensDisabled||legacyAction){el.hidden=true;el.setAttribute("aria-hidden","true");el.style.display="none";}
     });
   }
