@@ -7,7 +7,7 @@ This checklist distinguishes verified infrastructure from business settings that
 ## Verified from the connected project
 
 - [x] Supabase project reports `ACTIVE_HEALTHY`.
-- [x] Latest Vercel Production deployment reports `READY` (commit `82a9634cfefb5a78c9430eeffa0b8be4dca6fe25`).
+- [x] Latest Vercel Production deployment reports `READY` (commit `83048f51ed48a195e9b5b26267b919e9c76f6366`, deployment `craveislandceylonv18supabaseintegratedbuild-6wuauyog4.vercel.app`).
 - [x] Browser Supabase configuration uses a publishable/anonymous key, not a service-role key.
 - [x] Row Level Security is enabled on all seven public business tables inspected.
 - [x] Product creation in the owner catalogue saves new products as hidden drafts.
@@ -31,8 +31,9 @@ This checklist distinguishes verified infrastructure from business settings that
 - [x] Confirmed the configured Supabase email currently sends a sign-in link rather than a visible 6-digit code.
 - [x] Updated `supabase-admin-auth.js` on `main` to explain either email format and handle a pending magic-link sign-in by rechecking the approved owner profile. Source commit: `62eb7fd349d83928fc853e3ed0e236efd70b85ed`; JavaScript syntax check passed.
 - [x] Removed the unused checkout snapshot that persisted customer names, phone, email, address, and order lines in browser localStorage. The confirmed order remains in Supabase and the page shows its reference/total. Source commit: `c0aecde0cd969cda91f48b0e7fea9ac87cacc373`; JavaScript syntax check passed.
-- [x] Kept production on the last known-good deployment `82a9634cfefb5a78c9430eeffa0b8be4dca6fe25` after the intervening auth-only deployment was found to have a JavaScript syntax error. The production alias was returned to the known-good deployment; QR Passport bottom navigation remains present.
-- [ ] **Pending deployment:** the latest `main` source fixes (owner magic-link handoff and checkout PII storage removal) are not yet live. Vercel rejected a new deployment with HTTP 402 `api-deployments-free-per-day` (over 100 deployments in the daily window; retry-after 24 hours). Retry deployment after the quota resets, then verify the owner magic-link flow and checkout in a real browser. Do not treat the source fixes as live until that verification passes.
+- [x] Latest `main` fixes are now included in the READY production deployment. Verified production alias resolves to the new deployment; live `supabase-admin-auth.js` includes magic-link support and live `supabase-checkout.js` no longer contains the old customer-PII snapshot key.
+- [x] Mobile layout CSS fix is present in the live home page; QR Passport navigation is also present. HTTP smoke checks succeeded for the live home page and relevant JavaScript endpoints.
+- [ ] Real-browser end-to-end testing is still pending: mobile visual overlap, owner magic-link sign-in, and checkout flow need interaction-level confirmation. HTTP 200 and syntax checks alone do not prove these flows work.
 
 ## Findings from the latest Supabase advisor review
 
