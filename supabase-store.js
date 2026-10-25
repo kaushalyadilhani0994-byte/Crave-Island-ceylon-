@@ -36,17 +36,23 @@
   function announce(message, type) {
     state.lastError = type === "error" ? message : null;
     window.CIC_SUPABASE_STATUS = { connected: state.connected, message, type, lastSyncAt: state.lastSyncAt };
-    console.info("[CIC Supabase]", message);
+    // Keep implementation details in the developer console, not in the public storefront.
+    if (type === "error" || type === "setup") console.warn("[CRAVE ISLAND CEYLON service]", message);
     const el = document.getElementById("cicSupabaseStatus");
     if (!el) return;
     if (statusTimer) window.clearTimeout(statusTimer);
-    el.textContent = message;
+    // A successful connection is an internal health signal, not customer-facing copy.
+    if (type === "success" || type === "info") {
+      el.hidden = true;
+      el.textContent = "";
+      return;
+    }
+    // Do not expose provider/database names or raw service errors to customers.
+    el.textContent = type === "error"
+      ? "Our collection is temporarily unavailable. Please try again shortly."
+      : "Our collection is being prepared. Please check back soon.";
     el.dataset.state = type || "info";
     el.hidden = false;
-    // A successful connection should not leave a permanent banner over the shop.
-    if (type === "success") {
-      statusTimer = window.setTimeout(() => { el.hidden = true; }, 6000);
-    }
   }
 
   // Product/category image URLs are interpolated by legacy card templates.
@@ -159,7 +165,7 @@
       return true;
     } catch (error) {
       state.connected = false;
-      announce("Supabase catalogue connection failed: " + (error && error.message ? error.message : "unknown error"), "error");
+      announce("Catalogue service is temporarily unavailable.", "error");
       showCatalogueMessage("We could not load the live catalogue. Check your connection and try again.", true);
       return false;
     }
@@ -211,9 +217,9 @@
     return;
   }
   activateDatabaseCatalogueMode();
-  announce("Connecting to the CRAVE ISLAND CEYLON catalogue…", "info");
+  announce("Loading the live collection…", "info");
   if (!window.supabase || typeof window.supabase.createClient !== "function") {
-    announce("Supabase library did not load. Check the network connection and reload.", "error");
+    announce("Catalogue service did not load.", "error");
     showCatalogueMessage("The catalogue service did not load. Check your connection and retry.", true);
     return;
   }
