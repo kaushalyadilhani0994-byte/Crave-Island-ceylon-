@@ -99,7 +99,7 @@ button{border:0;border-radius:9px;background:var(--cocoa);color:var(--cream);pad
         if(itemError)throw itemError;(rows||[]).forEach(item=>(grouped[item.order_id]||(grouped[item.order_id]=[])).push(item));
       }
       renderOrders(orders||[],grouped);msg("Showing "+(orders||[]).length+" order(s) for your account.");
-    }catch(error){msg("Could not load orders: "+(error&&error.message?error.message:"Please try again."));}
+    }catch(_){msg("Could not load your orders right now. Check your connection and try again.");}
     finally{byId("refresh").disabled=false;}
   }
   byId("signIn").addEventListener("click",async()=>{
@@ -109,7 +109,7 @@ button{border:0;border-radius:9px;background:var(--cocoa);color:var(--cream);pad
     try{
       const {error}=await client.auth.signInWithPassword({email,password});if(error)throw error;
       showSignedIn(true);await loadOrders();
-    }catch(error){msg("Sign-in failed: "+(error&&error.message?error.message:"Please check your details."));}
+    }catch(_){msg("Sign-in failed. Check your email and password, then try again.");}
     finally{byId("signIn").disabled=false;}
   });
   byId("refresh").addEventListener("click",loadOrders);
