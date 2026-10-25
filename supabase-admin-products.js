@@ -148,7 +148,7 @@
     const name=$("#cicCatName").value.trim();
     if(!name){say("Enter a collection name.",true);return;}
     const imageUrl=$("#cicCatImage").value.trim();
-    if(imageUrl){try{const parsed=new URL(imageUrl);if(parsed.protocol!=="https:"){say("Collection image URL must use https://.",true);return;}}catch(_){say("Enter a valid collection image URL.",true);return;}}
+    if(imageUrl){try{const parsed=new URL(imageUrl);if(parsed.protocol!=="https:"||!parsed.hostname||parsed.username||parsed.password){say("Collection image URL must be a valid HTTPS URL without embedded credentials.",true);return;}}catch(_){say("Enter a valid collection image URL using https://.",true);return;}}
     const btn=event.submitter; if(btn){btn.disabled=true;btn.textContent="Saving…";}
     let error;
     try {
