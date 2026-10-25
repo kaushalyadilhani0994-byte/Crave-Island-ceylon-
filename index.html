@@ -381,8 +381,8 @@ function updateCheckoutTotal(){const el=document.getElementById('checkoutTotal')
 function addGift(name){const p=PRODUCTS.find(x=>x.name===name);if(p)addToCart(p.id);document.getElementById('giftCount').textContent=cart.reduce((a,x)=>a+x.qty,0);toast(name+' added to hamper')}
 function submitCheckout(){if(typeof toast==="function")toast("Secure checkout is unavailable until the live checkout service loads.");}
 function urlFor(id){return location.origin+location.pathname+'?product='+encodeURIComponent(id)}
-function setupQR(){const s=document.getElementById('qrSelect');s.innerHTML=PRODUCTS.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');refreshQR()}
-function refreshQR(){const p=PRODUCTS.find(x=>x.id===document.getElementById('qrSelect').value)||PRODUCTS[0];const box=document.getElementById('modalQR');box.innerHTML='';new QRCode(box,{text:urlFor(p.id),width:210,height:210,colorDark:'#2c1a14',colorLight:'#fffaf1',correctLevel:QRCode.CorrectLevel.H});document.getElementById('qrLink').textContent=urlFor(p.id)}
+function setupQR(){const s=document.getElementById('qrSelect');const box=document.getElementById('modalQR');const link=document.getElementById('qrLink');if(s){s.hidden=true;s.innerHTML='';}if(box){box.innerHTML='<p style="max-width:340px;margin:0;text-align:center;font-size:12px;line-height:1.6;color:#7c6d63">Verified product QR passports will appear here once a product passport is published. We do not create sample or unverified QR codes.</p>';}if(link)link.textContent='Published product passport required';const download=document.querySelector('#qrModal button[onclick="downloadQR()"]');if(download)download.hidden=true}
+function refreshQR(){setupQR()}
 function downloadQR(){const c=document.querySelector('#modalQR canvas');if(!c){toast('QR is loading');return}const a=document.createElement('a');a.download='crave-island-product-qr.png';a.href=c.toDataURL('image/png');a.click()}
 renderCats();renderProducts();updateCartBadge();
 </script>
@@ -426,7 +426,7 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
 /* Production guard: block browser-only admin, rewards, social/media and legacy QR demos. Live catalogue, secure checkout, owner auth and passport routes remain available. */
 (function(){
   "use strict";
-  const disabled=["adminModal","controlRoomModal","socialModal","mediaModal","loyaltyModal","scratchModal","certModal","historyModal","qrModal","inviteModal"];
+  const disabled=["adminModal","controlRoomModal","socialModal","mediaModal","loyaltyModal","scratchModal","certModal","historyModal","inviteModal"];
   const blocked=new Set(disabled);
   function hideLegacyControls(){
     disabled.forEach(id=>{const el=document.getElementById(id);if(el){el.hidden=true;el.setAttribute("aria-hidden","true");el.style.display="none";}});
