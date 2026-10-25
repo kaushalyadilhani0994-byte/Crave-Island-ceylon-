@@ -431,10 +431,10 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
 <script src="supabase-store.js"></script>
 
 <script>
-/* Production guard: block browser-only admin, rewards, social/media and legacy QR demos. Live catalogue, secure checkout, owner auth and passport routes remain available. */
+/* Production guard: block obsolete demo-only modals. Keep the original authenticated CRAVE Control Room available to the owner. */
 (function(){
   "use strict";
-  const disabled=["adminModal","controlRoomModal","socialModal","mediaModal","loyaltyModal","scratchModal","certModal","historyModal","inviteModal"];
+  const disabled=["adminModal","socialModal","mediaModal","loyaltyModal","scratchModal","certModal","historyModal","inviteModal"];
   const blocked=new Set(disabled);
   function hideLegacyControls(){
     disabled.forEach(id=>{const el=document.getElementById(id);if(el){el.hidden=true;el.setAttribute("aria-hidden","true");el.style.display="none";}});
