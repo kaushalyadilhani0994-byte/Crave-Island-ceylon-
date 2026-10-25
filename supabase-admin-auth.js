@@ -75,19 +75,75 @@
       status("Owner verified. Opening the live catalogue manager…");
       if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
       else {const m=$("#adminAccessModal");if(m)m.style.display="none";}
-      openLiveCatalogue();
+      openOwnerDashboard();
     }catch(e){status("Could not verify the code because of a connection error.",true);}
     finally{if(btn){btn.disabled=false;btn.textContent="Verify code / open admin";}}
   }
-  function openLiveCatalogue(){
-    let tries=0;
-    const attempt=()=>{
-      const button=$("#cicOwnerCatalogueButton");
-      if(button){button.hidden=false;button.click();return;}
-      if(++tries<30)window.setTimeout(attempt,200);
-      else status("You are signed in, but the catalogue manager did not finish loading. Reload the page and try again.",true);
-    };
-    window.setTimeout(attempt,150);
+  function openOwnerDashboard(){
+    let dashboard=$("#cicOwnerDashboard");
+    if(!dashboard){
+      const style=document.createElement("style");
+      style.id="cicOwnerDashboardStyle";
+      style.textContent=`
+        #cicOwnerDashboard{position:fixed;inset:0;z-index:10001;background:#f6f1ea;color:#2c1a14;overflow:auto;padding:clamp(14px,4vw,28px);font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+        #cicOwnerDashboard .cic-dash-wrap{max-width:760px;margin:0 auto}
+        #cicOwnerDashboard .cic-dash-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid #e4d7c7;padding-bottom:16px;margin-bottom:18px}
+        #cicOwnerDashboard h1{font:400 clamp(27px,6vw,38px)/1.12 Georgia,serif;margin:0 0 7px}
+        #cicOwnerDashboard p{color:#76665b;line-height:1.5;margin:0}
+        #cicOwnerDashboard .cic-dash-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+        #cicOwnerDashboard .cic-dash-card{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:8px;min-height:128px;padding:18px;border:1px solid #e2d5c4;border-radius:15px;background:#fffaf3;color:#2c1a14}
+        #cicOwnerDashboard .cic-dash-card strong{font:400 22px Georgia,serif}
+        #cicOwnerDashboard .cic-dash-card span{font-size:13px;color:#76665b;line-height:1.45}
+        #cicOwnerDashboard .cic-dash-card:active{transform:scale(.99)}
+        #cicOwnerDashboard .cic-dash-action{border:1px solid #d4af37;border-radius:10px;padding:10px 13px;background:#2c1a14;color:#fff8e7;font-weight:650}
+        #cicOwnerDashboard .cic-dash-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}
+        @media(max-width:430px){#cicOwnerDashboard .cic-dash-grid{grid-template-columns:1fr}#cicOwnerDashboard .cic-dash-card{min-height:98px}}
+      `;
+      document.head.appendChild(style);
+      dashboard=document.createElement("div");
+      dashboard.id="cicOwnerDashboard";
+      dashboard.setAttribute("role","dialog");
+      dashboard.setAttribute("aria-modal","true");
+      dashboard.setAttribute("aria-label","CRAVE ISLAND CEYLON owner dashboard");
+      dashboard.innerHTML=`
+        <div class="cic-dash-wrap">
+          <header class="cic-dash-top"><div><h1>CRAVE ISLAND CEYLON</h1><p>Owner workspace · Manage your business from one place.</p></div><button class="cic-dash-action" type="button" id="cicDashSignOut">Sign out</button></header>
+          <div class="cic-dash-grid">
+            <button class="cic-dash-card" type="button" data-open="cicOwnerCatalogueButton"><strong>Products & Catalogue</strong><span>Add and update products, prices, ingredients, images and availability.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicOwnerOrdersButton"><strong>Customer Orders</strong><span>Review incoming orders and update their progress.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>QR Product Passports</strong><span>Manage product traceability and passport details.</span></button>
+            <button class="cic-dash-card" type="button" data-open="storefront"><strong>Open Storefront</strong><span>Return to the customer-facing CRAVE ISLAND CEYLON shop.</span></button>
+          </div>
+          <div class="cic-dash-footer"><p>Owner access is checked against your approved account.</p><button class="cic-dash-action" type="button" id="cicDashClose">Back to shop</button></div>
+        </div>`;
+      document.body.appendChild(dashboard);
+      dashboard.addEventListener("click",async e=>{
+        const card=e.target.closest("[data-open]");
+        if(card){
+          const target=card.getAttribute("data-open");
+          if(target==="storefront"){dashboard.remove();return;}
+          let tries=0;
+          const launch=()=>{
+            const b=document.getElementById(target);
+            if(b){b.hidden=false;b.click();return;}
+            if(++tries<25){setTimeout(launch,200);return;}
+            status("This section is still loading. Please try again in a moment.",true);
+          };
+          launch();
+        }
+      });
+      $("#cicDashClose").onclick=()=>dashboard.remove();
+      $("#cicDashSignOut").onclick=async()=>{
+        const client=db();
+        if(client)await client.auth.signOut();
+        dashboard.remove();
+        try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+        status("You have signed out.");
+        if(typeof window.openAdminAccess==="function")window.openAdminAccess();
+      };
+    }
+    dashboard.style.display="block";
+    dashboard.scrollTop=0;
   }
   let handlingPendingOwnerSession=false;
   async function handlePendingOwnerSession(session){
@@ -106,7 +162,7 @@
       try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
       if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
       else {const modal=$("#adminAccessModal");if(modal)modal.style.display="none";}
-      openLiveCatalogue();
+      openOwnerDashboard();
     }catch(_){
       status("Could not verify the owner session. Please reopen Admin and try again.",true);
     }finally{handlingPendingOwnerSession=false;}
