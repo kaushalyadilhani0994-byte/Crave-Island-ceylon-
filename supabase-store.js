@@ -191,7 +191,11 @@
   };
 
   if (placeholder) {
+    // Clear legacy/demo products even when configuration is missing. A setup
+    // failure must never make demo catalogue entries look like real stock.
+    activateDatabaseCatalogueMode();
     announce("Supabase setup is incomplete: add the project's publishable key in supabase/client-config.js.", "setup");
+    showCatalogueMessage("The live catalogue is not configured yet. No demo products are available.", false);
     return;
   }
   activateDatabaseCatalogueMode();
