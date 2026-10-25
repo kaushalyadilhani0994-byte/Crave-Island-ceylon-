@@ -64,12 +64,14 @@
     try{
       const {data,error}=await client.auth.verifyOtp({email,token,type:"email"});
       if(error||!data.user){status("The code could not be verified. Check it or request a fresh sign-in email.",true);return;}
-      try{sessionStorage.removeItem("cicOwnerSignInPending");}catch(_){}\n      if(!(await isApprovedOwner(data.user))){
+      try{sessionStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+      if(!(await isApprovedOwner(data.user))){
         await client.auth.signOut();
         status("This account is not marked as an approved CRAVE ISLAND CEYLON owner. Access was denied.",true);
         return;
       }
-      try{sessionStorage.removeItem("cicOwnerSignInPending");}catch(_){}\n      status("Owner verified. Opening the live catalogue manager…");
+      try{sessionStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+      status("Owner verified. Opening the live catalogue manager…");
       if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
       else {const m=$("#adminAccessModal");if(m)m.style.display="none";}
       openLiveCatalogue();
