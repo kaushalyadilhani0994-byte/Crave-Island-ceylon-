@@ -1,13 +1,13 @@
 # CRAVE ISLAND CEYLON — Production Launch Checklist
 
-Last reviewed: 2026-10-25
+Last reviewed: 2026-10-25 (public storefront messaging pass)
 
 This checklist distinguishes verified infrastructure from business settings that still need the owner's real information. Do not publish invented product, ingredient, allergen, price, payment, or delivery details.
 
 ## Verified from the connected project
 
 - [x] Supabase project reports `ACTIVE_HEALTHY`.
-- [x] Latest Vercel Production deployment reports `READY` (commit `83048f51ed48a195e9b5b26267b919e9c76f6366`, deployment `craveislandceylonv18supabaseintegratedbuild-6wuauyog4.vercel.app`).
+- [x] Latest Vercel Production deployment reports `READY` (commit `732ba391f0f24de3a7da56dc7926aaee8ab49f3e`, deployment `craveislandceylonv18supabaseintegratedbuild-530k8npd2.vercel.app`).
 - [x] Browser Supabase configuration uses a publishable/anonymous key, not a service-role key.
 - [x] Row Level Security is enabled on all seven public business tables inspected.
 - [x] Product creation in the owner catalogue saves new products as hidden drafts.
@@ -34,6 +34,13 @@ This checklist distinguishes verified infrastructure from business settings that
 - [x] Latest `main` fixes are now included in the READY production deployment. Verified production alias resolves to the new deployment; live `supabase-admin-auth.js` includes magic-link support and live `supabase-checkout.js` no longer contains the old customer-PII snapshot key.
 - [x] Mobile layout CSS fix is present in the live home page; QR Passport navigation is also present. HTTP smoke checks succeeded for the live home page and relevant JavaScript endpoints.
 - [ ] Real-browser end-to-end testing is still pending: mobile visual overlap, owner magic-link sign-in, and checkout flow need interaction-level confirmation. HTTP 200 and syntax checks alone do not prove these flows work.
+
+## Public storefront messaging pass — 2026-10-25
+
+- [x] Updated `supabase-store.js` so successful catalogue connection and ordinary loading status messages stay hidden from public customers.
+- [x] Replaced raw Supabase/catalogue error details with customer-friendly generic messages; technical details are kept in the browser console for troubleshooting.
+- [x] Production deployment for commit `732ba391f0f24de3a7da56dc7926aaee8ab49f3e` reports `READY` and the production alias points to it.
+- [ ] Still confirm visually in a real mobile browser that no old cached status message appears and that category/product loading behaves correctly.
 
 ## Findings from the latest Supabase advisor review
 
