@@ -321,69 +321,7 @@ main{display:block!important;position:relative!important;margin:0!important;padd
 <button class="role-card-v9" id="role-accounts" onclick="selectAdminRole('accounts')"><b>Accounts</b><span>Payments + invoices</span></button>
 </div><div class="form-grid" style="margin-top:11px"><div class="field full"><label>Work email</label><input id="adminEmail" type="email" placeholder="name@yourbusiness.com" autocomplete="email"></div><div class="field full"><label>One-time code</label><input id="adminOtp" inputmode="numeric" maxlength="6" placeholder="6-digit OTP"></div></div><div class="login-actions"><button class="goldbtn" onclick="requestAdminOtp()">Send secure code</button><button class="gold-outline" onclick="verifyAdminOtpDemo()">Verify / Continue</button></div><div class="access-note"><b>Owner approval flow:</b> invite a supervisor/staff member by email, assign only the permissions they need, and revoke access later. The actual OTP and session must be handled by the authentication provider — never by this HTML.</div><div class="role-workspace" id="roleWorkspace"></div><div class="permission-list" id="permissionList"></div><div class="invite-box"><h4>Team Invitation · Owner Only</h4><p><b>What this does:</b> prepare an invitation for a new team member. In the live system, the invite is emailed, the person verifies their email/OTP, and you approve the requested role before access is granted.</p><div class="invite-fields"><div><label for="inviteName">Team member name</label><input id="inviteName" placeholder="Full name"></div><div><label for="inviteEmail">Work email address</label><input id="inviteEmail" type="email" placeholder="person@company.com"></div><div><label for="inviteRole">Role to request</label><select id="inviteRole"><option value="supervisor">Supervisor — operations</option><option value="staff">Staff — assigned tasks</option><option value="media">Media — content only</option><option value="accounts">Accounts — finance only</option></select></div></div><button class="goldbtn" onclick="prepareTeamInvite()">Prepare Invitation</button><div id="inviteResult" class="admin-note" aria-live="polite">No invitation prepared yet.</div><div class="demo-warning"><b>Demo limitation:</b> this button prepares a local preview only. It does not send email or grant access. Real invitations require Supabase Auth and server-side owner permission checks.</div></div></div></div>
 <div class="toast" id="toast"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">
-/* ===== V5 CONTROL / AUTOMATION DEMO LAYER ===== */
-(function(){
-  const KEY='cic_v5_settings';
-  const ORD='cic_v5_orders';
-  const CUST='cic_v5_custom_products';
-  const defaultSettings={whatsapp:'94710400159',bank:'Bank of Ceylon',branch:'Diyatalawa',accountName:'Kaushalya Dilhani',accountNo:'96835730',feedbackDays:2,pointsRate:1,autoInvoice:true,autoFeedback:true,autoPoints:true,autoSocial:false};
-  function settings(){try{return {...defaultSettings,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch(e){return {...defaultSettings}}}
-  function saveSettings(s){localStorage.setItem(KEY,JSON.stringify(s))}
-  function customProducts(){try{return JSON.parse(localStorage.getItem(CUST)||'[]')}catch(e){return []}}
-  function allProducts(){return PRODUCTS.concat(customProducts())}
-  window.CIC_ALL_PRODUCTS=allProducts;
-  window.CIC_SETTINGS=settings;
-  window.openModal=function(id){document.getElementById(id).classList.add('open');if(id==='ordersModal')renderCart();if(id==='qrModal')setupQR();if(id==='checkoutModal')updateCheckoutTotal();if(id==='controlRoomModal')adminRefreshAll();if(id==='invoiceModal')openLastInvoice()};
-  window.closeModal=function(id){document.getElementById(id).classList.remove('open')};
-  window.showAdminView=function(name,btn){document.querySelectorAll('.admin-view').forEach(x=>x.classList.remove('active'));document.getElementById('admin-'+name).classList.add('active');document.querySelectorAll('.admin-tabs button').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');if(name==='catalog')renderAdminProducts();if(name==='orders')adminRefreshOrders()};
-  window.renderProducts=function(mode='all',btn){if(btn){document.querySelectorAll('.switch button').forEach(x=>x.classList.remove('active'));btn.classList.add('active')}let list=allProducts();if(mode==='new')list=list.slice(0,4);if(mode==='gift')list=list.filter(p=>p.cat==='Gift & Hampers'||p.cat==='Homemade Chocolates'||p.cat==='Ceylon Native Atelier');document.getElementById('products').innerHTML=list.map(card).join('')};
-  window.filterCategory=function(cat){const list=allProducts().filter(p=>p.cat===cat);if(!list.length){toast(cat+' collection is ready for catalogue setup');return}document.getElementById('products').innerHTML=list.map(card).join('');jump('featured')};
-  window.searchProducts=function(q){q=q.toLowerCase().trim();if(!q)return renderProducts();const list=allProducts().filter(p=>(p.name+' '+p.cat+' '+p.desc).toLowerCase().includes(q));document.getElementById('products').innerHTML=list.length?list.map(card).join(''):'<p style="font-size:12px;color:#7c6d63;padding:15px">No product found yet.</p>'};
-  window.cartTotalValue=function(){return cart.reduce((sum,x)=>{const p=allProducts().find(y=>y.id===x.id);return sum+(p?p.price*x.qty:0)},0)};
-  window.addToCart=function(id){const o=cart.find(x=>x.id===id);if(o)o.qty++;else cart.push({id,qty:1});localStorage.setItem('cic_cart_v4',JSON.stringify(cart));updateCartBadge();toast('Added to your collection')};
-  window.renderCart=function(){const el=document.getElementById('cartRows');if(!cart.length){el.innerHTML='<p style="font-size:12px;color:#7c6d63">Your order basket is empty.</p>';document.getElementById('cartTotal').textContent='LKR 0';updateCartBadge();return}el.innerHTML=cart.map(x=>{const p=allProducts().find(y=>y.id===x.id);return p?`<div class="row"><span>${esc(p.name)} × ${x.qty}</span><b>LKR ${(p.price*x.qty).toLocaleString()}</b></div>`:''}).join('');document.getElementById('cartTotal').textContent='LKR '+cartTotalValue().toLocaleString();updateCartBadge()};
-  window.checkoutWhatsApp=function(){if(!cart.length){toast('Add a product first');return}const s=settings();const lines=cart.map(x=>{const p=allProducts().find(y=>y.id===x.id);return `${p.name} × ${x.qty} — LKR ${(p.price*x.qty).toLocaleString()}`}).join('%0A');window.open(`https://wa.me/${s.whatsapp}?text=CRAVE%20ISLAND%20CEYLON%20ORDER%20REQUEST%0A%0A${lines}%0A%0ATotal:%20LKR%20${cartTotalValue().toLocaleString()}%0A%0APlease%20confirm%20availability%20and%20delivery%20details.`,'_blank')};
-  window.addGift=function(name){const p=allProducts().find(x=>x.name===name);if(p)addToCart(p.id);document.getElementById('giftCount').textContent=cart.reduce((a,x)=>a+x.qty,0);toast(name+' added to hamper')};
-  window.setupQR=function(){const s=document.getElementById('qrSelect');s.innerHTML=allProducts().map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');refreshQR()};
-  window.refreshQR=function(){const p=allProducts().find(x=>x.id===document.getElementById('qrSelect').value)||allProducts()[0];const box=document.getElementById('modalQR');box.innerHTML='';new QRCode(box,{text:urlFor(p.id),width:210,height:210,colorDark:'#2c1a14',colorLight:'#fffaf1',correctLevel:QRCode.CorrectLevel.H});document.getElementById('qrLink').textContent=urlFor(p.id)};
-  window.submitCheckout=function(){const required=['cFirst','cLast','cPhone','cAddress','cCity'];for(const id of required){if(!document.getElementById(id).value.trim()){document.getElementById(id).focus();toast('Please complete the delivery details');return}}const method=document.querySelector('input[name="pay"]:checked')?.value||'gateway';const orderId='CIC-'+Date.now().toString().slice(-8);const s=settings();const order={orderId,customer:{first:document.getElementById('cFirst').value,last:document.getElementById('cLast').value,phone:document.getElementById('cPhone').value,email:document.getElementById('cEmail').value,address:document.getElementById('cAddress').value,city:document.getElementById('cCity').value,postal:document.getElementById('cPostal').value},payment:method,total:cartTotalValue(),items:JSON.parse(JSON.stringify(cart)),status:method==='cod'?'COD pending':'Payment pending',createdAt:new Date().toISOString()};const orders=JSON.parse(localStorage.getItem(ORD)||'[]');orders.unshift(order);localStorage.setItem(ORD,JSON.stringify(orders));localStorage.setItem('cic_last_order',JSON.stringify(order));renderInvoice(order);closeModal('checkoutModal');toast('Order '+orderId+' created');setTimeout(()=>openModal('invoiceModal'),250)};
-  window.renderInvoice=function(order){const s=settings();const items=(order.items||[]).map(x=>{const p=allProducts().find(y=>String(y.id)===String(x.id));const name=x.name||(p&&p.name);if(!name)return '';const qty=Number(x.qty||x.quantity||0);const price=Number(x.price??(p?p.price:0));return '<div class="invoice-item"><span>'+esc(name)+' × '+qty+'</span><b>LKR '+(price*qty).toLocaleString()+'</b></div>'}).join('');document.getElementById('invoiceBody').innerHTML=`<div class="invoice"><div class="invoice-brand"><div><h4>CRAVE ISLAND CEYLON</h4><div style="font-size:8px;color:#8a7568;margin-top:3px">LUXURY FOOD • CAFÉ • HERITAGE</div></div><div class="invoice-meta">Invoice<br><b>${esc(order.orderId)}</b><br>${new Date(order.createdAt).toLocaleString()}</div></div><div style="margin-top:10px;font-size:9px;line-height:1.6"><b>Customer</b><br>${esc(order.customer.first)} ${esc(order.customer.last)}<br>${esc(order.customer.phone)}${order.customer.email?'<br>'+esc(order.customer.email):''}<br>${esc(order.customer.address)}, ${esc(order.customer.city)} ${esc(order.customer.postal||'')}</div><div class="invoice-items">${items}</div><div class="invoice-total"><span>Total</span><span>LKR ${Number(order.total).toLocaleString()}</span></div><div style="font-size:8px;color:#7c6d63;line-height:1.5;margin-top:9px">Payment: ${esc(order.payment)} · Status: ${esc(order.status)}<br>Thank you for choosing CRAVE ISLAND CEYLON.</div></div>`};
-  window.openLastInvoice=function(){const o=JSON.parse(localStorage.getItem('cic_last_order')||'null');if(!o){toast('No invoice yet');return}renderInvoice(o);document.getElementById('invoiceModal').classList.add('open')};
-  window.printInvoice=function(){const body=document.getElementById('invoiceBody').innerHTML;const w=window.open('','_blank','width=760,height=900');if(!w){toast('Please allow the invoice window');return}w.document.write('<html><head><title>CRAVE ISLAND CEYLON Invoice</title><style>body{font-family:Arial,sans-serif;padding:30px;color:#24150d}.invoice{max-width:680px;margin:auto;border:1px solid #ddd;padding:20px;border-radius:14px}.invoice-brand{display:flex;justify-content:space-between;border-bottom:1px solid #ddd;padding-bottom:10px}.invoice-item{display:flex;justify-content:space-between;border-bottom:1px dashed #ddd;padding:8px 0}.invoice-total{display:flex;justify-content:space-between;background:#2c1a14;color:#fff;padding:12px;border-radius:8px}<\/style></head><body>'+body+'<!-- V15 invoice print --><script>
-/* Production storefront guard: remove legacy browser-only features that are not backed by live services. */
-(function(){
-  "use strict";
-  const disabled=["adminModal","controlRoomModal","socialModal","mediaModal","loyaltyModal","scratchModal","certModal","historyModal","qrModal"];
-  const blocked=new Set(disabled.concat(["inviteModal"]));
-  function disableLegacyUI(){
-    disabled.forEach(id=>{const el=document.getElementById(id);if(el){el.hidden=true;el.setAttribute("aria-hidden","true");el.style.display="none";}});
-    document.querySelectorAll("[onclick]").forEach(el=>{
-      const action=el.getAttribute("onclick")||"";
-      if([...blocked].some(id=>action.includes("openModal('"+id+"')")||action.includes('openModal("'+id+'")'))){
-        el.hidden=true;el.setAttribute("aria-hidden","true");el.style.display="none";
-      }
-      if(/downloadQR\s*\(/.test(action)||/saveOwnerImageDemo\s*\(|clearOwnerImageDemo\s*\(|v7SendInvite\s*\(|prepareTeamInvite\s*\(/.test(action)){
-        el.hidden=true;el.setAttribute("aria-hidden","true");el.style.display="none";
-      }
-    });
-    /* Purge stale browser-only records so fake orders/drafts cannot masquerade as live business data. */
-    ["cic_v5_orders","cic_v5_custom_products","cic_last_order","cic_v7_invites","cic_v7_audit","cic_daily_activity_v1","cic_demo_actor","cic_social_draft","cic_invite_drafts"].forEach(key=>{
-      try{localStorage.removeItem(key);}catch(_){}
-    });
-  }
-  const original=window.openModal;
-  window.openModal=function(id){
-    if(blocked.has(id)){
-      if(typeof window.toast==="function")window.toast("This legacy feature is unavailable. Use the live store and secure account tools.");
-      return;
-    }
-    if(typeof original==="function")return original.apply(this,arguments);
-  };
-  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",disableLegacyUI,{once:true});
-  else disableLegacyUI();
-})();
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </body></html>');w.document.close();w.focus();setTimeout(()=>w.print(),300)};
   window.shareInvoiceWhatsApp=function(){const o=JSON.parse(localStorage.getItem('cic_last_order')||'null');if(!o){toast('No invoice yet');return}const s=settings();const text=`CRAVE ISLAND CEYLON invoice ${o.orderId}\nTotal: LKR ${Number(o.total).toLocaleString()}\nThank you for your order.`;const phone=(o.customer.phone||'').replace(/\D/g,'');if(!phone){toast('Customer phone is missing');return}window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`,'_blank')};
   window.adminRefreshAll=function(){const s=settings();document.getElementById('adminOrderCount').textContent=JSON.parse(localStorage.getItem(ORD)||'[]').length;document.getElementById('adminProductCount').textContent=allProducts().length;document.getElementById('adminPointsRate').textContent=s.pointsRate+' / LKR 100';document.getElementById('adminFollowDays').textContent=s.feedbackDays+' days';renderAdminProducts();adminRefreshOrders();loadSettingsForm()};
@@ -545,5 +483,31 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase/client-config.js"></script>
 <script src="supabase-store.js"></script>
+
+<script>
+/* Production guard: block browser-only admin, rewards, social/media and legacy QR demos. Live catalogue, secure checkout, owner auth and passport routes remain available. */
+(function(){
+  "use strict";
+  const disabled=["adminModal","controlRoomModal","socialModal","mediaModal","loyaltyModal","scratchModal","certModal","historyModal","qrModal","inviteModal"];
+  const blocked=new Set(disabled);
+  function hideLegacyControls(){
+    disabled.forEach(id=>{const el=document.getElementById(id);if(el){el.hidden=true;el.setAttribute("aria-hidden","true");el.style.display="none";}});
+    document.querySelectorAll("[onclick]").forEach(el=>{
+      const action=el.getAttribute("onclick")||"";
+      const opensDisabled=[...blocked].some(id=>action.includes("openModal('"+id+"')")||action.includes('openModal("'+id+'")'));
+      const legacyAction=/downloadQR\\s*\\(|saveOwnerImageDemo\\s*\\(|clearOwnerImageDemo\\s*\\(|v7SendInvite\\s*\\(|prepareTeamInvite\\s*\\(|previewOwnerImage\\s*\\(/.test(action);
+      if(opensDisabled||legacyAction){el.hidden=true;el.setAttribute("aria-hidden","true");el.style.display="none";}
+    });
+  }
+  const originalOpen=window.openModal;
+  window.openModal=function(id){
+    if(blocked.has(id)){if(typeof window.toast==="function")window.toast("This feature is not available until its live service is connected.");return;}
+    if(typeof originalOpen==="function")return originalOpen.apply(this,arguments);
+  };
+  ["prepareTeamInvite","saveOwnerImageDemo","clearOwnerImageDemo","downloadQR"].forEach(name=>{window[name]=function(){if(typeof window.toast==="function")window.toast("This feature is not connected to a live service yet.");};});
+  ["cic_v5_orders","cic_v5_custom_products","cic_last_order","cic_v7_invites","cic_v7_audit","cic_daily_activity_v1","cic_demo_actor","cic_social_draft","cic_invite_drafts"].forEach(key=>{try{localStorage.removeItem(key);}catch(_){}});
+  hideLegacyControls();
+})();
+</script>
 </body>
 </html>
