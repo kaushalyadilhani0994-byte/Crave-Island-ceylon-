@@ -110,11 +110,15 @@
 
       const rows = productsResult.data || [];
       const categoryRows = categoriesResult.data || [];
+      const activeCategoryNames = new Set(categoryRows.map((row) => String(row.name || "")));
+      // A product in a hidden/missing collection must not leak into All Products,
+      // search, gift pickers, or stale category filters.
+      const visibleRows = rows.filter((row) => activeCategoryNames.has(String(row.category || "")));
 
       // The database is the source of truth after a successful read, including
       // when it contains zero active rows. Never silently show demo products.
       if (typeof PRODUCTS !== "undefined" && Array.isArray(PRODUCTS)) {
-        PRODUCTS.splice(0, PRODUCTS.length, ...rows.map(toProduct));
+        PRODUCTS.splice(0, PRODUCTS.length, ...visibleRows.map(toProduct));
       }
       if (typeof CATS !== "undefined" && Array.isArray(CATS)) {
         CATS.splice(0, CATS.length, ...categoryRows.map((row) => ({
@@ -127,15 +131,15 @@
 
       state.connected = true;
       state.lastSyncAt = new Date().toISOString();
-      const summary = "Supabase connected · " + rows.length + " active products · " + categoryRows.length + " active categories";
+      const summary = "Supabase connected · " + visibleRows.length + " available products · " + categoryRows.length + " active categories";
       announce(summary, "success");
       // The legacy page exposes renderCats/renderProducts, not CIC_RENDER_* aliases.
       // Re-render after the async Supabase fetch so newly loaded categories actually appear.
       if (typeof window.CIC_RENDER_CATS === "function") window.CIC_RENDER_CATS();
       else if (typeof window.renderCats === "function") window.renderCats();
-      if (typeof window.CIC_RENDER_PRODUCTS === "function") window.CIC_RENDER_PRODUCTS(rows.map(toProduct));
+      if (typeof window.CIC_RENDER_PRODUCTS === "function") window.CIC_RENDER_PRODUCTS(visibleRows.map(toProduct));
       else if (typeof window.renderProducts === "function") window.renderProducts();
-      if (!rows.length) {
+      if (!visibleRows.length) {
         const productsEl = document.getElementById("products");
         if (productsEl) productsEl.innerHTML = '<p style="font-size:13px;color:#7c6d63;padding:18px">Our catalogue is being prepared. Please check back soon.</p>';
       }
