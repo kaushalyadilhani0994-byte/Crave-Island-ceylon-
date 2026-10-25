@@ -451,6 +451,8 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
       if(el.children.length>3)return;
       const label=(el.innerText||el.textContent||"").replace(/\s+/g," ").trim();
       if(!label||label.length>70)return;
+      // Never hide the real Supabase-backed owner tools injected by the live service scripts.
+      if(["cicOwnerCatalogueButton","cicPassportButton"].includes(el.id))return;
       if(!/owner\s*[·•:-]\s*(qr\s*passports?|catalogue|catalog)/i.test(label))return;
       const r=el.getBoundingClientRect();
       if(r.width<80||r.height<24||r.width>innerWidth*.95)return;
