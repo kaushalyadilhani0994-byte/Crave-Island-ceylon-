@@ -7,7 +7,7 @@ This checklist distinguishes verified infrastructure from business settings that
 ## Verified from the connected project
 
 - [x] Supabase project reports `ACTIVE_HEALTHY`.
-- [x] Latest Vercel Production deployment reports `READY` (commit `0bf95cd1f14fde61b7dc95c931aa802d934811e2`).
+- [x] Latest Vercel Production deployment reports `READY` (commit `82a9634cfefb5a78c9430eeffa0b8be4dca6fe25`).
 - [x] Browser Supabase configuration uses a publishable/anonymous key, not a service-role key.
 - [x] Row Level Security is enabled on all seven public business tables inspected.
 - [x] Product creation in the owner catalogue saves new products as hidden drafts.
@@ -16,6 +16,7 @@ This checklist distinguishes verified infrastructure from business settings that
 - [x] The deployed order function checks the signed-in user and rejects anonymous sessions.
 - [x] The deployed order-status function contains an approved-owner check and validates order status transitions.
 - [x] Public product passport lookup requires a published record and an active product.
+- [x] Restored the QR Passport item in the home page's bottom navigation; it no longer opens the blocked legacy QR generator. The panel explains that verified QR codes require a published product passport and does not fabricate sample codes.
 - [x] The passport page does not invent a product story when none is supplied.
 - [x] Current live catalogue count: 0 active products (1 inactive/prototype product). No product was activated or altered during this audit.
 - [x] Current checkout only permits Cash on Delivery. Delivery fee is still configured as LKR 0 pending the owner's policy.
@@ -40,7 +41,7 @@ This checklist distinguishes verified infrastructure from business settings that
 - [ ] Test invalid product IDs, inactive products, altered prices, duplicate items, expired sessions, and unauthorised order-status changes.
 - [ ] Test public QR passports for a published product, unpublished passport, unknown slug, and inactive product.
 - [ ] Confirm email/password recovery, mobile layout, image loading, and customer support contact information.
-- [ ] Run a final production smoke test after the last deployment.
+- [ ] Run a final production smoke test after the last deployment (browser-level interaction check is still pending).
 
 ## Safe release rule
 
