@@ -51,7 +51,7 @@
     if (document.getElementById("cicOwnerOrdersButton")) return;
     const style=document.createElement("style");
     style.textContent=`
-      #cicOwnerOrdersButton{position:fixed;right:14px;bottom:124px;z-index:9998;background:#2C1A14;color:#FFF8E7;border:1px solid #D4AF37;border-radius:999px;padding:11px 15px;font:600 12px system-ui;box-shadow:0 5px 22px #2C1A1433}
+      #cicOwnerOrdersButton{position:fixed;right:14px;bottom:170px;z-index:9998;background:#2C1A14;color:#FFF8E7;border:1px solid #D4AF37;border-radius:999px;padding:11px 15px;font:600 12px system-ui;box-shadow:0 5px 22px #2C1A1433}
       #cicOwnerOrdersModal{display:none;position:fixed;inset:0;z-index:10000;background:#1c110ed9;overflow:auto;padding:12px;align-items:flex-start;justify-content:center}
       #cicOwnerOrdersModal .cic-orders-panel{box-sizing:border-box;background:#FFF8E7;color:#2C1A14;border:1px solid #D4AF37;border-radius:16px;width:min(980px,100%);margin:auto;padding:18px;font:14px system-ui;box-shadow:0 18px 55px #0005}
       #cicOwnerOrdersModal .cic-orders-head{display:flex;gap:12px;justify-content:space-between;align-items:flex-start}
@@ -60,7 +60,7 @@
       #cicOwnerOrdersModal button{border:1px solid #D4AF37;border-radius:8px;padding:9px 12px;background:#2C1A14;color:#FFF8E7;font-weight:650;cursor:pointer}
       #cicOwnerOrdersModal #adminOrderTable{margin-top:14px}
       #cicOwnerOrdersModal .admin-note{padding:12px;background:#f0e5d4;border-radius:8px;color:#2C1A14}
-      @media(max-width:600px){#cicOwnerOrdersButton{bottom:62px;right:10px}#cicOwnerOrdersModal{padding:5px}#cicOwnerOrdersModal .cic-orders-panel{padding:12px}}
+      @media(max-width:600px){#cicOwnerOrdersButton{bottom:170px;right:10px}#cicOwnerOrdersModal{padding:5px}#cicOwnerOrdersModal .cic-orders-panel{padding:12px}}
     `;
     document.head.appendChild(style);
     const button=document.createElement("button");
