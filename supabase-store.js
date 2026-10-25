@@ -37,13 +37,30 @@
     }
   }
 
+  // Product/category image URLs are interpolated by legacy card templates.
+  // Normalize them before they reach those templates to prevent attribute injection
+  // and disallow javascript:, data:, and other non-web schemes.
+  function safeImageUrl(value) {
+    const raw = typeof value === "string" ? value.trim() : "";
+    if (!raw) return "";
+    try {
+      const url = new URL(raw, window.location.origin);
+      if (url.username || url.password) return "";
+      if (url.protocol !== "https:" && url.origin !== window.location.origin) return "";
+      if (url.protocol !== "https:" && url.protocol !== "http:") return "";
+      return url.href;
+    } catch (_) {
+      return "";
+    }
+  }
+
   function toProduct(row) {
     return {
       id: String(row.id),
       name: row.name || "Unnamed product",
       cat: row.category || "Ceylon Native Atelier",
       price: Number(row.price || 0),
-      img: row.image_url || "",
+      img: safeImageUrl(row.image_url),
       desc: row.description || "",
       ingredients: row.ingredients || "",
       batch_number: row.batch_number || "",
@@ -104,7 +121,7 @@
           name: row.name,
           kicker: "CRAVE ISLAND CEYLON",
           desc: row.description || "Curated Ceylon-inspired collection.",
-          img: row.image_url || ""
+          img: safeImageUrl(row.image_url)
         })));
       }
 
