@@ -22,6 +22,9 @@
     const actions=modal&&$(".login-actions",modal);
     if(!modal||!email||!otp||!actions||modal.dataset.cicRealOtp==="true")return;
     modal.dataset.cicRealOtp="true";
+    // Hide the old browser-only role selector, local invitation preview, and demo warnings.
+    modal.querySelectorAll(".role-grid-v9,.role-workspace,#roleWorkspace,.permission-list,#permissionList,.invite-box,.demo-warning")
+      .forEach(el=>{el.style.display="none";});
     email.placeholder="Approved owner email";
     email.autocomplete="email";
     otp.type="text"; otp.inputMode="numeric"; otp.maxLength=6; otp.pattern="[0-9]{6}"; otp.autocomplete="one-time-code"; otp.placeholder="6-digit email code";
