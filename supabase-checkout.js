@@ -97,7 +97,7 @@
     if (!basket.length) { el.textContent = "Your basket is empty."; return; }
     const lines = basket.map(item => {
       const product = (typeof PRODUCTS !== "undefined" && Array.isArray(PRODUCTS) ? PRODUCTS : []).find(p => String(p.id) === String(item.id));
-      const qty = Number(item.q || item.quantity || 0);
+      const qty = Number(item.q || item.quantity || item.qty || 0);
       const price = Number(product && (product.price ?? product.p));
       const name = product && (product.name || product.n) || "Selected product";
       const line = Number.isFinite(price) ? price * qty : 0;
@@ -153,7 +153,7 @@
     if (!basket.length) return message("Your basket is empty. Close checkout and add products first.", true);
     const user = await signedIn();
     if (!user) return message("Please sign in first. If you are new, create an account and verify your email if requested.", true);
-    const items = basket.map(item => ({product_id:String(item.id), quantity:Number(item.q || item.quantity)}));
+    const items = basket.map(item => ({product_id:String(item.id), quantity:Number(item.q || item.quantity || item.qty)}));
     if (items.some(item => !/^[0-9a-f-]{36}$/i.test(item.product_id) || !Number.isInteger(item.quantity) || item.quantity < 1)) {
       return message("The basket contains an item that is not in the live catalogue. Refresh the shop, then add the product again.", true);
     }
@@ -188,7 +188,7 @@
         const nameParts = fullName.split(/\s+/).filter(Boolean);
         const invoiceItems = basket.map(item => {
           const product = (typeof PRODUCTS !== "undefined" && Array.isArray(PRODUCTS) ? PRODUCTS : []).find(p => String(p.id) === String(item.id));
-          return { id: String(item.id), qty: Number(item.q || item.quantity), name: product ? product.name : "Product", price: Number(product ? (product.price ?? product.p) : 0) };
+          return { id: String(item.id), qty: Number(item.q || item.quantity || item.qty), name: product ? product.name : "Product", price: Number(product ? (product.price ?? product.p) : 0) };
         });
         localStorage.setItem("cic_last_order", JSON.stringify({
           orderId: order.order_number,
