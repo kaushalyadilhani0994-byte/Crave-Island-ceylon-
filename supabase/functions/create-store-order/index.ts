@@ -35,6 +35,8 @@ Deno.serve(async (req: Request) => {
     const { data: authData, error: authError } = await admin.auth.getUser(token);
     if (authError || !authData.user) return respond(401, { error: "Your session is invalid or expired. Please sign in again." });
     const user = authData.user;
+    // Anonymous Supabase sessions are not eligible to place store orders.
+    if (user.is_anonymous) return respond(401, { error: "Please sign in with a registered account before placing an order." });
 
     let body: Record<string, unknown>;
     try { body = await req.json(); } catch { return respond(400, { error: "Invalid JSON request." }); }
@@ -73,7 +75,7 @@ Deno.serve(async (req: Request) => {
     const productIds = items.map((item) => item.product_id);
     const { data: products, error: productsError } = await admin
       .from("products")
-      .select("id,name,price,is_active,currency")
+      .select("id,name,category,price,is_active,currency")
       .in("id", productIds)
       .eq("is_active", true);
     if (productsError) {
@@ -82,6 +84,24 @@ Deno.serve(async (req: Request) => {
     }
     if (!products || products.length !== productIds.length) {
       return respond(400, { error: "A product in your basket is no longer available. Refresh the catalogue and try again." });
+    }
+
+    // A product must belong to a currently active collection as well as being active itself.
+    const requiredCategories = [...new Set(products.map((product) => cleanText(product.category, 160)).filter(Boolean))];
+    if (requiredCategories.length === 0 || products.some((product) => !cleanText(product.category, 160))) {
+      return respond(400, { error: "A product's collection is missing. Refresh the catalogue and try again." });
+    }
+    const { data: activeCategories, error: categoriesError } = await admin
+      .from("categories")
+      .select("name")
+      .in("name", requiredCategories)
+      .eq("is_active", true);
+    if (categoriesError) {
+      console.error("Collection validation failed", categoriesError.message);
+      return respond(500, { error: "We could not verify product collections. Please try again." });
+    }
+    if (!activeCategories || activeCategories.length !== requiredCategories.length) {
+      return respond(400, { error: "A product or its collection is no longer available. Refresh the catalogue and try again." });
     }
 
     const productById = new Map(products.map((product) => [String(product.id), product]));
