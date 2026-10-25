@@ -176,9 +176,12 @@
     message("Checking live product prices and saving your order…");
     try {
       const {data, error} = await db.functions.invoke("create-store-order", {body:payload});
-      if (error || !data || data.error || !data.order) {
-        const reason = data && data.error ? data.error : (error && error.message ? error.message : "Please try again.");
-        throw new Error(reason);
+      // Edge Function validation messages are safe to show; transport errors may not be.
+      if (data && data.error) throw new Error(data.error);
+      if (error || !data || !data.order) {
+        // A timeout can happen after the server saved the order. Do not encourage an immediate
+        // retry until the customer checks My Orders, or they could submit a duplicate.
+        throw new Error("We couldn't confirm whether your order was saved. Please check My Orders before trying again to avoid a duplicate order.");
       }
       const order = data.order;
       // Keep a convenience invoice snapshot only after the server confirms the order.
