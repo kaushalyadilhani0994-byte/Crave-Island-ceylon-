@@ -449,9 +449,9 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
   function removeDuplicateOwnerShortcuts(){
     document.querySelectorAll("body *").forEach(el=>{
       if(el.children.length>3)return;
-      const label=(el.innerText||el.textContent||"").replace(/\\s+/g," ").trim();
+      const label=(el.innerText||el.textContent||"").replace(/\s+/g," ").trim();
       if(!label||label.length>70)return;
-      if(!/owner\\s*[·•:-]\\s*(qr\\s*passports?|catalogue|catalog)/i.test(label))return;
+      if(!/owner\s*[·•:-]\s*(qr\s*passports?|catalogue|catalog)/i.test(label))return;
       const r=el.getBoundingClientRect();
       if(r.width<80||r.height<24||r.width>innerWidth*.95)return;
       const parent=el.parentElement;
