@@ -183,32 +183,8 @@
       const order = data.order;
       // Keep a convenience invoice snapshot only after the server confirms the order.
       // The database remains the source of truth; a local-storage failure must not undo an order.
-      try {
-        const fullName = document.getElementById("cicCheckoutName").value.trim();
-        const nameParts = fullName.split(/\s+/).filter(Boolean);
-        const invoiceItems = basket.map(item => {
-          const product = (typeof PRODUCTS !== "undefined" && Array.isArray(PRODUCTS) ? PRODUCTS : []).find(p => String(p.id) === String(item.id));
-          return { id: String(item.id), qty: Number(item.q || item.quantity || item.qty), name: product ? product.name : "Product", price: Number(product ? (product.price ?? product.p) : 0) };
-        });
-        localStorage.setItem("cic_last_order", JSON.stringify({
-          orderId: order.order_number,
-          customer: {
-            first: nameParts.shift() || "",
-            last: nameParts.join(" "),
-            phone: document.getElementById("cicCheckoutPhone").value.trim(),
-            email: user.email || "",
-            address: [document.getElementById("cicCheckoutAddress").value.trim(), document.getElementById("cicCheckoutAddress2").value.trim(), document.getElementById("cicCheckoutDistrict").value.trim()].filter(Boolean).join(", "),
-            city: document.getElementById("cicCheckoutCity").value.trim(),
-            postal: document.getElementById("cicCheckoutPostal").value.trim()
-          },
-          payment: order.payment_method,
-          status: order.order_status,
-          total: order.total,
-          items: invoiceItems,
-          createdAt: order.created_at,
-          source: "supabase"
-        }));
-      } catch (_) { /* The saved database order is unaffected if the local invoice snapshot cannot be stored. */ }
+      // Do not persist customer names, contact details, addresses, or order lines in browser localStorage.
+      // The verified order and items are stored in Supabase; the confirmation below displays only its reference and total.
       message("Order placed successfully. Order number: " + order.order_number + ". Total: " + money(order.total) + ". You can view its status under My Orders.", false);
       const form = document.getElementById("cicCheckoutForm");
       form.style.display = "none";
