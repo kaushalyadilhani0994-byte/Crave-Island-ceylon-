@@ -27,10 +27,13 @@ try{
 const db=window.supabase.createClient(cfg.url,cfg.anonKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
 const {data,error}=await db.from("product_passports").select("product_id,ingredients,allergen_information,origin,batch_code,best_before,storage_instructions,public_story").eq("public_slug",slug).eq("published",true).maybeSingle();
 if(error||!data){fail("No published product passport could be verified for this QR code. Please check the printed code or contact the brand.");return}
-const {data:product}=await db.from("products").select("name,category").eq("id",data.product_id).eq("is_active",true).maybeSingle();
-const productName=product&&product.name?product.name:"Verified CRAVE ISLAND CEYLON product";
+const {data:product,error:productError}=await db.from("products").select("name,category").eq("id",data.product_id).eq("is_active",true).maybeSingle();
+if(productError)throw productError;
+if(!product){fail("This product is not currently available in the public catalogue. Please contact CRAVE ISLAND CEYLON if you need help.");return}
+const productName=product.name;
 document.title=productName+" | CRAVE ISLAND CEYLON";
-root.innerHTML='<h1>'+esc(productName)+'</h1><p class="muted">'+esc(data.public_story||"A product from CRAVE ISLAND CEYLON, inspired by Sri Lankan food heritage.")+'</p><div class="grid">'+f("Collection",product&&product.category)+f("Batch / lot",data.batch_code)+f("Origin",data.origin)+f("Best before",data.best_before)+f("Ingredients",data.ingredients,true)+f("Allergen information",data.allergen_information,true)+f("Storage instructions",data.storage_instructions,true)+'</div>';
+const story=data.public_story?'<p class="muted">'+esc(data.public_story)+'</p>':"";
+root.innerHTML='<h1>'+esc(productName)+'</h1>'+story+'<div class="grid">'+f("Collection",product.category)+f("Batch / lot",data.batch_code)+f("Origin",data.origin)+f("Best before",data.best_before)+f("Ingredients",data.ingredients,true)+f("Allergen information",data.allergen_information,true)+f("Storage instructions",data.storage_instructions,true)+'</div>';
 }catch(e){fail("Product verification is temporarily unavailable. Please try again later.")}
 }
 init();
