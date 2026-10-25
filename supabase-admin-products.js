@@ -168,7 +168,7 @@
     const name=$("#cicProdName").value.trim(), category=$("#cicProdCategory").value, price=Number($("#cicProdPrice").value);
     const ingredients=$("#cicProdIngredients").value.trim(), imageUrl=$("#cicProdImage").value.trim();
     if(!name||!category||!ingredients||!Number.isFinite(price)||price<=0||price>2000000){say("Enter product name, collection, verified ingredients/allergens, and a valid LKR price.",true);return;}
-    if(imageUrl&&!/^https:\/\//i.test(imageUrl)){say("Product image URL must start with https://.",true);return;}
+    if(imageUrl){try{const parsed=new URL(imageUrl);if(parsed.protocol!=="https:"||!parsed.hostname){say("Product image URL must be a valid HTTPS URL.",true);return;}}catch(_){say("Enter a valid product image URL using https://.",true);return;}}
     const btn=event.submitter; if(btn){btn.disabled=true;btn.textContent="Saving…";}
     const editId=event.target.dataset.editId||"";
     const existingProduct=productRows.find(row=>String(row.id)===String(editId));
