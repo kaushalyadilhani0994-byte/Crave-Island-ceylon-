@@ -14,8 +14,8 @@
     if (document.getElementById("cicSecureCheckout")) return;
     const style = document.createElement("style");
     style.textContent = `
-      #cicSecureCheckout{display:none;position:fixed;inset:0;z-index:10020;background:#1c110ed9;overflow:auto;padding:12px;align-items:flex-start;justify-content:center}
-      #cicSecureCheckout .cic-checkout-panel{background:#FFF8E7;color:#2C1A14;border:1px solid #D4AF37;border-radius:16px;width:min(720px,100%);margin:auto;padding:20px;font:14px system-ui;box-shadow:0 18px 55px #0005}
+      #cicSecureCheckout{display:none;position:fixed;inset:0;z-index:10020;background:#1c110ed9;overflow:auto;overscroll-behavior:contain;padding:calc(12px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px));align-items:flex-start;justify-content:center}
+      #cicSecureCheckout .cic-checkout-panel{background:#FFF8E7;color:#2C1A14;border:1px solid #D4AF37;border-radius:16px;width:min(720px,100%);max-height:calc(100dvh - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow:auto;overscroll-behavior:contain;margin:auto;padding:20px;font:14px system-ui;box-shadow:0 18px 55px #0005}
       #cicSecureCheckout h2{font:normal 26px Georgia,serif;margin:0}
       #cicSecureCheckout p{line-height:1.5}
       #cicSecureCheckout label{display:block;font-size:12px;font-weight:650;margin:10px 0 5px}
