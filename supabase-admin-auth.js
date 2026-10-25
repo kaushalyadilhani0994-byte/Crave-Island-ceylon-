@@ -1,4 +1,4 @@
-/* CRAVE ISLAND CEYLON — real Supabase email OTP owner authentication.
+/* CRAVE ISLAND CEYLON — real Supabase email link/code owner authentication.
  * No browser-only demo code grants access. Database RLS remains authoritative.
  */
 (function () {
@@ -50,7 +50,7 @@
     try{
       const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:false}});
       if(error)status("Could not send a sign-in code. Check the email address and Supabase Auth email configuration, then try again.",true);
-      else { try{sessionStorage.setItem("cicOwnerSignInPending","1");}catch(_){} status("Supabase sent a sign-in email. If it contains a link, open it in this same browser; if it contains a 6-digit code, enter it below. Check spam too."); }
+      else { try{localStorage.setItem("cicOwnerSignInPending","1");}catch(_){} status("Supabase sent a sign-in email. If it contains a link, open it in this same browser; if it contains a 6-digit code, enter it below. Check spam too."); }
     }catch(e){status("Could not request a code because of a connection error.",true);}
     finally{if(btn){btn.disabled=false;btn.textContent="Send sign-in email";}}
   }
@@ -61,16 +61,17 @@
     if(!/^\d{6}$/.test(token))return status("If your email contains a sign-in link rather than a 6-digit code, open that link in this same browser. The approved-owner check will then open the live tools automatically.",true);
     const btn=$(".login-actions button:nth-child(2)");
     if(btn){btn.disabled=true;btn.textContent="Verifying…";}
+    try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
     try{
       const {data,error}=await client.auth.verifyOtp({email,token,type:"email"});
       if(error||!data.user){status("The code could not be verified. Check it or request a fresh sign-in email.",true);return;}
-      try{sessionStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+      try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
       if(!(await isApprovedOwner(data.user))){
         await client.auth.signOut();
         status("This account is not marked as an approved CRAVE ISLAND CEYLON owner. Access was denied.",true);
         return;
       }
-      try{sessionStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+      try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
       status("Owner verified. Opening the live catalogue manager…");
       if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
       else {const m=$("#adminAccessModal");if(m)m.style.display="none";}
@@ -91,18 +92,18 @@
   let handlingPendingOwnerSession=false;
   async function handlePendingOwnerSession(session){
     let pending=false;
-    try{pending=sessionStorage.getItem("cicOwnerSignInPending")==="1";}catch(_){}
+    try{pending=localStorage.getItem("cicOwnerSignInPending")==="1";}catch(_){}
     if(!pending||!session||!session.user||handlingPendingOwnerSession)return;
     handlingPendingOwnerSession=true;
     try{
       if(!(await isApprovedOwner(session.user))){
-        try{sessionStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+        try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
         await db().auth.signOut();
         if(typeof window.openAdminAccess==="function")window.openAdminAccess();
         status("This account is not marked as an approved CRAVE ISLAND CEYLON owner. Access was denied.",true);
         return;
       }
-      try{sessionStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+      try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
       if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
       else {const modal=$("#adminAccessModal");if(modal)modal.style.display="none";}
       openLiveCatalogue();
@@ -127,7 +128,7 @@
       });
       window.setTimeout(async()=>{
         let pending=false;
-        try{pending=sessionStorage.getItem("cicOwnerSignInPending")==="1";}catch(_){}
+        try{pending=localStorage.getItem("cicOwnerSignInPending")==="1";}catch(_){}
         if(!pending)return;
         try{const {data:{session}}=await client.auth.getSession();if(session)await handlePendingOwnerSession(session);}catch(_){}
       },600);
