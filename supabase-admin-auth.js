@@ -18,6 +18,11 @@
     return !error&&!!data&&data.role==="owner"&&data.approved===true;
   }
   function install() {
+    if(!$("#cic-owner-shortcut-style")){
+      const st=document.createElement("style");st.id="cic-owner-shortcut-style";
+      st.textContent="body.cic-owner-shortcuts-unified #cicOwnerCatalogueButton,body.cic-owner-shortcuts-unified #cicOwnerOrdersButton,body.cic-owner-shortcuts-unified #cicPassportButton{display:none!important}";
+      document.head.appendChild(st);
+    }
     const modal=$("#adminAccessModal"), email=$("#adminEmail"), otp=$("#adminOtp");
     const actions=modal&&$(".login-actions",modal);
     if(!modal||!email||!otp||!actions||modal.dataset.cicRealOtp==="true")return;
@@ -79,19 +84,42 @@
     }catch(e){status("Could not verify the code because of a connection error.",true);}
     finally{if(btn){btn.disabled=false;btn.textContent="Verify code / open admin";}}
   }
+  function installUnifiedLiveTools(){
+    const room=$("#controlRoomModal"), tabs=room&&$(".admin-tabs",room);
+    if(!room||!tabs)return;
+    document.body.classList.add("cic-owner-shortcuts-unified");
+    if($("#cicLiveCatalogueTab",tabs))return;
+    const entries=[
+      ["cicLiveCatalogueTab","Live Catalogue","cicOwnerCatalogueButton"],
+      ["cicLiveOrdersTab","Live Orders","cicOwnerOrdersButton"],
+      ["cicLivePassportsTab","QR Passports","cicPassportButton"]
+    ];
+    entries.forEach(([id,label,target])=>{
+      const b=document.createElement("button");b.type="button";b.id=id;b.textContent=label;
+      b.setAttribute("aria-label",label+" management");
+      b.addEventListener("click",()=>{
+        const launcher=document.getElementById(target);
+        if(launcher){launcher.click();return;}
+        status(label+" is still loading. Please wait a moment and try again.",true);
+      });
+      tabs.appendChild(b);
+    });
+  }
   function openOwnerDashboard(){
-    // Reuse the original, organized Control Room rather than introducing a second admin interface.
+    // Keep the original organized Control Room as the single owner entry point.
     const dashboard=$("#cicOwnerDashboard");
     if(dashboard)dashboard.remove();
     if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
-    // roleOpen is the original app entry point; it selects the correct view as well as opening the modal.
+    installUnifiedLiveTools();
     if(typeof window.roleOpen==="function"){
       window.roleOpen("overview");
+      installUnifiedLiveTools();
       return;
     }
     if(typeof window.openModal==="function"&&document.getElementById("controlRoomModal")){
       window.openModal("controlRoomModal");
-      status("Control Room opened. Choose Overview from its navigation if it is not selected.");
+      installUnifiedLiveTools();
+      status("Control Room opened. Use its tabs for live catalogue, orders and QR passports.");
       return;
     }
     status("Owner sign-in succeeded, but the original Control Room did not load. Refresh the page and try again.",true);
@@ -131,6 +159,13 @@
     if(client){
       client.auth.onAuthStateChange((event,session)=>{
         if(event==="SIGNED_IN"&&session)window.setTimeout(()=>handlePendingOwnerSession(session),0);
+        if(event==="SIGNED_OUT")document.body.classList.remove("cic-owner-shortcuts-unified");
+        if(session&&session.user)window.setTimeout(async()=>{
+          if(await isApprovedOwner(session.user)){
+            installUnifiedLiveTools();
+            document.body.classList.add("cic-owner-shortcuts-unified");
+          }
+        },250);
       });
       window.setTimeout(async()=>{
         let pending=false;
