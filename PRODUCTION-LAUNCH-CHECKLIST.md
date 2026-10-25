@@ -22,6 +22,13 @@ This checklist distinguishes verified infrastructure from business settings that
 - [x] Current checkout only permits Cash on Delivery. Delivery fee is still configured as LKR 0 pending the owner's policy.
 - [x] Owner/product/order/passport management source files are present in the repository.
 
+## Owner sign-in follow-up — 2026-10-25
+
+- [x] Confirmed the configured Supabase email currently sends a sign-in link rather than a visible 6-digit code.
+- [x] Updated `supabase-admin-auth.js` on `main` to explain either email format and handle a pending magic-link sign-in by rechecking the approved owner profile. Latest source commit: `62eb7fd349d83928fc853e3ed0e236efd70b85ed`; JavaScript syntax check passed.
+- [x] Kept production on the last known-good deployment `82a9634cfefb5a78c9430eeffa0b8be4dca6fe25` after the intervening auth-only deployment was found to have a JavaScript syntax error. The production alias was returned to the known-good deployment; QR Passport bottom navigation remains present.
+- [ ] **Pending deployment:** the latest `main` auth fix is not yet live. Vercel rejected a new deployment with HTTP 402 `api-deployments-free-per-day` (over 100 deployments in the daily window; retry-after 24 hours). Retry deployment after the quota resets, then verify the owner magic-link flow in a real browser. Do not treat the source fix as live until that verification passes.
+
 ## Findings from the latest Supabase advisor review
 
 - [ ] **Leaked-password protection is disabled.** Enable it in Supabase Dashboard → Authentication → Settings/password security, then rerun the security advisor. This is an Auth dashboard setting; it was not changed by this audit.
