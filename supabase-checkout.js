@@ -47,8 +47,8 @@
       <form id="cicCheckoutForm">
         <h3 style="margin:15px 0 5px">Account</h3>
         <div class="cic-checkout-grid">
-          <div><label for="cicCheckoutEmail">Email address *</label><input id="cicCheckoutEmail" type="email" autocomplete="email" required maxlength="254"></div>
-          <div><label for="cicCheckoutPassword">Password *</label><input id="cicCheckoutPassword" type="password" autocomplete="current-password" minlength="6" required maxlength="128"></div>
+          <div><label for="cicCheckoutEmail">Email address *</label><input id="cicCheckoutEmail" type="email" autocomplete="email" maxlength="254"></div>
+          <div><label for="cicCheckoutPassword">Password *</label><input id="cicCheckoutPassword" type="password" autocomplete="current-password" maxlength="128"></div>
         </div>
         <div class="cic-checkout-actions"><button type="button" id="cicCheckoutSignIn" class="secondary">Sign in</button><button type="button" id="cicCheckoutSignUp" class="secondary">Create account</button></div>
         <p id="cicCheckoutAccountState" style="font-size:12px;color:#77665b;margin:7px 0">You must be signed in before placing an order.</p>
