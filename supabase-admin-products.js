@@ -147,8 +147,16 @@
     event.preventDefault(); if(!await checkAccess()){say("Owner access required.",true);return;}
     const name=$("#cicCatName").value.trim();
     if(!name){say("Enter a collection name.",true);return;}
+    const imageUrl=$("#cicCatImage").value.trim();
+    if(imageUrl){try{const parsed=new URL(imageUrl);if(parsed.protocol!=="https:"){say("Collection image URL must use https://.",true);return;}}catch(_){say("Enter a valid collection image URL.",true);return;}}
     const btn=event.submitter; if(btn){btn.disabled=true;btn.textContent="Saving…";}
-    const {error}=await client.from("categories").insert({name,description:$("#cicCatDesc").value.trim()||null,image_url:$("#cicCatImage").value.trim()||null,is_active:true});
+    let error;
+    try {
+      ({error}=await client.from("categories").insert({name,description:$("#cicCatDesc").value.trim()||null,image_url:imageUrl||null,is_active:true}));
+    } catch (_) {
+      if(btn){btn.disabled=false;btn.textContent="Save collection";}
+      say("Connection problem: collection was not confirmed as saved. Refresh before retrying.",true);return;
+    }
     if(btn){btn.disabled=false;btn.textContent="Save collection";}
     if(error){say(error.code==="23505"?"That collection name already exists.":"Could not save collection. Check the fields and owner permissions.",true);return;}
     event.target.reset(); say("Collection saved."); await loadAll();
@@ -167,7 +175,13 @@
     // New products remain hidden drafts until an owner explicitly activates them after review.
     // Editing an existing product must preserve its current visibility state.
     const row={name,category,price,currency:"LKR",description:$("#cicProdDesc").value.trim()||null,image_url:imageUrl||null,ingredients,batch_number:$("#cicProdBatch").value.trim()||null,qr_code:$("#cicProdQr").value.trim()||null,is_active:editId?Boolean(existingProduct&&existingProduct.is_active):false};
-    const result=editId?await client.from("products").update(row).eq("id",editId):await client.from("products").insert(row);
+    let result;
+    try {
+      result=editId?await client.from("products").update(row).eq("id",editId):await client.from("products").insert(row);
+    } catch (_) {
+      if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}
+      say("Connection problem: the product save was not confirmed. Refresh the catalogue before retrying.",true);return;
+    }
     if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product to live shop";}
     if(result.error){say("Could not save changes. Check the fields and owner permissions.",true);return;}
     event.target.reset(); delete event.target.dataset.editId; const saveButton=event.target.querySelector("button[type=submit]"); if(saveButton)saveButton.textContent="Save product as draft";
