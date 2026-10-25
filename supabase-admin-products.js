@@ -117,6 +117,26 @@
 
   async function toggleRow(table,id,isActive) {
     if(!await checkAccess()){say("Owner session expired. Please sign in again.",true);return;}
+
+    // Keep incomplete/test records out of the public shop. Deactivation is always allowed.
+    if(table==="products"&&!isActive){
+      const {data:product,error:productError}=await client.from("products")
+        .select("name,category,price,currency,ingredients").eq("id",id).maybeSingle();
+      if(productError||!product){say("Could not verify this product. Refresh the catalogue and try again.",true);return;}
+      const name=String(product.name||"").trim();
+      if(/prototype|not\s+for\s+sale|test\s+product|sample\s+only/i.test(name)){
+        say("This looks like a prototype or test item. Rename it with the verified sale product name before activation.",true);return;
+      }
+      if(!name||!String(product.ingredients||"").trim()||!Number.isFinite(Number(product.price))||Number(product.price)<=0||product.currency!=="LKR"){
+        say("This product is missing verified ingredients or a valid LKR price. Complete and verify its details before activation.",true);return;
+      }
+      const {data:category,error:categoryError}=await client.from("categories")
+        .select("is_active").eq("name",product.category).maybeSingle();
+      if(categoryError||!category||category.is_active!==true){
+        say("Activate the product's collection first. A product cannot be published under a hidden or missing collection.",true);return;
+      }
+    }
+
     const {error}=await client.from(table).update({is_active:!isActive}).eq("id",id);
     if(error){say("Could not update this item. Confirm owner permissions and try again.",true);return;}
     say((isActive?"Hidden":"Activated")+" successfully."); await loadAll();
