@@ -104,7 +104,11 @@
     const p=productRows.find(row=>String(row.id)===String(id)); if(!p)return;
     const form=$("#cicProductForm"); form.dataset.editId=p.id;
     $("#cicProdName").value=p.name||""; $("#cicProdPrice").value=p.price==null?"":p.price;
-    $("#cicProdCategory").value=p.category||""; $("#cicProdImage").value=p.image_url||"";
+    const categorySelect=$("#cicProdCategory");
+    if(p.category&&!Array.from(categorySelect.options).some(option=>option.value===p.category)){
+      const option=document.createElement("option"); option.value=p.category; option.textContent=p.category+" (inactive collection)"; categorySelect.appendChild(option);
+    }
+    categorySelect.value=p.category||""; $("#cicProdImage").value=p.image_url||"";
     $("#cicProdDesc").value=p.description||""; $("#cicProdIngredients").value=p.ingredients||"";
     $("#cicProdBatch").value=p.batch_number||""; $("#cicProdQr").value=p.qr_code||"";
     const button=form.querySelector("button[type=submit]"); if(button)button.textContent="Update live product";
