@@ -84,15 +84,14 @@
     const dashboard=$("#cicOwnerDashboard");
     if(dashboard)dashboard.remove();
     if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
-    if(typeof window.openModal==="function"&&document.getElementById("controlRoomModal")){
-      window.openModal("controlRoomModal");
-      if(typeof window.showAdminView==="function")window.showAdminView("overview");
-      if(typeof window.v7Success==="function")window.v7Success("Owner workspace opened");
-      return;
-    }
-    // Older page builds may expose the control-room entry through the role selector.
+    // roleOpen is the original app entry point; it selects the correct view as well as opening the modal.
     if(typeof window.roleOpen==="function"){
       window.roleOpen("overview");
+      return;
+    }
+    if(typeof window.openModal==="function"&&document.getElementById("controlRoomModal")){
+      window.openModal("controlRoomModal");
+      status("Control Room opened. Choose Overview from its navigation if it is not selected.");
       return;
     }
     status("Owner sign-in succeeded, but the original Control Room did not load. Refresh the page and try again.",true);
