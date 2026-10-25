@@ -5,6 +5,8 @@
   "use strict";
   const $ = (selector, root=document) => root.querySelector(selector);
   const db = () => window.CIC_SUPABASE && window.CIC_SUPABASE.client;
+  // Prevent duplicate auth callbacks while processing an owner magic-link return.
+  let handlingPendingOwnerSession = false;
   function status(message, bad=false) {
     const el=$("#cicOwnerAuthStatus");
     if(!el)return;
