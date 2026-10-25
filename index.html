@@ -354,7 +354,7 @@ main{display:block!important;position:relative!important;margin:0!important;padd
 /* Production storefront guard: remove legacy browser-only features that are not backed by live services. */
 (function(){
   "use strict";
-  const disabled=["adminModal","controlRoomModal","socialModal","mediaModal","loyaltyModal","scratchModal","certModal","historyModal","ordersModal","qrModal"];
+  const disabled=["adminModal","controlRoomModal","socialModal","mediaModal","loyaltyModal","scratchModal","certModal","historyModal","qrModal"];
   const blocked=new Set(disabled.concat(["inviteModal"]));
   function disableLegacyUI(){
     disabled.forEach(id=>{const el=document.getElementById(id);if(el){el.hidden=true;el.setAttribute("aria-hidden","true");el.style.display="none";}});
