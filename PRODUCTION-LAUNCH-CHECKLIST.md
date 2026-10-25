@@ -19,6 +19,8 @@ This checklist distinguishes verified infrastructure from business settings that
 - [x] Restored the QR Passport item in the home page's bottom navigation; it no longer opens the blocked legacy QR generator. The panel explains that verified QR codes require a published product passport and does not fabricate sample codes.
 - [x] The passport page does not invent a product story when none is supplied.
 - [x] Current live catalogue count: 0 active products (1 inactive/prototype product). No product was activated or altered during this audit.
+- [x] All five active collections have a description and an HTTPS image URL; no collection data was changed.
+- [x] Vercel runtime-error clusters reported none in the last 24 hours, and the latest 50-minute error/fatal runtime-log query was empty. Raw runtime logs older than the Hobby retention window were unavailable; this is not a substitute for browser-level testing.
 - [x] Current checkout only permits Cash on Delivery. Delivery fee is still configured as LKR 0 pending the owner's policy.
 - [x] Owner/product/order/passport management source files are present in the repository.
 
