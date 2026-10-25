@@ -24,7 +24,7 @@
   const legacyOpenModal = window.openModal;
   window.openModal = function (id) {
     if (id === "controlRoomModal" || id === "adminModal") {
-      const msg = "The demo admin panel is disabled. Use Secure Admin Access for live owner tools.";
+      const msg = "This legacy admin panel is unavailable. Use Secure Admin Access for live owner tools.";
       if (typeof window.toast === "function") window.toast(msg);
       else document.getElementById("cicSupabaseStatus")?.replaceChildren(document.createTextNode(msg));
       return;
