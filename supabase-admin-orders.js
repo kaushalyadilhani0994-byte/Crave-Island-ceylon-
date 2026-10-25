@@ -51,7 +51,7 @@
     if (document.getElementById("cicOwnerOrdersButton")) return;
     const style=document.createElement("style");
     style.textContent=`
-      #cicOwnerOrdersButton{position:fixed;right:14px;bottom:66px;z-index:9998;background:#2C1A14;color:#FFF8E7;border:1px solid #D4AF37;border-radius:999px;padding:11px 15px;font:600 12px system-ui;box-shadow:0 5px 22px #2C1A1433}
+      #cicOwnerOrdersButton{position:fixed;right:14px;bottom:124px;z-index:9998;background:#2C1A14;color:#FFF8E7;border:1px solid #D4AF37;border-radius:999px;padding:11px 15px;font:600 12px system-ui;box-shadow:0 5px 22px #2C1A1433}
       #cicOwnerOrdersModal{display:none;position:fixed;inset:0;z-index:10000;background:#1c110ed9;overflow:auto;padding:12px;align-items:flex-start;justify-content:center}
       #cicOwnerOrdersModal .cic-orders-panel{box-sizing:border-box;background:#FFF8E7;color:#2C1A14;border:1px solid #D4AF37;border-radius:16px;width:min(980px,100%);margin:auto;padding:18px;font:14px system-ui;box-shadow:0 18px 55px #0005}
       #cicOwnerOrdersModal .cic-orders-head{display:flex;gap:12px;justify-content:space-between;align-items:flex-start}
