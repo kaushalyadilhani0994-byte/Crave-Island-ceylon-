@@ -127,9 +127,10 @@
     status("Owner sign-in succeeded, but the original Control Room did not load. Refresh the page and try again.",true);
   }
   async function handlePendingOwnerSession(session){
-    let pending=false;
-    try{pending=localStorage.getItem("cicOwnerSignInPending")==="1";}catch(_){}
-    if(!pending||!session||!session.user||handlingPendingOwnerSession)return;
+    // Supabase may consume a magic link before this dynamically loaded script
+    // attaches its auth listener. Therefore, trust the verified session plus
+    // the database owner approval—not a browser-only pending flag—as the gate.
+    if(!session||!session.user||handlingPendingOwnerSession)return;
     handlingPendingOwnerSession=true;
     try{
       if(!(await isApprovedOwner(session.user))){
@@ -169,12 +170,11 @@
           }
         },250);
       });
+      // Recover magic-link returns even if SIGNED_IN fired before this script
+      // loaded. Only an owner approved in staff_profiles can open the Control Room.
       window.setTimeout(async()=>{
-        let pending=false;
-        try{pending=localStorage.getItem("cicOwnerSignInPending")==="1";}catch(_){}
-        if(!pending)return;
-        try{const {data:{session}}=await client.auth.getSession();if(session)await handlePendingOwnerSession(session);}catch(_){}
-      },600);
+        try{const {data:{session}}=await client.auth.getSession();if(session&&session.user&&await isApprovedOwner(session.user))await handlePendingOwnerSession(session);}catch(_){}
+      },800);
     }
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",wire);else wire();
