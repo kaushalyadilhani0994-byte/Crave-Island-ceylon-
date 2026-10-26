@@ -407,7 +407,24 @@ const roleMeta={owner:{title:'Main Admin',caption:'Full business control. Use th
   window.prepareTeamInvite=function(){if(typeof toast==="function")toast("Team invitations are not enabled until server-side invitation delivery is connected")};   window.previewOwnerImage=function(input){const file=input?.files?.[0];if(!file)return;if(!file.type.startsWith('image/')){toast('Please choose an image file');input.value='';return}const reader=new FileReader();reader.onload=()=>{const img=document.getElementById('ownerImagePreview');if(img){img.src=reader.result;img.hidden=false}window.cicPendingImage={target:document.getElementById('imageTarget')?.value||'',data:reader.result,name:file.name}};reader.readAsDataURL(file)};
   window.saveOwnerImageDemo=function(){if(typeof toast==="function")toast("Image publishing is not connected to live storage yet")};   window.clearOwnerImageDemo=function(){const img=document.getElementById('ownerImagePreview');if(img){img.src='';img.hidden=true}const input=document.getElementById('imageFile');if(input)input.value='';window.cicPendingImage=null};   window.selectAdminRole=function(role){currentRole=role;document.querySelectorAll('.role-card,.role-card-v9').forEach(x=>x.classList.remove('active'));document.querySelectorAll('#role-v9-'+role).forEach(el=>el.classList.add('active'));const list=document.getElementById('permissionList');if(list)list.innerHTML=(rolePermissions[role]||[]).map(x=>`<div class="permission"><span>${esc(x)}</span><b>${role==='owner'?'FULL':role==='supervisor'?'LIMITED':role==='staff'?'ASSIGNED':'SPECIALIST'}</b></div>`).join('');const meta=roleMeta[role];const ws=document.getElementById('roleWorkspace');if(ws&&meta)ws.innerHTML=`<h4>${esc(meta.title)}</h4><div class="role-caption">${esc(meta.caption)}</div><div class="role-actions">${meta.actions.map(a=>`<button class="role-action" onclick="roleOpen('${a[2]}')"><b>${esc(a[0])}</b><span>${esc(a[1])}</span></button>`).join('')}</div><div class="access-lock"><strong>Access boundary:</strong> only the modules above are assigned to this role. Restricted areas should be enforced again by Supabase Auth + RLS in production.</div>`};
 window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'controlRoomModal',orders:'controlRoomModal',media:'mediaModal',hamper:'hamperModal',team:'controlRoomModal',overview:'controlRoomModal'};const id=map[target]||'controlRoomModal';if(id==='controlRoomModal'){closeModal('adminAccessModal');openModal('controlRoomModal');const view={brand:'brand',catalog:'catalog',orders:'orders',team:'team',overview:'overview'}[target]||'overview';showAdminView(view);v7Success((roleMeta[currentRole]?.title||'Workspace')+' opened')}else{closeModal('adminAccessModal');openModal(id)}};
-  window.openAdminAccess=function(){openModal('adminAccessModal');selectAdminRole('owner')};
+  window.openAdminAccess=async function(){
+    const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
+    try{
+      if(db&&db.auth){
+        const {data:{session},error}=await db.auth.getSession();
+        if(session&&!error){
+          const {data:staff,error:staffError}=await db.from('staff_profiles').select('role,approved').eq('id',session.user.id).maybeSingle();
+          if(!staffError&&staff&&staff.role==='owner'&&staff.approved===true){
+            openModal('controlRoomModal');
+            if(typeof showAdminView==='function')showAdminView('overview');
+            return;
+          }
+        }
+      }
+    }catch(_){}
+    openModal('adminAccessModal');
+    selectAdminRole('owner');
+  };
   window.requestAdminOtp=async function(){
     const emailEl=document.getElementById('adminEmail'), codeEl=document.getElementById('adminOtp');
     const email=(emailEl&&emailEl.value||'').trim().toLowerCase();
