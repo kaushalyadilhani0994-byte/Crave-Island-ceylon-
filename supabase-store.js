@@ -351,10 +351,23 @@
         item.append(h,p,ack);list.appendChild(item);
       });
     }
-    button.addEventListener("click",async()=>{panel.style.display="flex";await refresh();const db=window.CIC_SUPABASE.client;const {data}=await db.from("admin_alerts").select("id,alert_type,severity,title,message,status,created_at").eq("status","open").order("created_at",{ascending:false}).limit(50);render(data||[]);});
+    button.addEventListener("click",async()=>{
+      // Re-check owner approval at the point of opening the panel; never rely on
+      // a previously visible button or stale browser state.
+      if(!await ownerSession()){button.style.display="none";panel.style.display="none";return;}
+      panel.style.display="flex";await refresh();
+      const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
+      if(!db||!await ownerSession()){panel.style.display="none";button.style.display="none";return;}
+      const {data,error}=await db.from("admin_alerts").select("id,alert_type,severity,title,message,status,created_at").eq("status","open").order("created_at",{ascending:false}).limit(50);
+      if(error){summary.textContent="Alerts are temporarily unavailable. Please try again later.";list.replaceChildren();return;}
+      render(data||[]);
+    });
     close.addEventListener("click",()=>panel.style.display="none");panel.addEventListener("click",e=>{if(e.target===panel)panel.style.display="none";});
     const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
-    if(db)db.auth.onAuthStateChange(()=>window.setTimeout(refresh,200));
+    if(db)db.auth.onAuthStateChange((event)=>{
+      if(event==="SIGNED_OUT"){button.style.display="none";panel.style.display="none";badge.hidden=true;}
+      window.setTimeout(refresh,200);
+    });
     refresh();window.setInterval(refresh,45000);
   })();
 
