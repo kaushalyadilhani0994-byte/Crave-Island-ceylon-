@@ -20,11 +20,8 @@
     return !error&&!!data&&data.role==="owner"&&data.approved===true;
   }
   function install() {
-    if(!$("#cic-owner-shortcut-style")){
-      const st=document.createElement("style");st.id="cic-owner-shortcut-style";
-      st.textContent="body.cic-owner-shortcuts-unified #cicOwnerCatalogueButton,body.cic-owner-shortcuts-unified #cicOwnerOrdersButton,body.cic-owner-shortcuts-unified #cicPassportButton{display:none!important}";
-      document.head.appendChild(st);
-    }
+    // Keep the original V18 floating owner tools visible; do not hide them behind
+    // a new navigation layout. The secure entry gate is applied after owner approval.
     const modal=$("#adminAccessModal"), email=$("#adminEmail"), otp=$("#adminOtp");
     const actions=modal&&$(".login-actions",modal);
     if(!modal||!email||!otp||!actions||modal.dataset.cicRealOtp==="true")return;
@@ -87,25 +84,11 @@
     finally{if(btn){btn.disabled=false;btn.textContent="Verify code / open admin";}}
   }
   function installUnifiedLiveTools(){
-    const room=$("#controlRoomModal"), tabs=room&&$(".admin-tabs",room);
-    if(!room||!tabs)return;
-    document.body.classList.add("cic-owner-shortcuts-unified");
-    if($("#cicLiveCatalogueTab",tabs))return;
-    const entries=[
-      ["cicLiveCatalogueTab","Live Catalogue","cicOwnerCatalogueButton"],
-      ["cicLiveOrdersTab","Live Orders","cicOwnerOrdersButton"],
-      ["cicLivePassportsTab","QR Passports","cicPassportButton"]
-    ];
-    entries.forEach(([id,label,target])=>{
-      const b=document.createElement("button");b.type="button";b.id=id;b.textContent=label;
-      b.setAttribute("aria-label",label+" management");
-      b.addEventListener("click",()=>{
-        const launcher=document.getElementById(target);
-        if(launcher){launcher.click();return;}
-        status(label+" is still loading. Please wait a moment and try again.",true);
-      });
-      tabs.appendChild(b);
-    });
+    // Restore the original V18 Control Room and its original floating owner tools.
+    // This class is only added after the signed-in user is confirmed as an approved owner.
+    if(document.getElementById("controlRoomModal")){
+      document.body.classList.add("cic-owner-shortcuts-unified");
+    }
   }
   function openOwnerDashboard(){
     // Keep the original organized Control Room as the single owner entry point.
