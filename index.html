@@ -408,7 +408,47 @@ const roleMeta={owner:{title:'Main Admin',caption:'Full business control. Use th
   window.saveOwnerImageDemo=function(){if(typeof toast==="function")toast("Image publishing is not connected to live storage yet")};   window.clearOwnerImageDemo=function(){const img=document.getElementById('ownerImagePreview');if(img){img.src='';img.hidden=true}const input=document.getElementById('imageFile');if(input)input.value='';window.cicPendingImage=null};   window.selectAdminRole=function(role){currentRole=role;document.querySelectorAll('.role-card,.role-card-v9').forEach(x=>x.classList.remove('active'));document.querySelectorAll('#role-v9-'+role).forEach(el=>el.classList.add('active'));const list=document.getElementById('permissionList');if(list)list.innerHTML=(rolePermissions[role]||[]).map(x=>`<div class="permission"><span>${esc(x)}</span><b>${role==='owner'?'FULL':role==='supervisor'?'LIMITED':role==='staff'?'ASSIGNED':'SPECIALIST'}</b></div>`).join('');const meta=roleMeta[role];const ws=document.getElementById('roleWorkspace');if(ws&&meta)ws.innerHTML=`<h4>${esc(meta.title)}</h4><div class="role-caption">${esc(meta.caption)}</div><div class="role-actions">${meta.actions.map(a=>`<button class="role-action" onclick="roleOpen('${a[2]}')"><b>${esc(a[0])}</b><span>${esc(a[1])}</span></button>`).join('')}</div><div class="access-lock"><strong>Access boundary:</strong> only the modules above are assigned to this role. Restricted areas should be enforced again by Supabase Auth + RLS in production.</div>`};
 window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'controlRoomModal',orders:'controlRoomModal',media:'mediaModal',hamper:'hamperModal',team:'controlRoomModal',overview:'controlRoomModal'};const id=map[target]||'controlRoomModal';if(id==='controlRoomModal'){closeModal('adminAccessModal');openModal('controlRoomModal');const view={brand:'brand',catalog:'catalog',orders:'orders',team:'team',overview:'overview'}[target]||'overview';showAdminView(view);v7Success((roleMeta[currentRole]?.title||'Workspace')+' opened')}else{closeModal('adminAccessModal');openModal(id)}};
   window.openAdminAccess=function(){openModal('adminAccessModal');selectAdminRole('owner')};
-  window.requestAdminOtp=function(){if(typeof toast==="function")toast("Secure sign-in service is not available. Please try again shortly")};   window.verifyAdminOtpDemo=function(){if(typeof toast==="function")toast("Demo sign-in is disabled. Use the real email code")};   window.renderHamperPicker=function(){const el=document.getElementById('hamperPicker');if(!el)return;el.innerHTML=allP().map(p=>{const q=selectedHamper[p.id]||0;return `<div class="hamper-item"><img src="${p.img}" alt="${esc(p.name)}"><div class="hp"><b>${esc(p.name)}</b><small>LKR ${Number(p.price).toLocaleString()} · ${esc(p.cat)}</small><div class="hp-actions"><button onclick="changeHamper('${p.id}',-1)">−</button><button class="addh" onclick="changeHamper('${p.id}',1)">${q?'× '+q:'Add'}</button><button onclick="changeHamper('${p.id}',1)">+</button></div></div></div>`}).join('');updateHamperSummary()};
+  window.requestAdminOtp=async function(){
+    const emailEl=document.getElementById('adminEmail'), codeEl=document.getElementById('adminOtp');
+    const email=(emailEl&&emailEl.value||'').trim().toLowerCase();
+    const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
+    if(!email||!/^\S+@\S+\.\S+$/.test(email)){if(typeof toast==="function")toast("Enter your work email first");if(emailEl)emailEl.focus();return;}
+    if(!db||!db.auth){if(typeof toast==="function")toast("Secure sign-in is temporarily unavailable. Please try again shortly");return;}
+    const btn=document.querySelector('#adminAccessModal .login-actions .goldbtn');
+    if(btn){btn.disabled=true;btn.textContent='Sending code…';}
+    try{
+      const {error}=await db.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:window.location.origin+'/' }});
+      if(error)throw error;
+      if(codeEl)codeEl.focus();
+      if(typeof toast==="function")toast("If this email is registered, a secure sign-in code has been sent");
+    }catch(e){if(typeof toast==="function")toast((e&&e.message)||"Could not send the sign-in code");}
+    finally{if(btn){btn.disabled=false;btn.textContent='Send secure code';}}
+  };
+  window.verifyAdminOtpDemo=async function(){
+    const email=(document.getElementById('adminEmail')?.value||'').trim().toLowerCase();
+    const token=(document.getElementById('adminOtp')?.value||'').trim();
+    const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
+    if(!email||!token){if(typeof toast==="function")toast("Enter your work email and the 6-digit code");return;}
+    if(!db||!db.auth){if(typeof toast==="function")toast("Secure sign-in is temporarily unavailable");return;}
+    const btn=document.querySelector('#adminAccessModal .login-actions .gold-outline');
+    if(btn){btn.disabled=true;btn.textContent='Verifying…';}
+    try{
+      const {data,error}=await db.auth.verifyOtp({email,token,type:'email'});
+      if(error)throw error;
+      const user=data&&data.user;
+      if(!user){throw new Error("Sign-in could not be confirmed. Request a new code.");}
+      const {data:staff,error:staffError}=await db.from('staff_profiles').select('role,approved').eq('id',user.id).maybeSingle();
+      if(staffError||!staff||staff.role!=='owner'||staff.approved!==true){
+        await db.auth.signOut();
+        throw new Error("This account is not approved for owner access. Contact the store owner.");
+      }
+      closeModal('adminAccessModal');
+      openModal('controlRoomModal');
+      if(typeof showAdminView==='function')showAdminView('overview');
+      if(typeof toast==="function")toast("Secure owner sign-in successful");
+    }catch(e){if(typeof toast==="function")toast((e&&e.message)||"Code verification failed. Request a new code");}
+    finally{if(btn){btn.disabled=false;btn.textContent='Verify / Continue';}}
+  };   window.renderHamperPicker=function(){const el=document.getElementById('hamperPicker');if(!el)return;el.innerHTML=allP().map(p=>{const q=selectedHamper[p.id]||0;return `<div class="hamper-item"><img src="${p.img}" alt="${esc(p.name)}"><div class="hp"><b>${esc(p.name)}</b><small>LKR ${Number(p.price).toLocaleString()} · ${esc(p.cat)}</small><div class="hp-actions"><button onclick="changeHamper('${p.id}',-1)">−</button><button class="addh" onclick="changeHamper('${p.id}',1)">${q?'× '+q:'Add'}</button><button onclick="changeHamper('${p.id}',1)">+</button></div></div></div>`}).join('');updateHamperSummary()};
   window.changeHamper=function(id,delta){selectedHamper[id]=Math.max(0,(selectedHamper[id]||0)+delta);if(!selectedHamper[id])delete selectedHamper[id];renderHamperPicker()};
   window.updateHamperSummary=function(){let n=0,t=0;Object.entries(selectedHamper).forEach(([id,q])=>{const p=allP().find(x=>x.id===id);if(p){n+=q;t+=p.price*q}});const c=document.getElementById('hamperCount'),v=document.getElementById('hamperTotal');if(c)c.textContent=n;if(v)v.textContent='LKR '+t.toLocaleString()};
   window.clearHamperSelection=function(){selectedHamper={};renderHamperPicker();toast('Hamper selection cleared')};
