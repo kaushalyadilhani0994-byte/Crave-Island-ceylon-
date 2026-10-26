@@ -25,13 +25,21 @@
     `;
     document.head.appendChild(style);
   }
-  function openTool(modalId, buttonId, label) {
-    const trigger = document.getElementById(buttonId);
-    const modal = document.getElementById(modalId);
-    if (trigger) { trigger.click(); return; }
+  async function openTool(modalId, buttonId, label) {
     const status = $("#cicOwnerWorkspaceStatus");
-    if (status) status.textContent = label + " is still loading. Wait a moment and try again.";
-    if (modal) modal.style.display = "flex";
+    if (status) status.textContent = "Opening " + label + "…";
+    // Admin modules mount asynchronously. Do not expose an uninitialized modal
+    // when its trigger (which performs owner checks and loads data) is not ready.
+    for (let attempt = 0; attempt < 60; attempt++) {
+      const trigger = document.getElementById(buttonId);
+      if (trigger) {
+        trigger.click();
+        if (status) status.textContent = label + " opened. Loading live data…";
+        return;
+      }
+      await new Promise(resolve => window.setTimeout(resolve, 100));
+    }
+    if (status) status.textContent = label + " could not load. Please close Control Room, wait a few seconds, and try again.";
   }
   function mount() {
     if (mounted) return;
