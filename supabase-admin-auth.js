@@ -14,6 +14,11 @@
     el.hidden=false;
     el.style.cssText="margin-top:10px;padding:10px 12px;border-radius:9px;background:"+(bad?"#f8deda":"#f0e5d4")+";color:#2C1A14;font-size:12px;line-height:1.5";
   }
+  async function recordDeniedOwnerAttempt(){
+    const client=db();
+    if(!client)return;
+    try{await client.functions.invoke("owner-alert-notify",{body:{action:"log_denied_owner_access"}});}catch(_){}
+  }
   async function isApprovedOwner(user) {
     const client=db(); if(!client||!user)return false;
     const {data,error}=await client.from("staff_profiles").select("role,approved").eq("id",user.id).maybeSingle();
@@ -71,6 +76,7 @@
       if(error||!data.user){status("The code could not be verified. Check it or request a fresh sign-in email.",true);return;}
       try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
       if(!(await isApprovedOwner(data.user))){
+        await recordDeniedOwnerAttempt();
         await client.auth.signOut();
         status("This account is not marked as an approved CRAVE ISLAND CEYLON owner. Access was denied.",true);
         return;
@@ -120,6 +126,7 @@
     try{
       if(!(await isApprovedOwner(session.user))){
         try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+        await recordDeniedOwnerAttempt();
         await db().auth.signOut();
         if(typeof window.openAdminAccess==="function")window.openAdminAccess();
         status("This account is not marked as an approved CRAVE ISLAND CEYLON owner. Access was denied.",true);
