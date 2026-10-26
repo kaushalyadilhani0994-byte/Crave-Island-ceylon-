@@ -152,17 +152,28 @@
   }
 
   async function saveCategory(event) {
-    event.preventDefault(); if(!await checkAccess()){say("Owner access required.",true);return;}
+    event.preventDefault();
+    if(!await checkAccess()){say("Owner access required. Sign in with the approved owner account.",true);return;}
     const name=$("#cicCatName").value.trim(), parentId=$("#cicCatParent").value||null;
-    if(!name){say("Enter a collection name.",true);return;}
-    const btn=event.submitter; if(btn){btn.disabled=true;btn.textContent="Saving…";}
-    const {data:existingCategories}=await client.from("categories").select("sort_order").eq("parent_id",parentId);
-     const sortOrder=Math.max(0,...(existingCategories||[]).map(x=>Number(x.sort_order)||0))+1;
-     const {error}=await client.from("categories").insert({name,parent_id:parentId,sort_order:sortOrder,description:$("#cicCatDesc").value.trim()||null,image_url:$("#cicCatImage").value.trim()||null,is_active:true});
-    if(btn){btn.disabled=false;btn.textContent="Save collection";}
-    if(error){say(error.code==="23505"?"That collection name already exists.":"Could not save collection. Check the fields and owner permissions.",true);return;}
-    event.target.reset(); say("Collection saved."); await loadAll();
-    if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function") await window.CIC_SUPABASE.refreshCatalogue();
+    if(!name){say("Enter a category or subcategory name.",true);return;}
+    const btn=event.submitter, idleText=btn?btn.textContent:"Save category";
+    if(btn){btn.disabled=true;btn.textContent="Saving…";}
+    try {
+      let query=client.from("categories").select("sort_order");
+      query=parentId?query.eq("parent_id",parentId):query.is("parent_id",null);
+      const {data:existingCategories,error:sortError}=await query;
+      if(sortError)throw sortError;
+      const sortOrder=Math.max(0,...(existingCategories||[]).map(x=>Number(x.sort_order)||0))+1;
+      const {error}=await client.from("categories").insert({name,parent_id:parentId,sort_order:sortOrder,description:$("#cicCatDesc").value.trim()||null,image_url:$("#cicCatImage").value.trim()||null,is_active:true});
+      if(error)throw error;
+      event.target.reset(); say(parentId?"Subcategory saved.":"Main category saved.");
+      await loadAll();
+      if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function") await window.CIC_SUPABASE.refreshCatalogue();
+    } catch(error) {
+      const code=error&&error.code?String(error.code)+" · ":"";
+      const detail=String(error&&error.message||"Network or permission error").slice(0,180);
+      say("Category save failed: "+code+detail,true);
+    } finally {if(btn){btn.disabled=false;btn.textContent=idleText;}}
   }
 
   async function saveProduct(event) {
@@ -179,9 +190,18 @@
     const stockQuantity=Number($("#cicProdStock").value||0), lowStockThreshold=Number($("#cicProdLowStock").value||5), expiryDate=$("#cicProdExpiry").value||null;
      if(!Number.isInteger(stockQuantity)||stockQuantity<0||!Number.isInteger(lowStockThreshold)||lowStockThreshold<0){say("Stock and low-stock threshold must be whole numbers of zero or more.",true);if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}return;}
      const row={name,category,price,currency:"LKR",description:$("#cicProdDesc").value.trim()||null,image_url:imageUrl||null,ingredients,batch_number:$("#cicProdBatch").value.trim()||null,qr_code:$("#cicProdQr").value.trim()||null,stock_quantity:stockQuantity,low_stock_threshold:lowStockThreshold,expiry_date:expiryDate,track_inventory:$("#cicProdTrackStock").checked,is_active:editId?Boolean(existingProduct&&existingProduct.is_active):false};
-    const result=editId?await client.from("products").update(row).eq("id",editId):await client.from("products").insert(row);
-    if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product to live shop";}
-    if(result.error){say("Could not save changes. Check the fields and owner permissions.",true);return;}
+    let result;
+    try {
+      result=editId?await client.from("products").update(row).eq("id",editId):await client.from("products").insert(row);
+    } catch(error) {
+      if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}
+      say("Product save failed: "+String(error&&error.message||"Network error").slice(0,180),true);return;
+    }
+    if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}
+    if(result.error){
+      const code=result.error.code?String(result.error.code)+" · ":"";
+      say("Product save failed: "+code+String(result.error.message||"Check the owner permissions and fields").slice(0,180),true);return;
+    }
     event.target.reset(); delete event.target.dataset.editId; const saveButton=event.target.querySelector("button[type=submit]"); if(saveButton)saveButton.textContent="Save product as draft";
     say(editId?"Product details updated; its previous visibility setting was preserved.":"Product saved as a hidden draft. Review the details and activate it only when ready to sell."); await loadAll();
     if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function") await window.CIC_SUPABASE.refreshCatalogue();
