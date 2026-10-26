@@ -305,13 +305,18 @@
     const close=document.createElement("button");close.type="button";close.textContent="Close";close.style.cssText="border:1px solid #D4AF37;border-radius:8px;padding:8px 11px;background:#2C1A14;color:#FFF8E7";
     header.append(title,close);const summary=document.createElement("p");summary.id="cicOwnerAlertsSummary";summary.textContent="Checking alerts…";
     const list=document.createElement("div");list.id="cicOwnerAlertsList";card.append(header,summary,list);panel.appendChild(card);document.body.append(button,panel);
-    let lastOpenIds=new Set(), polling=false;
+    let lastOpenIds=new Set(), polling=false, lastDeniedUserId="";
     function textNode(tag,value){const el=document.createElement(tag);el.textContent=value;return el;}
     async function ownerSession(){
       const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;if(!db)return false;
       const {data:{session},error}=await db.auth.getSession();if(error||!session)return false;
       const {data,error:profileError}=await db.from("staff_profiles").select("role,approved").eq("id",session.user.id).maybeSingle();
-      return !profileError&&!!data&&data.role==="owner"&&data.approved===true;
+      const ok=!profileError&&!!data&&data.role==="owner"&&data.approved===true;
+      if(!ok&&lastDeniedUserId!==session.user.id){
+        lastDeniedUserId=session.user.id;
+        db.functions.invoke("owner-alert-notify",{body:{action:"log_denied_owner_access"}}).catch(()=>{});
+      }
+      return ok;
     }
     async function refresh(){
       if(polling)return;polling=true;
@@ -319,10 +324,15 @@
         const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
         if(!db||!await ownerSession()){button.style.display="none";return;}
         button.style.display="inline-flex";
-        const {data,error}=await db.from("admin_alerts").select("id,alert_type,severity,title,message,status,created_at").eq("status","open").order("created_at",{ascending:false}).limit(50);
+        const {data,error}=await db.from("admin_alerts").select("id,alert_type,severity,title,message,status,created_at,notification_sent_at").eq("status","open").order("created_at",{ascending:false}).limit(50);
         if(error){badge.hidden=true;summary.textContent="Alerts are temporarily unavailable. Check the owner alert permissions.";return;}
         const rows=data||[];badge.textContent=String(rows.length);badge.hidden=rows.length===0;
-        rows.forEach(row=>lastOpenIds.add(row.id));
+        rows.forEach(row=>{
+          if(!lastOpenIds.has(row.id)&&!row.notification_sent_at&&Date.now()-new Date(row.created_at).getTime()<300000){
+            db.functions.invoke("owner-alert-notify",{body:{alert_id:row.id}}).catch(()=>{});
+          }
+          lastOpenIds.add(row.id);
+        });
         if(panel.style.display==="flex")render(rows);
       }catch(_){button.style.display="none";}
       finally{polling=false;}
