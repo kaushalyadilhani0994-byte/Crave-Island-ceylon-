@@ -23,8 +23,21 @@
   // Disable localStorage-only legacy admin previews in the live storefront.
   const legacyOpenModal = window.openModal;
   window.openModal = function (id) {
-    if (id === "controlRoomModal" || id === "adminModal") {
-      const msg = "This legacy admin panel is unavailable. Use Secure Admin Access for live owner tools.";
+    if (id === "controlRoomModal") {
+      // The owner-auth script adds this class only after Supabase confirms the
+      // signed-in user is an approved owner. Keep the original V18 Control
+      // Room as the owner's navigation hub; live data remains protected by RLS.
+      if (!document.body.classList.contains("cic-owner-shortcuts-unified")) {
+        const msg = "Please use Secure Admin Access and sign in with the approved owner account.";
+        if (typeof window.toast === "function") window.toast(msg);
+        else document.getElementById("cicSupabaseStatus")?.replaceChildren(document.createTextNode(msg));
+        return;
+      }
+      if (typeof legacyOpenModal === "function") return legacyOpenModal.apply(this, arguments);
+      return;
+    }
+    if (id === "adminModal") {
+      const msg = "Use Secure Admin Access for live owner tools.";
       if (typeof window.toast === "function") window.toast(msg);
       else document.getElementById("cicSupabaseStatus")?.replaceChildren(document.createTextNode(msg));
       return;
