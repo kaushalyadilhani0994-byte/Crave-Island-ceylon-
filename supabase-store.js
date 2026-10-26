@@ -305,18 +305,13 @@
     const close=document.createElement("button");close.type="button";close.textContent="Close";close.style.cssText="border:1px solid #D4AF37;border-radius:8px;padding:8px 11px;background:#2C1A14;color:#FFF8E7";
     header.append(title,close);const summary=document.createElement("p");summary.id="cicOwnerAlertsSummary";summary.textContent="Checking alerts…";
     const list=document.createElement("div");list.id="cicOwnerAlertsList";card.append(header,summary,list);panel.appendChild(card);document.body.append(button,panel);
-    let lastOpenIds=new Set(), polling=false, lastDeniedUserId="";
+    let lastOpenIds=new Set(), polling=false;
     function textNode(tag,value){const el=document.createElement(tag);el.textContent=value;return el;}
     async function ownerSession(){
       const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;if(!db)return false;
       const {data:{session},error}=await db.auth.getSession();if(error||!session)return false;
       const {data,error:profileError}=await db.from("staff_profiles").select("role,approved").eq("id",session.user.id).maybeSingle();
-      const ok=!profileError&&!!data&&data.role==="owner"&&data.approved===true;
-      if(!ok&&lastDeniedUserId!==session.user.id){
-        lastDeniedUserId=session.user.id;
-        db.functions.invoke("owner-alert-notify",{body:{action:"log_denied_owner_access"}}).catch(()=>{});
-      }
-      return ok;
+      return !profileError&&!!data&&data.role==="owner"&&data.approved===true;
     }
     async function refresh(){
       if(polling)return;polling=true;
