@@ -8,6 +8,7 @@
   const placeholder = !config.anonKey || /PASTE_|YOUR_|REPLACE_ME/i.test(config.anonKey);
   const state = { client: null, connected: false, lastError: null, lastSyncAt: null };
   let statusTimer = null;
+  let liveCategoryRows = [];
 
   // Fail closed: the legacy storefront's submitCheckout() stores demo orders in localStorage.
   // Route every legacy checkout submit to the trusted Supabase checkout instead.
@@ -134,13 +135,14 @@
     try {
       const [productsResult, categoriesResult] = await Promise.all([
         state.client.from("products").select("id,name,description,category,price,currency,image_url,ingredients,batch_number,qr_code,is_active").eq("is_active", true).order("name"),
-        state.client.from("categories").select("id,name,description,image_url,sort_order,is_active").eq("is_active", true).order("sort_order")
+        state.client.from("categories").select("id,name,description,image_url,sort_order,is_active,parent_id").eq("is_active", true).order("sort_order")
       ]);
       if (productsResult.error) throw productsResult.error;
       if (categoriesResult.error) throw categoriesResult.error;
 
       const rows = productsResult.data || [];
       const categoryRows = categoriesResult.data || [];
+      liveCategoryRows = categoryRows;
       const activeCategoryNames = new Set(categoryRows.map((row) => String(row.name || "")));
       // A product in a hidden/missing collection must not leak into All Products,
       // search, gift pickers, or stale category filters.
@@ -152,17 +154,17 @@
         PRODUCTS.splice(0, PRODUCTS.length, ...visibleRows.map(toProduct));
       }
       if (typeof CATS !== "undefined" && Array.isArray(CATS)) {
-        CATS.splice(0, CATS.length, ...categoryRows.map((row) => ({
+        CATS.splice(0, CATS.length, ...categoryRows.filter((row) => !row.parent_id).map((row) => ({
           name: row.name,
           kicker: "CRAVE ISLAND CEYLON",
           desc: row.description || "Curated Ceylon-inspired collection.",
-          img: safeImageUrl(row.image_url)
+          img: safeImageUrl(row.image_url) || "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=80"
         })));
       }
 
       state.connected = true;
       state.lastSyncAt = new Date().toISOString();
-      const summary = "Supabase connected · " + visibleRows.length + " available products · " + categoryRows.length + " active categories";
+      const summary = "Catalogue ready · " + visibleRows.length + " available products · " + categoryRows.filter((row) => !row.parent_id).length + " main categories";
       announce(summary, "success");
       // The legacy page exposes renderCats/renderProducts, not CIC_RENDER_* aliases.
       // Re-render after the async Supabase fetch so newly loaded categories actually appear.
@@ -191,7 +193,9 @@
     if (typeof CATS !== "undefined" && Array.isArray(CATS)) CATS.splice(0, CATS.length);
     window.CIC_ALL_PRODUCTS = () => (typeof PRODUCTS !== "undefined" ? PRODUCTS : []);
     window.filterCategory = function (category) {
-      const list = PRODUCTS.filter((product) => product.cat === category);
+      const selected = liveCategoryRows.find((row) => row.name === category);
+      const childNames = new Set(liveCategoryRows.filter((row) => selected && row.parent_id === selected.id).map((row) => row.name));
+      const list = PRODUCTS.filter((product) => product.cat === category || childNames.has(product.cat));
       const el = document.getElementById("products");
       if (!el) return;
       el.innerHTML = list.length && typeof window.CIC_RENDER_CARD === "function"
