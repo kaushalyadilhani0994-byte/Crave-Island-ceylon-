@@ -19,8 +19,9 @@
       #cicOwnerWorkspace .cic-owner-workspace-status{margin-top:11px;font:11px/1.5 system-ui,sans-serif;color:#75645a}
       #cicOwnerOrdersButton,#cicOwnerCatalogueButton,#cicPassportButton{display:none!important}
       @media(max-width:650px){#cicOwnerWorkspace{padding:13px}#cicOwnerWorkspace .cic-live-actions{grid-template-columns:1fr}}
-      #admin-overview>.control-grid,#admin-overview>.automation,#admin-overview>.health-bar{display:none!important}
-      #admin-catalog .owner-image-panel{display:none!important}
+      #admin-overview>.control-grid,#admin-overview>.automation{display:none!important}
+      .health-bar{display:none!important}
+      #admin-catalog>.section-tight,#admin-catalog>.table-like,#admin-catalog .owner-image-panel{display:none!important}
     `;
     document.head.appendChild(style);
   }
