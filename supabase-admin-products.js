@@ -42,7 +42,7 @@
       <div style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between"><div><h2>CRAVE ISLAND CEYLON</h2><div class="cic-muted">Live catalogue management · changes save to Supabase</div></div><button type="button" id="cicOwnerCatalogueClose" aria-label="Close">Close ✕</button></div>
       <div id="cicOwnerCatalogueMessage" class="cic-message" role="status">Checking owner access…</div>
       <div class="cic-section"><h3>1. Add a collection</h3><form id="cicCategoryForm">
-        <div class="cic-grid"><div><label for="cicCatName">Collection name *</label><input id="cicCatName" maxlength="80" required></div><div><label for="cicCatImage">Collection image URL (optional)</label><input id="cicCatImage" type="url" maxlength="1500"></div></div>
+        <div class="cic-grid"><div><label for="cicCatName">Category / subcategory name *</label><input id="cicCatName" maxlength="80" required></div><div><label for="cicCatParent">Parent category (leave blank for a main category)</label><select id="cicCatParent"><option value="">Main category</option></select></div><div><label for="cicCatImage">Collection image URL (optional)</label><input id="cicCatImage" type="url" maxlength="1500"></div></div>
         <label for="cicCatDesc">Description</label><textarea id="cicCatDesc" maxlength="500"></textarea>
         <button type="submit">Save collection</button>
       </form></div>
@@ -52,7 +52,7 @@
         <div><label for="cicProdCategory">Collection *</label><select id="cicProdCategory" required><option value="">Create a collection first</option></select></div><div><label for="cicProdImage">Product image URL (optional)</label><input id="cicProdImage" type="url" maxlength="1500"></div></div>
         <label for="cicProdDesc">Product description</label><textarea id="cicProdDesc" maxlength="3000"></textarea>
         <label for="cicProdIngredients">Ingredients / allergen information *</label><textarea id="cicProdIngredients" maxlength="5000" required placeholder="Enter the verified ingredient list and clear allergen information"></textarea>
-        <div class="cic-grid"><div><label for="cicProdBatch">Batch number (optional)</label><input id="cicProdBatch" maxlength="100"></div><div><label for="cicProdQr">QR code / traceability value (optional)</label><input id="cicProdQr" maxlength="500"></div></div>
+        <div class="cic-grid"><div><label for="cicProdBatch">Batch number (optional)</label><input id="cicProdBatch" maxlength="100"></div><div><label for="cicProdQr">QR code / traceability value (optional)</label><input id="cicProdQr" maxlength="500"></div><div><label for="cicProdStock">Stock quantity</label><input id="cicProdStock" type="number" min="0" max="1000000" step="1" value="0"></div><div><label for="cicProdLowStock">Low-stock warning threshold</label><input id="cicProdLowStock" type="number" min="0" max="1000000" step="1" value="5"></div><div><label for="cicProdExpiry">Expiry / best-before date</label><input id="cicProdExpiry" type="date"></div><div><label><input id="cicProdTrackStock" type="checkbox" style="width:auto"> Track stock and alerts for this product</label></div></div>
         <button type="submit">Save product as draft</button>
       </form></div>
       <div class="cic-section"><div style="display:flex;gap:10px;align-items:center;justify-content:space-between"><h3>3. Live catalogue</h3><button type="button" id="cicOwnerCatalogueRefresh">Refresh</button></div><div id="cicOwnerCatalogueList" aria-live="polite"></div></div>
@@ -84,14 +84,15 @@
     if(!await checkAccess()){say("Sign in using the approved owner account to manage the catalogue.",true);return;}
     say("Loading collections and products…");
     const [cats,products]=await Promise.all([
-      client.from("categories").select("id,name,description,image_url,is_active,sort_order").order("sort_order").order("name"),
-      client.from("products").select("id,name,category,price,currency,is_active,ingredients,batch_number,qr_code,description,image_url").order("created_at",{ascending:false})
+      client.from("categories").select("id,name,description,image_url,is_active,sort_order,parent_id").order("sort_order").order("name"),
+      client.from("products").select("id,name,category,price,currency,is_active,ingredients,batch_number,qr_code,description,image_url,stock_quantity,low_stock_threshold,track_inventory,expiry_date,sku").order("created_at",{ascending:false})
     ]);
     if(cats.error||products.error){say("Catalogue could not be loaded. Check the categories/products table access and try Refresh.",true);return;}
     productRows=products.data||[];
     const select=$("#cicProdCategory");
-    select.innerHTML='<option value="">Choose a collection</option>'+(cats.data||[]).filter(c=>c.is_active).map(c=>'<option value="'+esc(c.name)+'">'+esc(c.name)+'</option>').join("");
-    const catList=(cats.data||[]).map(c=>'<div class="cic-card"><div><b>'+esc(c.name)+'</b><div class="cic-muted">'+(c.is_active?"Active collection":"Hidden collection")+'</div></div><button type="button" data-cic-category-toggle="'+esc(c.id)+'" data-active="'+String(!!c.is_active)+'">'+(c.is_active?"Hide":"Activate")+'</button></div>').join("");
+    select.innerHTML='<option value="">Choose a category or subcategory</option>'+(cats.data||[]).filter(c=>c.is_active).map(c=>{const parent=(cats.data||[]).find(p=>p.id===c.parent_id);return '<option value="'+esc(c.name)+'">'+(parent?esc(parent.name)+' › ':'')+esc(c.name)+'</option>';}).join("");
+     const parentSelect=$("#cicCatParent"); if(parentSelect)parentSelect.innerHTML='<option value="">Main category</option>'+(cats.data||[]).filter(c=>!c.parent_id).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join("");
+    const catList=(cats.data||[]).map(c=>{const parent=(cats.data||[]).find(p=>p.id===c.parent_id);return '<div class="cic-card"><div><b>'+(parent?esc(parent.name)+' › ':'')+esc(c.name)+'</b><div class="cic-muted">'+(c.parent_id?"Subcategory · ":"Main category · ")+(c.is_active?"Active":"Hidden")+'</div></div><button type="button" data-cic-category-toggle="'+esc(c.id)+'" data-active="'+String(!!c.is_active)+'">'+(c.is_active?"Hide":"Activate")+'</button></div>';}).join("");
     const prodList=productRows.map(p=>'<div class="cic-card"><div><b>'+esc(p.name)+'</b><div class="cic-muted">'+esc(p.category||"Uncategorised")+' · '+money(p.price)+' · '+(p.is_active?"Active":"Hidden")+'</div></div><div><button type="button" data-cic-product-edit="'+esc(p.id)+'">Edit details</button> <button type="button" data-cic-product-toggle="'+esc(p.id)+'" data-active="'+String(!!p.is_active)+'">'+(p.is_active?"Hide product":"Activate")+'</button></div></div>').join("");
     $("#cicOwnerCatalogueList").innerHTML='<h3 style="margin-top:14px">Collections ('+(cats.data||[]).length+')</h3>'+(catList||'<p class="cic-muted">No collections yet. Create one above.</p>')+'<h3 style="margin-top:18px">Products ('+(products.data||[]).length+')</h3>'+(prodList||'<p class="cic-muted">No products yet. Add verified product details above.</p>');
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-category-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("categories",btn.getAttribute("data-cic-category-toggle"),btn.getAttribute("data-active")==="true")));
@@ -110,7 +111,7 @@
     }
     categorySelect.value=p.category||""; $("#cicProdImage").value=p.image_url||"";
     $("#cicProdDesc").value=p.description||""; $("#cicProdIngredients").value=p.ingredients||"";
-    $("#cicProdBatch").value=p.batch_number||""; $("#cicProdQr").value=p.qr_code||"";
+    $("#cicProdBatch").value=p.batch_number||""; $("#cicProdQr").value=p.qr_code||""; $("#cicProdStock").value=Number(p.stock_quantity||0); $("#cicProdLowStock").value=Number(p.low_stock_threshold||5); $("#cicProdExpiry").value=p.expiry_date||""; $("#cicProdTrackStock").checked=Boolean(p.track_inventory);
     const button=form.querySelector("button[type=submit]"); if(button)button.textContent="Update live product";
     say("Editing "+p.name+". Save changes to update the live catalogue."); form.scrollIntoView({behavior:"smooth",block:"start"});
   }
@@ -145,10 +146,12 @@
 
   async function saveCategory(event) {
     event.preventDefault(); if(!await checkAccess()){say("Owner access required.",true);return;}
-    const name=$("#cicCatName").value.trim();
+    const name=$("#cicCatName").value.trim(), parentId=$("#cicCatParent").value||null;
     if(!name){say("Enter a collection name.",true);return;}
     const btn=event.submitter; if(btn){btn.disabled=true;btn.textContent="Saving…";}
-    const {error}=await client.from("categories").insert({name,description:$("#cicCatDesc").value.trim()||null,image_url:$("#cicCatImage").value.trim()||null,is_active:true});
+    const {data:existingCategories}=await client.from("categories").select("sort_order").eq("parent_id",parentId);
+     const sortOrder=Math.max(0,...(existingCategories||[]).map(x=>Number(x.sort_order)||0))+1;
+     const {error}=await client.from("categories").insert({name,parent_id:parentId,sort_order:sortOrder,description:$("#cicCatDesc").value.trim()||null,image_url:$("#cicCatImage").value.trim()||null,is_active:true});
     if(btn){btn.disabled=false;btn.textContent="Save collection";}
     if(error){say(error.code==="23505"?"That collection name already exists.":"Could not save collection. Check the fields and owner permissions.",true);return;}
     event.target.reset(); say("Collection saved."); await loadAll();
@@ -166,7 +169,9 @@
     const existingProduct=productRows.find(row=>String(row.id)===String(editId));
     // New products remain hidden drafts until an owner explicitly activates them after review.
     // Editing an existing product must preserve its current visibility state.
-    const row={name,category,price,currency:"LKR",description:$("#cicProdDesc").value.trim()||null,image_url:imageUrl||null,ingredients,batch_number:$("#cicProdBatch").value.trim()||null,qr_code:$("#cicProdQr").value.trim()||null,is_active:editId?Boolean(existingProduct&&existingProduct.is_active):false};
+    const stockQuantity=Number($("#cicProdStock").value||0), lowStockThreshold=Number($("#cicProdLowStock").value||5), expiryDate=$("#cicProdExpiry").value||null;
+     if(!Number.isInteger(stockQuantity)||stockQuantity<0||!Number.isInteger(lowStockThreshold)||lowStockThreshold<0){say("Stock and low-stock threshold must be whole numbers of zero or more.",true);if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}return;}
+     const row={name,category,price,currency:"LKR",description:$("#cicProdDesc").value.trim()||null,image_url:imageUrl||null,ingredients,batch_number:$("#cicProdBatch").value.trim()||null,qr_code:$("#cicProdQr").value.trim()||null,stock_quantity:stockQuantity,low_stock_threshold:lowStockThreshold,expiry_date:expiryDate,track_inventory:$("#cicProdTrackStock").checked,is_active:editId?Boolean(existingProduct&&existingProduct.is_active):false};
     const result=editId?await client.from("products").update(row).eq("id",editId):await client.from("products").insert(row);
     if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product to live shop";}
     if(result.error){say("Could not save changes. Check the fields and owner permissions.",true);return;}
