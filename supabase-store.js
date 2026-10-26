@@ -265,6 +265,11 @@
   ownerAuthScript.defer = true;
   document.body.appendChild(ownerAuthScript);
 
+  const ownerWorkspaceScript = document.createElement("script");
+  ownerWorkspaceScript.src = "supabase-admin-workspace.js";
+  ownerWorkspaceScript.defer = true;
+  document.body.appendChild(ownerWorkspaceScript);
+
   // My Orders remains available through the storefront navigation/page link;
   // do not add a second fixed floating button on every screen.
 })();
