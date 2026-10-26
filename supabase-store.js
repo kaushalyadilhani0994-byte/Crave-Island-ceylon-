@@ -280,6 +280,79 @@
   ownerWorkspaceScript.defer = true;
   document.body.appendChild(ownerWorkspaceScript);
 
+
+  // Owner-only red-dot alert centre. Database RLS is the final authority.
+  (function installOwnerAlerts(){
+    if(document.getElementById("cicOwnerAlertsButton")) return;
+    const css=document.createElement("style");
+    css.textContent=`
+      #cicOwnerAlertsButton{position:fixed;top:14px;right:14px;z-index:10001;display:none;border:1px solid #D4AF37;border-radius:999px;background:#2C1A14;color:#FFF8E7;padding:9px 13px;font:700 12px system-ui;box-shadow:0 4px 18px #0002}
+      #cicOwnerAlertsBadge{display:inline-flex;min-width:17px;height:17px;align-items:center;justify-content:center;margin-left:6px;border-radius:99px;background:#c92332;color:white;font-size:10px}
+      #cicOwnerAlertsPanel{position:fixed;inset:0;z-index:10002;display:none;align-items:flex-start;justify-content:center;overflow:auto;background:#1c110ed9;padding:14px}
+      #cicOwnerAlertsPanel .cic-alerts-card{box-sizing:border-box;width:min(680px,100%);margin:auto;padding:18px;border-radius:16px;background:#FFF8E7;color:#2C1A14;border:1px solid #D4AF37;font:14px system-ui}
+      #cicOwnerAlertsList{display:grid;gap:9px;margin-top:12px}
+      .cic-alert-row{border:1px solid #e2d5c4;border-left:5px solid #c58b2b;border-radius:9px;padding:11px}
+      .cic-alert-row.critical{border-left-color:#c92332}.cic-alert-row h4{margin:0 0 5px;font-size:14px}.cic-alert-row p{margin:0 0 8px;line-height:1.45;font-size:12px}.cic-alert-row button{border:1px solid #D4AF37;border-radius:7px;padding:7px 9px;background:#2C1A14;color:#FFF8E7;font-weight:600}
+      @media(max-width:600px){#cicOwnerAlertsButton{top:8px;right:8px}#cicOwnerAlertsPanel{padding:7px}}
+    `;
+    document.head.appendChild(css);
+    const button=document.createElement("button");button.id="cicOwnerAlertsButton";button.type="button";button.textContent="Owner Alerts ";
+    const badge=document.createElement("span");badge.id="cicOwnerAlertsBadge";badge.textContent="0";badge.hidden=true;button.appendChild(badge);
+    const panel=document.createElement("div");panel.id="cicOwnerAlertsPanel";panel.setAttribute("role","dialog");panel.setAttribute("aria-modal","true");panel.setAttribute("aria-label","Owner alerts");
+    const card=document.createElement("section");card.className="cic-alerts-card";
+    const header=document.createElement("div");header.style.cssText="display:flex;justify-content:space-between;gap:12px;align-items:center";
+    const title=document.createElement("h2");title.textContent="CRAVE Control Room · Alerts";title.style.margin="0";
+    const close=document.createElement("button");close.type="button";close.textContent="Close";close.style.cssText="border:1px solid #D4AF37;border-radius:8px;padding:8px 11px;background:#2C1A14;color:#FFF8E7";
+    header.append(title,close);const summary=document.createElement("p");summary.id="cicOwnerAlertsSummary";summary.textContent="Checking alerts…";
+    const list=document.createElement("div");list.id="cicOwnerAlertsList";card.append(header,summary,list);panel.appendChild(card);document.body.append(button,panel);
+    let lastOpenIds=new Set(), polling=false;
+    function textNode(tag,value){const el=document.createElement(tag);el.textContent=value;return el;}
+    async function ownerSession(){
+      const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;if(!db)return false;
+      const {data:{session},error}=await db.auth.getSession();if(error||!session)return false;
+      const {data,error:profileError}=await db.from("staff_profiles").select("role,approved").eq("id",session.user.id).maybeSingle();
+      return !profileError&&!!data&&data.role==="owner"&&data.approved===true;
+    }
+    async function refresh(){
+      if(polling)return;polling=true;
+      try{
+        const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
+        if(!db||!await ownerSession()){button.style.display="none";return;}
+        button.style.display="inline-flex";
+        const {data,error}=await db.from("admin_alerts").select("id,alert_type,severity,title,message,status,created_at").eq("status","open").order("created_at",{ascending:false}).limit(50);
+        if(error){badge.hidden=true;summary.textContent="Alerts are temporarily unavailable. Check the owner alert permissions.";return;}
+        const rows=data||[];badge.textContent=String(rows.length);badge.hidden=rows.length===0;
+        rows.forEach(row=>lastOpenIds.add(row.id));
+        if(panel.style.display==="flex")render(rows);
+      }catch(_){button.style.display="none";}
+      finally{polling=false;}
+    }
+    function render(rows){
+      list.replaceChildren();
+      summary.textContent=rows.length?rows.length+" open alert"+(rows.length===1?"":"s")+" · newest first":"No open alerts. We'll keep checking stock, expiry and orders.";
+      if(!rows.length)return;
+      rows.forEach(row=>{
+        const item=document.createElement("article");item.className="cic-alert-row"+(row.severity==="critical"?" critical":"");
+        const h=textNode("h4",(row.severity==="critical"?"🔴 ":"🟠 ")+row.title);
+        const p=textNode("p",row.message+" · "+new Date(row.created_at).toLocaleString());
+        const ack=document.createElement("button");ack.type="button";ack.textContent="Acknowledge";
+        ack.addEventListener("click",async()=>{
+          if(!await ownerSession())return;
+          const db=window.CIC_SUPABASE.client;
+          const {error}=await db.from("admin_alerts").update({status:"acknowledged",acknowledged_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",row.id).eq("status","open");
+          if(error){summary.textContent="Could not acknowledge this alert. Please refresh.";return;}
+          await refresh();const {data}=await db.from("admin_alerts").select("id,alert_type,severity,title,message,status,created_at").eq("status","open").order("created_at",{ascending:false}).limit(50);render(data||[]);
+        });
+        item.append(h,p,ack);list.appendChild(item);
+      });
+    }
+    button.addEventListener("click",async()=>{panel.style.display="flex";await refresh();const db=window.CIC_SUPABASE.client;const {data}=await db.from("admin_alerts").select("id,alert_type,severity,title,message,status,created_at").eq("status","open").order("created_at",{ascending:false}).limit(50);render(data||[]);});
+    close.addEventListener("click",()=>panel.style.display="none");panel.addEventListener("click",e=>{if(e.target===panel)panel.style.display="none";});
+    const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
+    if(db)db.auth.onAuthStateChange(()=>window.setTimeout(refresh,200));
+    refresh();window.setInterval(refresh,45000);
+  })();
+
   // My Orders remains available through the storefront navigation/page link;
   // do not add a second fixed floating button on every screen.
 })();
