@@ -476,5 +476,63 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
   hideLegacyControls();
 })();
 </script>
+
+<script>
+/* CRAVE ISLAND CEYLON — quick links to existing, permission-checked live owner tools.
+   UI-only addition: preserves existing storefront, admin views, auth and service scripts. */
+(function(){
+  "use strict";
+  function install(){
+    const modal=document.getElementById("controlRoomModal");
+    if(!modal || document.getElementById("cicOwnerQuickTools")) return;
+    const panel=document.createElement("section");
+    panel.id="cicOwnerQuickTools";
+    panel.style.cssText="margin:14px 0;padding:14px;border:1px solid #D4AF37;border-radius:12px;background:#fffaf0;color:#2C1A14";
+    panel.innerHTML='<h3 style="margin:0 0 5px">Quick Owner Tools</h3><p style="margin:0 0 10px;font-size:12px;line-height:1.5">Fast access to the live Supabase-backed catalogue, orders and product passports. Existing admin sections remain available below.</p><div id="cicOwnerQuickToolsStatus" role="status" style="font-size:12px;margin-bottom:9px">Checking approved owner access…</div><div id="cicOwnerQuickToolsButtons" style="display:flex;gap:8px;flex-wrap:wrap"></div>';
+    const tabs=modal.querySelector(".admin-tabs");
+    if(tabs) tabs.insertAdjacentElement("afterend",panel);
+    else modal.querySelector(".sheet-head")?.insertAdjacentElement("afterend",panel);
+    const status=panel.querySelector("#cicOwnerQuickToolsStatus"), buttons=panel.querySelector("#cicOwnerQuickToolsButtons");
+    const db=()=>window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
+    async function refresh(){
+      const c=db(); let approved=false;
+      try{
+        if(c){const {data:{session},error}=await c.auth.getSession();
+          if(session&&!error){const {data,error:e}=await c.from("staff_profiles").select("role,approved").eq("id",session.user.id).maybeSingle();approved=!e&&!!data&&data.role==="owner"&&data.approved===true;}
+        }
+      }catch(_){}
+      buttons.replaceChildren();
+      if(!approved){status.textContent="Sign in with the approved owner account to use live tools.";return;}
+      status.textContent="Owner access verified. Choose a tool:";
+      const items=[
+        ["Products & Collections","cicOwnerCatalogueButton"],
+        ["Orders & Customers","cicOwnerOrdersButton"],
+        ["Product QR Passports","cicPassportButton"]
+      ];
+      items.forEach(([label,id])=>{
+        const b=document.createElement("button");b.type="button";b.textContent=label;
+        b.style.cssText="border:1px solid #D4AF37;border-radius:8px;padding:10px 12px;background:#2C1A14;color:#FFF8E7;font-weight:650;cursor:pointer";
+        b.addEventListener("click",()=>{
+          const target=document.getElementById(id);
+          if(target){target.click();return;}
+          status.textContent="That live tool is still loading. Please wait a moment and try again.";
+          setTimeout(()=>{const retry=document.getElementById(id);if(retry)retry.click();},700);
+        });
+        buttons.appendChild(b);
+      });
+    }
+    refresh();
+    if(db()) db().auth.onAuthStateChange(()=>setTimeout(refresh,180));
+    const oldOpen=window.openModal;
+    if(typeof oldOpen==="function"&&!oldOpen.__cicQuickToolsWrapped){
+      const wrapped=function(id){const result=oldOpen.apply(this,arguments);if(id==="controlRoomModal")setTimeout(refresh,180);return result;};
+      wrapped.__cicQuickToolsWrapped=true;window.openModal=wrapped;
+    }
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(install,500));
+  else setTimeout(install,500);
+})();
+</script>
+
 </body>
 </html>
