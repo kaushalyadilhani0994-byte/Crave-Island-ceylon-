@@ -414,9 +414,8 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
         const {data:{session},error}=await db.auth.getSession();
         if(session&&!error){
           const {data:staff,error:staffError}=await db.from('staff_profiles').select('role,approved').eq('id',session.user.id).maybeSingle();
-          if(!staffError&&staff&&staff.role==='owner'&&staff.approved===true){
-            openModal('controlRoomModal');
-            if(typeof showAdminView==='function')showAdminView('overview');
+          if(!staffError&&staff&&staff.role==='owner'&&staff.approved===true&&typeof window.CIC_OPEN_OWNER_DASHBOARD==='function'){
+            window.CIC_OPEN_OWNER_DASHBOARD();
             return;
           }
         }
