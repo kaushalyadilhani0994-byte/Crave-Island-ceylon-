@@ -12,9 +12,9 @@
     if ($("#cic-catalogue-admin-style")) return;
     const s=document.createElement("style"); s.id="cic-catalogue-admin-style";
     s.textContent=`
-      #cicOwnerCatalogueButton{position:fixed;right:14px;bottom:120px;z-index:9998;background:#2C1A14;color:#FFF8E7;border:1px solid #D4AF37;border-radius:999px;padding:11px 15px;font:600 12px system-ui;box-shadow:0 5px 22px #2C1A1433}
-      #cicOwnerCatalogue{position:fixed;inset:0;z-index:9999;background:#1c110ed9;display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:18px}
-      #cicOwnerCatalogue .cic-panel{background:#FFF8E7;color:#2C1A14;border:1px solid #D4AF37;border-radius:16px;width:min(900px,100%);margin:auto;padding:20px;box-shadow:0 15px 50px #0005;font:14px system-ui}
+      #cicOwnerCatalogueButton{position:fixed;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(120px + env(safe-area-inset-bottom,0px));z-index:9998;max-width:calc(100vw - 28px);background:#2C1A14;color:#FFF8E7;border:1px solid #D4AF37;border-radius:999px;padding:11px 15px;font:600 12px/1.25 system-ui;box-shadow:0 5px 22px #2C1A1433;overflow-wrap:anywhere}
+      #cicOwnerCatalogue{position:fixed;inset:0;z-index:9999;background:#1c110ed9;display:none;align-items:flex-start;justify-content:center;overflow:auto;overscroll-behavior:contain;padding:calc(18px + env(safe-area-inset-top,0px)) 18px calc(18px + env(safe-area-inset-bottom,0px))}
+      #cicOwnerCatalogue .cic-panel{background:#FFF8E7;color:#2C1A14;border:1px solid #D4AF37;border-radius:16px;width:min(900px,100%);max-height:calc(100dvh - 36px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow:auto;overscroll-behavior:contain;margin:auto;padding:20px;box-shadow:0 15px 50px #0005;font:14px system-ui}
       #cicOwnerCatalogue h2,#cicOwnerCatalogue h3{margin:0 0 12px;color:#2C1A14}
       #cicOwnerCatalogue .cic-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
       #cicOwnerCatalogue label{display:block;font-size:12px;font-weight:650;margin:8px 0 4px}
@@ -26,7 +26,7 @@
       #cicOwnerCatalogue .cic-card{border:1px solid #e2d5c4;border-radius:10px;padding:12px;margin:8px 0;display:flex;gap:12px;align-items:center;justify-content:space-between}
       #cicOwnerCatalogue .cic-message{padding:10px;border-radius:8px;background:#f0e5d4;margin:10px 0;white-space:pre-wrap}
       #cicOwnerCatalogue .cic-section{border-top:1px solid #e3d5c3;margin-top:18px;padding-top:16px}
-      @media(max-width:600px){#cicOwnerCatalogue{padding:8px}#cicOwnerCatalogue .cic-panel{padding:14px}#cicOwnerCatalogue .cic-grid{grid-template-columns:1fr}#cicOwnerCatalogue .cic-card{align-items:flex-start;flex-direction:column}}
+      @media(max-width:600px){#cicOwnerCatalogue{padding:calc(8px + env(safe-area-inset-top,0px)) 8px calc(8px + env(safe-area-inset-bottom,0px))}#cicOwnerCatalogue .cic-panel{padding:14px;max-height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}#cicOwnerCatalogue .cic-grid{grid-template-columns:1fr}#cicOwnerCatalogue .cic-card{align-items:flex-start;flex-direction:column}}
     `;
     document.head.appendChild(s);
   }
@@ -147,8 +147,16 @@
     event.preventDefault(); if(!await checkAccess()){say("Owner access required.",true);return;}
     const name=$("#cicCatName").value.trim();
     if(!name){say("Enter a collection name.",true);return;}
+    const imageUrl=$("#cicCatImage").value.trim();
+    if(imageUrl){try{const parsed=new URL(imageUrl);if(parsed.protocol!=="https:"||!parsed.hostname||parsed.username||parsed.password){say("Collection image URL must be a valid HTTPS URL without embedded credentials.",true);return;}}catch(_){say("Enter a valid collection image URL using https://.",true);return;}}
     const btn=event.submitter; if(btn){btn.disabled=true;btn.textContent="Saving…";}
-    const {error}=await client.from("categories").insert({name,description:$("#cicCatDesc").value.trim()||null,image_url:$("#cicCatImage").value.trim()||null,is_active:true});
+    let error;
+    try {
+      ({error}=await client.from("categories").insert({name,description:$("#cicCatDesc").value.trim()||null,image_url:imageUrl||null,is_active:true}));
+    } catch (_) {
+      if(btn){btn.disabled=false;btn.textContent="Save collection";}
+      say("Connection problem: collection was not confirmed as saved. Refresh before retrying.",true);return;
+    }
     if(btn){btn.disabled=false;btn.textContent="Save collection";}
     if(error){say(error.code==="23505"?"That collection name already exists.":"Could not save collection. Check the fields and owner permissions.",true);return;}
     event.target.reset(); say("Collection saved."); await loadAll();
@@ -160,14 +168,20 @@
     const name=$("#cicProdName").value.trim(), category=$("#cicProdCategory").value, price=Number($("#cicProdPrice").value);
     const ingredients=$("#cicProdIngredients").value.trim(), imageUrl=$("#cicProdImage").value.trim();
     if(!name||!category||!ingredients||!Number.isFinite(price)||price<=0||price>2000000){say("Enter product name, collection, verified ingredients/allergens, and a valid LKR price.",true);return;}
-    if(imageUrl&&!/^https:\/\//i.test(imageUrl)){say("Product image URL must start with https://.",true);return;}
+    if(imageUrl){try{const parsed=new URL(imageUrl);if(parsed.protocol!=="https:"||!parsed.hostname||parsed.username||parsed.password){say("Product image URL must be a valid HTTPS URL without embedded credentials.",true);return;}}catch(_){say("Enter a valid product image URL using https://.",true);return;}}
     const btn=event.submitter; if(btn){btn.disabled=true;btn.textContent="Saving…";}
     const editId=event.target.dataset.editId||"";
     const existingProduct=productRows.find(row=>String(row.id)===String(editId));
     // New products remain hidden drafts until an owner explicitly activates them after review.
     // Editing an existing product must preserve its current visibility state.
     const row={name,category,price,currency:"LKR",description:$("#cicProdDesc").value.trim()||null,image_url:imageUrl||null,ingredients,batch_number:$("#cicProdBatch").value.trim()||null,qr_code:$("#cicProdQr").value.trim()||null,is_active:editId?Boolean(existingProduct&&existingProduct.is_active):false};
-    const result=editId?await client.from("products").update(row).eq("id",editId):await client.from("products").insert(row);
+    let result;
+    try {
+      result=editId?await client.from("products").update(row).eq("id",editId):await client.from("products").insert(row);
+    } catch (_) {
+      if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}
+      say("Connection problem: the product save was not confirmed. Refresh the catalogue before retrying.",true);return;
+    }
     if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product to live shop";}
     if(result.error){say("Could not save changes. Check the fields and owner permissions.",true);return;}
     event.target.reset(); delete event.target.dataset.editId; const saveButton=event.target.querySelector("button[type=submit]"); if(saveButton)saveButton.textContent="Save product as draft";
