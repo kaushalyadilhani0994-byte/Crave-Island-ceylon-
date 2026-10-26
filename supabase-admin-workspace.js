@@ -19,9 +19,7 @@
       #cicOwnerWorkspace .cic-owner-workspace-status{margin-top:11px;font:11px/1.5 system-ui,sans-serif;color:#75645a}
       #cicOwnerOrdersButton,#cicOwnerCatalogueButton,#cicPassportButton{display:none!important}
       @media(max-width:650px){#cicOwnerWorkspace{padding:13px}#cicOwnerWorkspace .cic-live-actions{grid-template-columns:1fr}}
-      #admin-overview>.control-grid,#admin-overview>.automation{display:none!important}
-      .health-bar{display:none!important}
-      #admin-catalog>.section-tight,#admin-catalog>.table-like,#admin-catalog .owner-image-panel{display:none!important}
+      /* Keep original V18 admin sections visible; quick links are shortcuts, not replacements. */
     `;
     document.head.appendChild(style);
   }
@@ -43,8 +41,10 @@
   }
   function mount() {
     if (mounted) return;
-    const control = $("#controlRoomModal"), overview = $("#admin-overview", control);
-    if (!control || !overview) return;
+    const control = $("#controlRoomModal");
+    if (!control) return;
+    const overview = $("#admin-overview", control);
+    if (!overview) return;
     addStyle();
     const panel = document.createElement("section");
     panel.id = "cicOwnerWorkspace";
@@ -67,7 +67,8 @@
     if (mounted) return;
     const observer = new MutationObserver(() => { mount(); if (mounted) observer.disconnect(); });
     observer.observe(document.documentElement,{childList:true,subtree:true});
-    window.setTimeout(()=>observer.disconnect(),15000);
+    // V18 modules can render after auth on slower mobile connections.
+    window.setTimeout(()=>observer.disconnect(),60000);
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
 })();
