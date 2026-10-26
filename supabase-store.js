@@ -303,8 +303,8 @@
     const header=document.createElement("div");header.style.cssText="display:flex;justify-content:space-between;gap:12px;align-items:center";
     const title=document.createElement("h2");title.textContent="CRAVE Control Room · Alerts";title.style.margin="0";
     const close=document.createElement("button");close.type="button";close.textContent="Close";close.style.cssText="border:1px solid #D4AF37;border-radius:8px;padding:8px 11px;background:#2C1A14;color:#FFF8E7";
-    header.append(title,close);const summary=document.createElement("p");summary.id="cicOwnerAlertsSummary";summary.textContent="Checking alerts…";
-    const list=document.createElement("div");list.id="cicOwnerAlertsList";card.append(header,summary,list);panel.appendChild(card);document.body.append(button,panel);
+    header.append(title,close);const summary=document.createElement("p");summary.id="cicOwnerAlertsSummary";summary.textContent="Checking alerts…";const reportButton=document.createElement("button");reportButton.type="button";reportButton.textContent="Send daily report to Telegram";reportButton.style.cssText="margin:8px 0;border:1px solid #D4AF37;border-radius:8px;padding:9px 12px;background:#2C1A14;color:#FFF8E7;font-weight:700";reportButton.onclick=async()=>{reportButton.disabled=true;summary.textContent="Preparing daily report…";try{const result=await window.CIC_SUPABASE.client.functions.invoke("owner-alert-notify",{body:{action:"daily_summary"}});summary.textContent=result.data?.sent?"Daily report sent to Telegram.":(result.data?.message||"Telegram is not configured yet; add the bot token and chat ID in Supabase secrets.");}catch(_){summary.textContent="Report delivery failed. Check Telegram settings.";}finally{reportButton.disabled=false;}};
+    const list=document.createElement("div");list.id="cicOwnerAlertsList";card.append(header,summary,reportButton,list);panel.appendChild(card);document.body.append(button,panel);
     let lastOpenIds=new Set(), polling=false;
     function textNode(tag,value){const el=document.createElement(tag);el.textContent=value;return el;}
     async function ownerSession(){
