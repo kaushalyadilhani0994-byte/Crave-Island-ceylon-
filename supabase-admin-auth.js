@@ -126,6 +126,8 @@
     }
     status("Owner sign-in succeeded, but the original Control Room did not load. Refresh the page and try again.",true);
   }
+  window.CIC_OPEN_OWNER_DASHBOARD = openOwnerDashboard;
+
   async function handlePendingOwnerSession(session){
     // Supabase may consume a magic link before this dynamically loaded script
     // attaches its auth listener. Therefore, trust the verified session plus
