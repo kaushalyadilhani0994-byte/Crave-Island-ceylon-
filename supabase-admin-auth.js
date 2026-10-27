@@ -113,8 +113,20 @@
       const isOpen=control&&(control.classList.contains("open")||
         control.getAttribute("aria-hidden")==="false"||
         (control.style.display&&control.style.display!=="none"));
-      if(control&&!isOpen&&typeof window.openModal==="function"){
-        try{window.openModal("controlRoomModal");}catch(_){}
+      if(control&&!isOpen){
+        if(typeof window.openModal==="function"){
+          try{window.openModal("controlRoomModal");}catch(_){}
+        }
+        // Final UI fallback: preserve the original modal and only reveal it
+        // after the database-approved owner check above has succeeded.
+        const opened=control.classList.contains("open")||
+          control.getAttribute("aria-hidden")==="false"||
+          (control.style.display&&control.style.display!=="none");
+        if(!opened){
+          control.classList.add("open");
+          control.setAttribute("aria-hidden","false");
+          control.style.display="";
+        }
       }
       installUnifiedLiveTools();
     },100);
