@@ -19,15 +19,10 @@
       #cicOwnerWorkspace .cic-owner-workspace-status{margin-top:11px;font:11px/1.5 system-ui,sans-serif;color:#75645a}
       #cicOwnerOrdersButton,#cicOwnerCatalogueButton,#cicPassportButton{display:none!important}
       @media(max-width:650px){#cicOwnerWorkspace{padding:13px}#cicOwnerWorkspace .cic-live-actions{grid-template-columns:1fr}}
-      /* Use the verified Supabase-backed tools as the main owner workflow.
-         Hide legacy browser-preview navigation so it cannot be mistaken for live tools. */
-      #controlRoomModal .admin-tabs,#controlRoomModal #v7AdminMap{display:none!important}
-      #controlRoomModal #admin-catalog,#controlRoomModal #admin-orders,
-      #controlRoomModal #admin-brand,#controlRoomModal #admin-automation,
-      #controlRoomModal #admin-security,#controlRoomModal #admin-team{display:none!important}
+      /* Preserve the original V18 Control Room navigation and panels.
+         The quick links are shortcuts only; they must not replace existing owner tools. */
       #controlRoomModal .health-bar{border:1px solid #D4AF37;border-radius:10px;padding:10px;background:#fffaf0}
       #controlRoomModal .health-note{line-height:1.55}
-      #controlRoomModal #admin-overview{display:block!important}
       #controlRoomModal #admin-overview .control-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
       @media(max-width:420px){#controlRoomModal #admin-overview .control-grid{grid-template-columns:1fr}}
     `;
