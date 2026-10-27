@@ -81,7 +81,7 @@
         status("This account is not marked as an approved CRAVE ISLAND CEYLON owner. Access was denied.",true);
         return;
       }
-      try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+      try{localStorage.removeItem("cicOwnerSignInPending");sessionStorage.setItem("cicOwnerOtpVerified","1");}catch(_){}
       status("Owner verified. Opening the original CRAVE Control Room…");
       // The storefront modal guard requires this owner-only class before it will open Control Room.
       document.body.classList.add("cic-owner-shortcuts-unified");
@@ -169,10 +169,28 @@
     install();
     const original=window.openAdminAccess;
     window.openAdminAccess=function(){
-      if(typeof original==="function")original.apply(this,arguments);
+      let otpVerified=false;
+      try{otpVerified=sessionStorage.getItem("cicOwnerOtpVerified")==="1";}catch(_){}
+      if(otpVerified && typeof original==="function") original.apply(this,arguments);
+      else if(typeof window.openModal==="function") window.openModal("adminAccessModal");
+      else {const m=$("#adminAccessModal");if(m)m.style.display="";}
       const s=$("#cicOwnerAuthStatus");if(s)s.hidden=true;
       const email=$("#adminEmail");if(email)email.focus({preventScroll:true});
     };
+    // The Admin item stays hidden from customers. Owner entry: tap the CRAVE
+    // hero title five times quickly, then complete the approved-owner OTP check.
+    const secretBrand=document.querySelector(".hero-copy h2");
+    if(secretBrand && !secretBrand.dataset.cicOwnerTrigger){
+      secretBrand.dataset.cicOwnerTrigger="1";
+      let taps=0,timer=0;
+      secretBrand.style.cursor="default";
+      secretBrand.addEventListener("click",()=>{
+        taps++;
+        window.clearTimeout(timer);
+        timer=window.setTimeout(()=>{taps=0;},2200);
+        if(taps>=5){taps=0;window.openAdminAccess();}
+      });
+    }
     window.requestAdminOtp=sendCode;
     window.verifyAdminOtpDemo=function(){verifyCode();};
     const client=db();
@@ -187,43 +205,17 @@
           }
         },250);
       });
-      // Recover a magic-link return only when the owner explicitly requested
-      // sign-in in this browser. An existing saved session must NOT open the
-      // Control Room automatically when a customer or owner opens the storefront.
-      // CIC_AUTH_CALLBACK_OWNER_RECOVERY_V1
-      // A magic link may reload the storefront before the auth listener runs.
-      // Recover only when this page is an explicit Supabase auth callback OR
-      // the owner started sign-in in this browser; never auto-open on a normal visit.
-      window.setTimeout(async()=>{
-        let pending=false;
-        try{pending=localStorage.getItem("cicOwnerSignInPending")==="1";}catch(_){}
-        const url=new URL(window.location.href);
-        const hasAuthCallback=url.searchParams.has("code") ||
-          url.hash.includes("access_token=") || url.hash.includes("refresh_token=") ||
-          url.searchParams.has("error_description") || url.searchParams.has("error");
-        if(!pending&&!hasAuthCallback)return;
-        try{
-          const {data:{session},error}=await client.auth.getSession();
-          if(error)throw error;
-          if(session&&session.user){
-            if(await isApprovedOwner(session.user)){
-              await handlePendingOwnerSession(session);
-              // Remove callback credentials from the visible address bar after Supabase consumes them.
-              if(hasAuthCallback)history.replaceState(history.state,"",url.origin+url.pathname);
-            } else if(hasAuthCallback) {
-              await recordDeniedOwnerAttempt();
-              await client.auth.signOut();
-              try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
-              if(typeof window.openAdminAccess==="function")window.openAdminAccess();
-              status("This account is not approved for owner access.",true);
-              history.replaceState(history.state,"",url.origin+url.pathname);
-            }
-          } else if(hasAuthCallback) {
-            status("The sign-in link could not be completed in this browser. Return to Admin and request a fresh email.",true);
-            history.replaceState(history.state,"",url.origin+url.pathname);
-          }
-        }catch(_){}
-      },1000);
+      // Admin is opened only after verifyCode() confirms a six-digit OTP and
+      // the database marks this account as an approved owner. A magic-link
+      // callback must never open the Control Room automatically.
+      const url=new URL(window.location.href);
+      const hasAuthCallback=url.searchParams.has("code") || url.hash.includes("access_token=") ||
+        url.hash.includes("refresh_token=") || url.searchParams.has("error_description") || url.searchParams.has("error");
+      if(hasAuthCallback){
+        try{await client.auth.signOut();}catch(_){}
+        try{localStorage.removeItem("cicOwnerSignInPending");sessionStorage.removeItem("cicOwnerOtpVerified");}catch(_){}
+        history.replaceState(history.state,"",url.origin+url.pathname);
+      }
     }
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",wire);else wire();
