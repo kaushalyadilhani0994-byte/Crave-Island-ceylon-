@@ -490,7 +490,7 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
 /* Production guard: block obsolete demo-only modals. Keep the original authenticated CRAVE Control Room available to the owner. */
 (function(){
   "use strict";
-  const disabled=["adminModal","socialModal","mediaModal","loyaltyModal","scratchModal","certModal","historyModal","inviteModal"];
+  const disabled=["adminModal","inviteModal"]; // Keep the original V18 customer-facing Social, Media Clips, Loyalty, Scratch Card, Certificates and History panels available.
   const blocked=new Set(disabled);
   function hideLegacyControls(){
     disabled.forEach(id=>{const el=document.getElementById(id);if(el){el.hidden=true;el.setAttribute("aria-hidden","true");el.style.display="none";}});
