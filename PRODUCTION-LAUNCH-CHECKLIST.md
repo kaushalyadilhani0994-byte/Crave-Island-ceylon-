@@ -66,3 +66,14 @@ This checklist distinguishes verified infrastructure from business settings that
 ## Safe release rule
 
 The site may be online while launch preparation continues. Do not announce that checkout, payment, delivery, or the whole business workflow is fully production-tested until the end-to-end tests above have passed. Never create test orders with real customer information or activate placeholder products.
+
+## Follow-up audit — 2026-10-27
+
+- [x] Rechecked Supabase counts: 60 categories total, 14 active; 1 product total and 0 active products. No products were created or activated.
+- [x] Rechecked core Row Level Security policies: public reads are limited to active categories/products and published passports; product/category writes and owner order reads are guarded by `private.is_approved_owner()`; customers' order reads are scoped to their own user ID.
+- [x] Fixed an owner-UI gate in `supabase-admin-auth.js`: a Supabase session by itself no longer unlocks owner shortcuts; the UI now also requires the current browser session's verified six-digit OTP marker and an approved owner profile. Source commit: `445c1c0b757770e7bd10037e671f46ecd30e3833`.
+- [x] Confirmed Vercel production deployment for that commit is `READY` (deployment `dpl_7SBnJaFMv8Lh9uB2V4DTHnFLwM5z`).
+- [x] Confirmed Supabase Edge Functions `create-store-order`, `update-order-status`, and `owner-alert-notify` are ACTIVE with JWT verification enabled.
+- [ ] Owner email delivery is **not yet verified as a true six-digit OTP**. The source calls `verifyOtp`, but the Supabase email template must display the token (rather than only a sign-in link) and the live email must be tested.
+- [ ] Leaked-password protection remains disabled in Supabase Auth. This requires the Auth dashboard setting; it has not been changed here.
+- [ ] Browser-level owner/customer flows and real QR scans remain untested in this audit. Do not treat READY deployment or passing source checks as a full launch sign-off.
