@@ -198,9 +198,15 @@
       client.auth.onAuthStateChange((event,session)=>{
         if(event==="SIGNED_OUT")document.body.classList.remove("cic-owner-shortcuts-unified");
         if(session&&session.user)window.setTimeout(async()=>{
-          if(await isApprovedOwner(session.user)){
+          // A valid Supabase session alone must not unlock owner UI: require the
+          // six-digit OTP verification marker from this browser session as well.
+          let otpVerified=false;
+          try{otpVerified=sessionStorage.getItem("cicOwnerOtpVerified")==="1";}catch(_){}
+          if(otpVerified && await isApprovedOwner(session.user)){
             installUnifiedLiveTools();
             document.body.classList.add("cic-owner-shortcuts-unified");
+          }else{
+            document.body.classList.remove("cic-owner-shortcuts-unified");
           }
         },250);
       });
