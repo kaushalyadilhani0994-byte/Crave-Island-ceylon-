@@ -1,4 +1,4 @@
-/* CRAVE ISLAND CEYLON — real Supabase email link/code owner authentication.
+/* CRAVE ISLAND CEYLON — real Supabase email OTP owner authentication.
  * No browser-only demo code grants access. Database RLS remains authoritative.
  */
 (function () {
@@ -36,18 +36,18 @@
       .forEach(el=>{el.style.display="none";});
     email.placeholder="Approved owner email";
     email.autocomplete="email";
-    otp.type="text"; otp.inputMode="numeric"; otp.maxLength=6; otp.pattern="[0-9]{6}"; otp.autocomplete="one-time-code"; otp.placeholder="6-digit code (if provided)";
-    const label=$('label[for="adminOtp"]',modal); if(label)label.textContent="One-time code (if the email includes one)";
+    otp.type="text"; otp.inputMode="numeric"; otp.maxLength=6; otp.pattern="[0-9]{6}"; otp.autocomplete="one-time-code"; otp.placeholder="Enter 6-digit code";
+    const label=$('label[for="adminOtp"]',modal); if(label)label.textContent="6-digit one-time code";
     const buttons=actions.querySelectorAll("button");
-    if(buttons[0]){buttons[0].textContent="Send sign-in email";buttons[0].type="button";buttons[0].onclick=sendCode;}
-    if(buttons[1]){buttons[1].textContent="Verify code / open admin";buttons[1].type="button";buttons[1].onclick=verifyCode;}
+    if(buttons[0]){buttons[0].textContent="Send 6-digit OTP";buttons[0].type="button";buttons[0].onclick=sendCode;}
+    if(buttons[1]){buttons[1].textContent="Verify OTP & open admin";buttons[1].type="button";buttons[1].onclick=verifyCode;}
     if(!$("#cicOwnerAuthStatus",modal)){
       const s=document.createElement("div");s.id="cicOwnerAuthStatus";s.hidden=true;s.setAttribute("role","status");s.setAttribute("aria-live","polite");actions.insertAdjacentElement("afterend",s);
     }
     const intro=$(".muted-note",modal);
-    if(intro)intro.textContent="Use the approved owner email. Depending on the Supabase email template, you may receive a sign-in link or a 6-digit code. Open any link in this same browser, or enter the code below; only an approved owner can open live tools.";
+    if(intro)intro.textContent="Enter the approved owner email and request a 6-digit code. Enter that code here to continue. Only an approved owner can open live tools.";
     const note=$(".access-note",modal);
-    if(note)note.textContent="This uses real Supabase email authentication. This project may send a sign-in link instead of a numeric code. Only an approved owner account can open live catalogue tools.";
+    if(note)note.textContent="Secure email OTP sign-in. Enter the 6-digit code sent to the approved owner email. Only an approved owner account can open live catalogue tools.";
     modal.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target===email||e.target===otp)){e.preventDefault();e.target===email?sendCode():verifyCode();}});
   }
   async function sendCode() {
@@ -59,15 +59,15 @@
     try{
       const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:window.location.origin+window.location.pathname}});
       if(error)status("Could not send a sign-in code. Check the email address and Supabase Auth email configuration, then try again.",true);
-      else { try{localStorage.setItem("cicOwnerSignInPending","1");}catch(_){} status("Supabase sent a sign-in email. If it contains a link, open it in this same browser; if it contains a 6-digit code, enter it below. Check spam too."); }
+      else { try{localStorage.setItem("cicOwnerSignInPending","1");}catch(_){} status("OTP request sent. Check the owner email inbox and spam folder for the 6-digit code. If the email contains a sign-in link instead, the Supabase email template still needs to be changed to display the OTP token."); }
     }catch(e){status("Could not request a code because of a connection error.",true);}
-    finally{if(btn){btn.disabled=false;btn.textContent="Send sign-in email";}}
+    finally{if(btn){btn.disabled=false;btn.textContent="Send 6-digit OTP";}}
   }
   async function verifyCode() {
     const client=db(), email=($("#adminEmail")?.value||"").trim(), token=($("#adminOtp")?.value||"").trim();
     if(!client)return status("Supabase is still connecting. Please wait and try again.",true);
     if(!email||!email.includes("@"))return status("Enter the owner email used to request the code.",true);
-    if(!/^\d{6}$/.test(token))return status("If your email contains a sign-in link rather than a 6-digit code, open that link in this same browser. The approved-owner check will then open the live tools automatically.",true);
+    if(!/^\d{6}$/.test(token))return status("Enter the 6-digit code from the email. If Supabase sent a link instead, its email template must be changed to show the OTP token.",true);
     const btn=$(".login-actions button:nth-child(2)");
     if(btn){btn.disabled=true;btn.textContent="Verifying…";}
     try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
@@ -89,7 +89,7 @@
       else {const m=$("#adminAccessModal");if(m)m.style.display="none";}
       openOwnerDashboard();
     }catch(e){status("Could not verify the code because of a connection error.",true);}
-    finally{if(btn){btn.disabled=false;btn.textContent="Verify code / open admin";}}
+    finally{if(btn){btn.disabled=false;btn.textContent="Verify OTP & open admin";}}
   }
   function installUnifiedLiveTools(){
     // Restore the original V18 Control Room and its original floating owner tools.
@@ -174,7 +174,7 @@
       const email=$("#adminEmail");if(email)email.focus({preventScroll:true});
     };
     window.requestAdminOtp=sendCode;
-    window.verifyAdminOtpDemo=function(){status("Demo OTP login is disabled. Use the real Supabase sign-in email instead.",true);};
+    window.verifyAdminOtpDemo=function(){verifyCode();};
     const client=db();
     if(client){
       client.auth.onAuthStateChange((event,session)=>{
