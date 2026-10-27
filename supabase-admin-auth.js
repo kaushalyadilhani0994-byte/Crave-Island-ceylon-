@@ -162,10 +162,17 @@
           }
         },250);
       });
-      // Recover magic-link returns even if SIGNED_IN fired before this script
-      // loaded. Only an owner approved in staff_profiles can open the Control Room.
+      // Recover a magic-link return only when the owner explicitly requested
+      // sign-in in this browser. An existing saved session must NOT open the
+      // Control Room automatically when a customer or owner opens the storefront.
       window.setTimeout(async()=>{
-        try{const {data:{session}}=await client.auth.getSession();if(session&&session.user&&await isApprovedOwner(session.user))await handlePendingOwnerSession(session);}catch(_){}
+        let pending=false;
+        try{pending=localStorage.getItem("cicOwnerSignInPending")==="1";}catch(_){}
+        if(!pending)return;
+        try{
+          const {data:{session}}=await client.auth.getSession();
+          if(session&&session.user&&await isApprovedOwner(session.user))await handlePendingOwnerSession(session);
+        }catch(_){}
       },800);
     }
   }
