@@ -30,14 +30,25 @@
     // when its trigger (which performs owner checks and loads data) is not ready.
     for (let attempt = 0; attempt < 60; attempt++) {
       const trigger = document.getElementById(buttonId);
-      if (trigger) {
+      const modal = document.getElementById(modalId);
+      // Wait until both the secure trigger and its actual live modal are mounted.
+      if (trigger && modal) {
         trigger.click();
-        if (status) status.textContent = label + " opened. Loading live data…";
+        await new Promise(resolve => window.setTimeout(resolve, 180));
+        const isOpen = modal.style.display === "flex" ||
+          modal.getAttribute("aria-hidden") === "false" ||
+          modal.classList.contains("open");
+        if (isOpen) {
+          if (status) status.textContent = label + " opened. Live data is loading.";
+          return;
+        }
+        // Do not claim success if the owner guard blocked access or the module failed.
+        if (status) status.textContent = label + " is not ready or access was not confirmed. Please check your owner sign-in and try again.";
         return;
       }
       await new Promise(resolve => window.setTimeout(resolve, 100));
     }
-    if (status) status.textContent = label + " could not load. Please close Control Room, wait a few seconds, and try again.";
+    if (status) status.textContent = label + " could not load yet. Close Control Room, wait a few seconds, and try again.";
   }
   function mount() {
     if (mounted) return;
