@@ -177,20 +177,40 @@
       const s=$("#cicOwnerAuthStatus");if(s)s.hidden=true;
       const email=$("#adminEmail");if(email)email.focus({preventScroll:true});
     };
-    // The Admin item stays hidden from customers. Owner entry: tap the CRAVE
-    // hero title five times quickly, then complete the approved-owner OTP check.
-    const secretBrand=document.querySelector(".hero-copy h2");
-    if(secretBrand && !secretBrand.dataset.cicOwnerTrigger){
-      secretBrand.dataset.cicOwnerTrigger="1";
-      let taps=0,timer=0;
-      secretBrand.style.cursor="default";
-      secretBrand.addEventListener("click",()=>{
+    // Admin stays hidden from customer navigation. Owner can open the secure
+    // OTP gate by tapping the main brand title/logo five times, or by using
+    // the private owner-entry URL parameter. Database approval + OTP remain required.
+    const ownerEntryTargets = [
+      document.querySelector(".hero-copy h2"),
+      document.querySelector(".hero-copy"),
+      document.querySelector("header .logo"),
+      document.querySelector(".brand-logo"),
+      document.querySelector("[data-brand-logo]")
+    ].filter((el, index, all) => el && all.indexOf(el) === index);
+    ownerEntryTargets.forEach((target) => {
+      if (target.dataset.cicOwnerTrigger) return;
+      target.dataset.cicOwnerTrigger = "1";
+      let taps = 0, timer = 0;
+      target.addEventListener("click", () => {
         taps++;
         window.clearTimeout(timer);
-        timer=window.setTimeout(()=>{taps=0;},2200);
-        if(taps>=5){taps=0;window.openAdminAccess();}
+        timer = window.setTimeout(() => { taps = 0; }, 2600);
+        if (taps >= 5) {
+          taps = 0;
+          window.openAdminAccess();
+        }
       });
-    }
+    });
+    // A discreet fallback for the owner: append ?owner-access=1 to the storefront URL.
+    // Remove the parameter immediately so it does not remain in browser history.
+    try {
+      const ownerUrl = new URL(window.location.href);
+      if (ownerUrl.searchParams.get("owner-access") === "1") {
+        ownerUrl.searchParams.delete("owner-access");
+        history.replaceState(history.state, "", ownerUrl.pathname + ownerUrl.search + ownerUrl.hash);
+        window.setTimeout(() => window.openAdminAccess(), 350);
+      }
+    } catch (_) {}
     window.requestAdminOtp=sendCode;
     window.verifyAdminOtpDemo=function(){verifyCode();};
     const client=db();
