@@ -57,7 +57,7 @@
     const btn=$(".login-actions button");
     if(btn){btn.disabled=true;btn.textContent="Sending…";}
     try{
-      const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:false}});
+      const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:window.location.origin+window.location.pathname}});
       if(error)status("Could not send a sign-in code. Check the email address and Supabase Auth email configuration, then try again.",true);
       else { try{localStorage.setItem("cicOwnerSignInPending","1");}catch(_){} status("Supabase sent a sign-in email. If it contains a link, open it in this same browser; if it contains a 6-digit code, enter it below. Check spam too."); }
     }catch(e){status("Could not request a code because of a connection error.",true);}
@@ -190,15 +190,40 @@
       // Recover a magic-link return only when the owner explicitly requested
       // sign-in in this browser. An existing saved session must NOT open the
       // Control Room automatically when a customer or owner opens the storefront.
+      // CIC_AUTH_CALLBACK_OWNER_RECOVERY_V1
+      // A magic link may reload the storefront before the auth listener runs.
+      // Recover only when this page is an explicit Supabase auth callback OR
+      // the owner started sign-in in this browser; never auto-open on a normal visit.
       window.setTimeout(async()=>{
         let pending=false;
         try{pending=localStorage.getItem("cicOwnerSignInPending")==="1";}catch(_){}
-        if(!pending)return;
+        const url=new URL(window.location.href);
+        const hasAuthCallback=url.searchParams.has("code") ||
+          url.hash.includes("access_token=") || url.hash.includes("refresh_token=") ||
+          url.searchParams.has("error_description") || url.searchParams.has("error");
+        if(!pending&&!hasAuthCallback)return;
         try{
-          const {data:{session}}=await client.auth.getSession();
-          if(session&&session.user&&await isApprovedOwner(session.user))await handlePendingOwnerSession(session);
+          const {data:{session},error}=await client.auth.getSession();
+          if(error)throw error;
+          if(session&&session.user){
+            if(await isApprovedOwner(session.user)){
+              await handlePendingOwnerSession(session);
+              // Remove callback credentials from the visible address bar after Supabase consumes them.
+              if(hasAuthCallback)history.replaceState(history.state,"",url.origin+url.pathname);
+            } else if(hasAuthCallback) {
+              await recordDeniedOwnerAttempt();
+              await client.auth.signOut();
+              try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+              if(typeof window.openAdminAccess==="function")window.openAdminAccess();
+              status("This account is not approved for owner access.",true);
+              history.replaceState(history.state,"",url.origin+url.pathname);
+            }
+          } else if(hasAuthCallback) {
+            status("The sign-in link could not be completed in this browser. Return to Admin and request a fresh email.",true);
+            history.replaceState(history.state,"",url.origin+url.pathname);
+          }
         }catch(_){}
-      },800);
+      },1000);
     }
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",wire);else wire();
