@@ -22,6 +22,10 @@
          The original Control Room itself is deliberately untouched. */
       .bottom{grid-template-columns:repeat(6,minmax(0,1fr))!important}
       .bottom>.nav:last-child{display:none!important}
+      /* Reveal Admin only after supabase-admin-auth.js confirms an approved owner
+         by email/OTP and adds this body class. All ordinary visitors stay on six tabs. */
+      body.cic-owner-shortcuts-unified .bottom{grid-template-columns:repeat(7,minmax(0,1fr))!important}
+      body.cic-owner-shortcuts-unified .bottom>.nav:last-child{display:flex!important}
       .bottom>.nav{padding:10px 3px 8px;gap:5px;font-size:10px;line-height:1.15}
       .bottom>.nav svg{width:21px;height:21px}
       .bottom>.nav .nav-label{font-size:10px;line-height:1.15}
