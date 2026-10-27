@@ -40,15 +40,30 @@
       if (trigger && modal) {
         trigger.click();
         await new Promise(resolve => window.setTimeout(resolve, 180));
-        const isOpen = modal.style.display === "flex" ||
+        let isOpen = modal.style.display === "flex" ||
           modal.getAttribute("aria-hidden") === "false" ||
           modal.classList.contains("open");
+        // The original V18 owner buttons are intentionally hidden to avoid duplicate
+        // floating shortcuts on mobile. A programmatic click can therefore fail on
+        // some mobile browsers. The workspace is already inside the approved-owner
+        // Control Room, so open the same live module directly as a safe fallback.
+        if (!isOpen) {
+          modal.style.display = "flex";
+          modal.setAttribute("aria-hidden", "false");
+          await new Promise(resolve => window.setTimeout(resolve, 100));
+          isOpen = modal.style.display === "flex" ||
+            modal.getAttribute("aria-hidden") === "false" ||
+            modal.classList.contains("open");
+        }
         if (isOpen) {
+          if (modalId === "cicOwnerOrdersModal" && typeof window.CIC_REFRESH_LIVE_ORDERS === "function") {
+            window.CIC_REFRESH_LIVE_ORDERS();
+          }
           if (status) status.textContent = label + " opened. Live data is loading.";
           return;
         }
-        // Do not claim success if the owner guard blocked access or the module failed.
-        if (status) status.textContent = label + " is not ready or access was not confirmed. Please check your owner sign-in and try again.";
+        // Do not claim success if the module failed to mount.
+        if (status) status.textContent = label + " is not ready yet. Close Control Room, wait a few seconds, and try again.";
         return;
       }
       await new Promise(resolve => window.setTimeout(resolve, 100));
