@@ -535,5 +535,47 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
 
 
 
+
+<!-- CIC_MOBILE_FULLSCREEN_BACK_V1: mobile-friendly full-screen work areas and safe Android back handling -->
+<style id="cic-mobile-workspace-polish">
+@media(max-width:650px){
+  .modal{padding:0!important;align-items:stretch!important;justify-content:stretch!important;background:#0b0705b8}
+  .modal .sheet{width:100%!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;min-height:100dvh!important;box-sizing:border-box;border-radius:0!important;padding:calc(16px + env(safe-area-inset-top,0px)) 15px calc(22px + env(safe-area-inset-bottom,0px))!important;overflow-y:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .modal .sheet-head{position:sticky;top:calc(-16px - env(safe-area-inset-top,0px));z-index:5;background:var(--cream);padding:8px 0 12px;border-bottom:1px solid var(--line);margin-bottom:10px}
+  .modal .sheet-head h3{font-size:25px;line-height:1.15}
+  .modal .sheet-head .close{width:46px;height:46px;min-width:46px;flex:0 0 46px;font-size:27px;display:grid;place-items:center;touch-action:manipulation}
+  .modal button,.modal input,.modal select,.modal textarea{touch-action:manipulation}
+  .modal .admin-tabs{position:sticky;top:60px;z-index:4;background:var(--cream);overflow-x:auto;flex-wrap:nowrap}
+}
+@media(min-width:651px){.modal .sheet{max-height:88vh}}
+</style>
+<script id="cic-mobile-back-navigation">
+(function(){
+  if(window.CIC_MOBILE_FULLSCREEN_BACK_V1)return;
+  window.CIC_MOBILE_FULLSCREEN_BACK_V1=true;
+  var modalState=false, handlingBack=false;
+  function openModals(){return Array.from(document.querySelectorAll('.modal')).filter(function(m){return m.classList.contains('open')||m.getAttribute('aria-hidden')==='false'||(m.style.display==='flex'&&m.id!=='');});}
+  function hasOpenModal(){return openModals().length>0;}
+  function syncModalState(){
+    if(hasOpenModal()&&!modalState&&!handlingBack){
+      modalState=true;
+      try{history.pushState({cicModalOpen:true},'','#workspace');}catch(e){}
+    }else if(!hasOpenModal()&&modalState&&!handlingBack){
+      modalState=false;
+      if(history.state&&history.state.cicModalOpen){handlingBack=true;history.back();window.setTimeout(function(){handlingBack=false;},180);}
+    }
+  }
+  var obs=new MutationObserver(syncModalState);
+  function watch(){document.querySelectorAll('.modal').forEach(function(m){obs.observe(m,{attributes:true,attributeFilter:['class','style','aria-hidden']});});syncModalState();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch);else watch();
+  window.addEventListener('popstate',function(){
+    if(!modalState)return;
+    handlingBack=true;
+    openModals().forEach(function(m){m.classList.remove('open');m.setAttribute('aria-hidden','true');if(m.style.display==='flex')m.style.display='none';});
+    modalState=false;
+    window.setTimeout(function(){handlingBack=false;},120);
+  });
+})();
+</script>
 </body>
 </html>
