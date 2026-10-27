@@ -146,7 +146,7 @@
     }catch(_){status("Could not verify the owner session. Please reopen Admin and try again.",true);}
     finally{handlingPendingOwnerSession=false;}
   }
-  function wire(){
+  async function wire(){
     install();
     const original=window.openAdminAccess;
     window.openAdminAccess=function(){
