@@ -77,3 +77,6 @@ The site may be online while launch preparation continues. Do not announce that 
 - [ ] Owner email delivery is **not yet verified as a true six-digit OTP**. The source calls `verifyOtp`, but the Supabase email template must display the token (rather than only a sign-in link) and the live email must be tested.
 - [ ] Leaked-password protection remains disabled in Supabase Auth. This requires the Auth dashboard setting; it has not been changed here.
 - [ ] Browser-level owner/customer flows and real QR scans remain untested in this audit. Do not treat READY deployment or passing source checks as a full launch sign-off.
+
+- [x] Additional database defense-in-depth fix on 2026-10-27: public passport reads now require both `published = true` and a matching active product. Migration `20261027133941_secure_public_passports_active_product` was applied and the resulting policy was re-read from `pg_policies` to verify it is present.
+- [ ] Supabase Auth leaked-password protection remains a dashboard-only blocker; this connected toolset cannot edit that Auth setting. Do not mark the final security review complete until it is enabled and the advisor warning clears.
