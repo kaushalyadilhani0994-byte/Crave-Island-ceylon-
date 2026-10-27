@@ -82,7 +82,9 @@
         return;
       }
       try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
-      status("Owner verified. Opening the live catalogue manager…");
+      status("Owner verified. Opening the original CRAVE Control Room…");
+      // The storefront modal guard requires this owner-only class before it will open Control Room.
+      document.body.classList.add("cic-owner-shortcuts-unified");
       if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
       else {const m=$("#adminAccessModal");if(m)m.style.display="none";}
       openOwnerDashboard();
@@ -154,6 +156,8 @@
         return;
       }
       try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+      // The session has been verified against the approved-owner database row; unlock the original Control Room guard.
+      document.body.classList.add("cic-owner-shortcuts-unified");
       if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
       else {const modal=$("#adminAccessModal");if(modal)modal.style.display="none";}
       openOwnerDashboard();
