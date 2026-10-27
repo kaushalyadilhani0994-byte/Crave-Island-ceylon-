@@ -135,7 +135,7 @@
     try {
       const [productsResult, categoriesResult] = await Promise.all([
         state.client.from("products").select("id,name,description,category,price,currency,image_url,ingredients,batch_number,qr_code,is_active").eq("is_active", true).order("name"),
-        state.client.from("categories").select("id,name,description,image_url,sort_order,is_active").eq("is_active", true).order("sort_order")
+        state.client.from("categories").select("id,name,description,image_url,sort_order,is_active,parent_id").eq("is_active", true).order("sort_order")
       ]);
       if (productsResult.error) throw productsResult.error;
       if (categoriesResult.error) throw categoriesResult.error;
