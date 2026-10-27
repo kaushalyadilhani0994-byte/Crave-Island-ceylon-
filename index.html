@@ -577,5 +577,58 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
   });
 })();
 </script>
+
+<!-- CIC_ADMIN_TABS_FIX_V1: make Control Room tabs actually switch views -->
+<script id="cic-admin-tabs-fix">
+(function(){
+  "use strict";
+  window.showAdminView = function(view, button){
+    var allowed = ["overview","catalog","orders","brand","automation","security","team"];
+    if(!allowed.includes(view)) view = "overview";
+    var aliases = {catalog:"admin-catalog",overview:"admin-overview",orders:"admin-orders",brand:"admin-brand",automation:"admin-automation",security:"admin-security",team:"admin-team"};
+    var targetId = aliases[view];
+    var target = document.getElementById(targetId);
+    var modal = document.getElementById("controlRoomModal");
+    if(!target && modal){
+      var candidates = Array.from(modal.querySelectorAll(".admin-view"));
+      target = candidates.find(function(el){return el.id === targetId;}) || null;
+    }
+    if(target){
+      var container = target.closest("#controlRoomModal") || modal || document;
+      container.querySelectorAll(".admin-view").forEach(function(el){
+        el.classList.toggle("active", el === target);
+        el.setAttribute("aria-hidden", el === target ? "false" : "true");
+      });
+    }
+    if(modal){
+      modal.querySelectorAll(".admin-tabs button").forEach(function(btn){
+        var action = btn.getAttribute("onclick") || "";
+        var active = action.indexOf("'" + view + "'") >= 0 || action.indexOf('"' + view + '"') >= 0;
+        btn.classList.toggle("active", active);
+        btn.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+      var map = modal.querySelector("#v7AdminMap");
+      if(map) map.hidden = view !== "overview";
+      modal.querySelectorAll(".admin-node").forEach(function(node){ node.open = false; });
+      if(target) target.scrollIntoView({block:"start",behavior:"smooth"});
+    }
+    if(view === "catalog" && typeof window.adminRenderProducts === "function") window.adminRenderProducts();
+    if(view === "orders" && typeof window.renderAdminOrders === "function") window.renderAdminOrders();
+    return false;
+  };
+  document.addEventListener("DOMContentLoaded",function(){
+    var modal = document.getElementById("controlRoomModal");
+    if(!modal) return;
+    modal.querySelectorAll(".admin-tabs button").forEach(function(btn){
+      btn.addEventListener("click",function(){
+        var match = (btn.getAttribute("onclick") || "").match(/showAdminView\(['"]([^'"]+)/);
+        if(match) window.showAdminView(match[1],btn);
+      });
+    });
+    window.showAdminView("overview");
+  });
+})();
+</script>
+
 </body>
 </html>
