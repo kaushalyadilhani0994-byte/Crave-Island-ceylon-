@@ -153,7 +153,7 @@
     const client=db();
     if(client){
       client.auth.onAuthStateChange((event,session)=>{
-        if(event==="SIGNED_IN"&&session)window.setTimeout(()=>handlePendingOwnerSession(session),0);
+        if(event==="SIGNED_IN"&&session)window.setTimeout(()=>{let pending=false;try{pending=localStorage.getItem("cicOwnerSignInPending")==="1";}catch(_){}if(pending)handlePendingOwnerSession(session);},0);
         if(event==="SIGNED_OUT")document.body.classList.remove("cic-owner-shortcuts-unified");
         if(session&&session.user)window.setTimeout(async()=>{
           if(await isApprovedOwner(session.user)){
