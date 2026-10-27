@@ -18,7 +18,16 @@
       #cicOwnerWorkspace button span{display:block;opacity:.78;font-size:10px;font-weight:400;margin-top:3px}
       #cicOwnerWorkspace .cic-owner-workspace-status{margin-top:11px;font:11px/1.5 system-ui,sans-serif;color:#75645a}
       #cicOwnerOrdersButton,#cicOwnerCatalogueButton,#cicPassportButton{display:none!important}
+      /* Customer navigation: no Admin entry. Keep six customer actions spacious and readable.
+         The original Control Room itself is deliberately untouched. */
+      .bottom{grid-template-columns:repeat(6,minmax(0,1fr))!important}
+      .bottom>.nav:last-child{display:none!important}
+      .bottom>.nav{padding:10px 3px 8px;gap:5px;font-size:10px;line-height:1.15}
+      .bottom>.nav svg{width:21px;height:21px}
+      .bottom>.nav .nav-label{font-size:10px;line-height:1.15}
+      .bottom>.nav .nav-sub{font-size:8px;line-height:1.15}
       @media(max-width:650px){#cicOwnerWorkspace{padding:13px}#cicOwnerWorkspace .cic-live-actions{grid-template-columns:1fr}}
+      @media(max-width:390px){.bottom>.nav{padding:8px 1px 7px}.bottom>.nav svg{width:19px;height:19px}.bottom>.nav .nav-label{font-size:9px}.bottom>.nav .nav-sub{font-size:7px}}
       /* Preserve the original V18 Control Room navigation and panels.
          The quick links are shortcuts only; they must not replace existing owner tools. */
       #controlRoomModal .health-bar{border:1px solid #D4AF37;border-radius:10px;padding:10px;background:#fffaf0}
