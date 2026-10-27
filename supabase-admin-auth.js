@@ -59,7 +59,7 @@
     try{
       const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:window.location.origin+window.location.pathname}});
       if(error)status("Could not send a sign-in code. Check the email address and Supabase Auth email configuration, then try again.",true);
-      else { try{localStorage.setItem("cicOwnerSignInPending","1");}catch(_){} status("OTP request sent. Check the owner email inbox and spam folder for the 6-digit code. If the email contains a sign-in link instead, the Supabase email template still needs to be changed to display the OTP token."); }
+      else { status("OTP request sent. Check the owner email inbox and spam folder for the 6-digit code. If the email contains a sign-in link instead, the Supabase email template still needs to be changed to display the OTP token."); }
     }catch(e){status("Could not request a code because of a connection error.",true);}
     finally{if(btn){btn.disabled=false;btn.textContent="Send 6-digit OTP";}}
   }
@@ -196,7 +196,6 @@
     const client=db();
     if(client){
       client.auth.onAuthStateChange((event,session)=>{
-        if(event==="SIGNED_IN"&&session)window.setTimeout(()=>{let pending=false;try{pending=localStorage.getItem("cicOwnerSignInPending")==="1";}catch(_){}if(pending)handlePendingOwnerSession(session);},0);
         if(event==="SIGNED_OUT")document.body.classList.remove("cic-owner-shortcuts-unified");
         if(session&&session.user)window.setTimeout(async()=>{
           if(await isApprovedOwner(session.user)){
