@@ -102,15 +102,24 @@
     if(dashboard)dashboard.remove();
     if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
     installUnifiedLiveTools();
+    const control=document.getElementById("controlRoomModal");
+    // Some V18 builds define roleOpen() but only switch the selected panel;
+    // they do not open the parent Control Room modal. Try it first, then
+    // explicitly open the original modal if it is still closed.
     if(typeof window.roleOpen==="function"){
-      window.roleOpen("overview");
-      installUnifiedLiveTools();
-      return;
+      try{window.roleOpen("overview");}catch(_){}
     }
-    if(typeof window.openModal==="function"&&document.getElementById("controlRoomModal")){
-      window.openModal("controlRoomModal");
+    window.setTimeout(()=>{
+      const isOpen=control&&(control.classList.contains("open")||
+        control.getAttribute("aria-hidden")==="false"||
+        (control.style.display&&control.style.display!=="none"));
+      if(control&&!isOpen&&typeof window.openModal==="function"){
+        try{window.openModal("controlRoomModal");}catch(_){}
+      }
       installUnifiedLiveTools();
-      status("Control Room opened. Use its tabs for live catalogue, orders and QR passports.");
+    },100);
+    if(control){
+      status("Owner verified. Opening the original CRAVE Control Room…");
       return;
     }
     status("Owner sign-in succeeded, but the original Control Room did not load. Refresh the page and try again.",true);
