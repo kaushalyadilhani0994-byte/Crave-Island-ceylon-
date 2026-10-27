@@ -19,8 +19,24 @@
     if(!client)return;
     try{await client.functions.invoke("owner-alert-notify",{body:{action:"log_denied_owner_access"}});}catch(_){}
   }
+  const OWNER_EMAIL = "kaushalyadilhani0994@gmail.com";
+  function setOwnerNavVisible(visible) {
+    const bottom = document.querySelector(".bottom");
+    const adminButton = bottom && bottom.querySelector(".nav:last-child");
+    if (visible) {
+      document.body.classList.add("cic-owner-shortcuts-unified");
+      if (bottom) bottom.style.setProperty("grid-template-columns", "repeat(7,minmax(0,1fr))", "important");
+      if (adminButton) adminButton.style.setProperty("display", "flex", "important");
+    } else {
+      document.body.classList.remove("cic-owner-shortcuts-unified");
+      if (bottom) bottom.style.removeProperty("grid-template-columns");
+      if (adminButton) adminButton.style.removeProperty("display");
+    }
+  }
   async function isApprovedOwner(user) {
     const client=db(); if(!client||!user)return false;
+    // Owner UI is allowed only for the exact owner email and the approved database row.
+    if(String(user.email||"").trim().toLowerCase() !== OWNER_EMAIL)return false;
     const {data,error}=await client.from("staff_profiles").select("role,approved").eq("id",user.id).maybeSingle();
     return !error&&!!data&&data.role==="owner"&&data.approved===true;
   }
@@ -84,7 +100,7 @@
       try{localStorage.removeItem("cicOwnerSignInPending");sessionStorage.setItem("cicOwnerOtpVerified","1");}catch(_){}
       status("Owner verified. Opening the original CRAVE Control Room…");
       // The storefront modal guard requires this owner-only class before it will open Control Room.
-      document.body.classList.add("cic-owner-shortcuts-unified");
+      setOwnerNavVisible(true);
       if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
       else {const m=$("#adminAccessModal");if(m)m.style.display="none";}
       openOwnerDashboard();
@@ -157,7 +173,7 @@
       }
       try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
       // The session has been verified against the approved-owner database row; unlock the original Control Room guard.
-      document.body.classList.add("cic-owner-shortcuts-unified");
+      setOwnerNavVisible(true);
       if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
       else {const modal=$("#adminAccessModal");if(modal)modal.style.display="none";}
       openOwnerDashboard();
@@ -216,7 +232,7 @@
     const client=db();
     if(client){
       client.auth.onAuthStateChange((event,session)=>{
-        if(event==="SIGNED_OUT")document.body.classList.remove("cic-owner-shortcuts-unified");
+        if(event==="SIGNED_OUT")setOwnerNavVisible(false);
         if(session&&session.user)window.setTimeout(async()=>{
           // A valid Supabase session alone must not unlock owner UI: require the
           // six-digit OTP verification marker from this browser session as well.
@@ -224,9 +240,9 @@
           try{otpVerified=sessionStorage.getItem("cicOwnerOtpVerified")==="1";}catch(_){}
           if(otpVerified && await isApprovedOwner(session.user)){
             installUnifiedLiveTools();
-            document.body.classList.add("cic-owner-shortcuts-unified");
+            setOwnerNavVisible(true);
           }else{
-            document.body.classList.remove("cic-owner-shortcuts-unified");
+            setOwnerNavVisible(false);
           }
         },250);
       });
