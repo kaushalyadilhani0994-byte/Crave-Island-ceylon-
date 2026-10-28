@@ -66,18 +66,18 @@
       .forEach(el=>{el.style.display="none";});
     email.placeholder="Approved owner email";
     email.autocomplete="email";
-    otp.type="text"; otp.inputMode="numeric"; otp.maxLength=6; otp.pattern="[0-9]{6}"; otp.autocomplete="one-time-code"; otp.placeholder="Enter 6-digit code";
+    otp.type="text"; otp.inputMode="numeric"; otp.maxLength=6; otp.pattern="[0-9]{6}"; otp.autocomplete="one-time-code"; otp.placeholder="Enter code if the email contains one";
     const label=$('label[for="adminOtp"]',modal); if(label)label.textContent="6-digit one-time code";
     const buttons=actions.querySelectorAll("button");
-    if(buttons[0]){buttons[0].textContent="Send 6-digit OTP";buttons[0].type="button";buttons[0].onclick=sendCode;}
-    if(buttons[1]){buttons[1].textContent="Verify OTP & open admin";buttons[1].type="button";buttons[1].onclick=verifyCode;}
+    if(buttons[0]){buttons[0].textContent="Send secure sign-in email";buttons[0].type="button";buttons[0].onclick=sendCode;}
+    if(buttons[1]){buttons[1].textContent="Verify code & open Admin";buttons[1].type="button";buttons[1].onclick=verifyCode;}
     if(!$("#cicOwnerAuthStatus",modal)){
       const s=document.createElement("div");s.id="cicOwnerAuthStatus";s.hidden=true;s.setAttribute("role","status");s.setAttribute("aria-live","polite");actions.insertAdjacentElement("afterend",s);
     }
     const intro=$(".muted-note",modal);
-    if(intro)intro.textContent="Enter one of the owner's approved email addresses and request a 6-digit code. Only an approved owner account can open live tools.";
+    if(intro)intro.textContent="Enter an approved owner email and request a secure sign-in email. Depending on the Supabase email template, use the 6-digit code here or tap the sign-in link in the email. Only an approved owner account can open live tools.";
     const note=$(".access-note",modal);
-    if(note)note.textContent="Secure email OTP sign-in. Only the approved owner email accounts with database approval can open live catalogue tools.";
+    if(note)note.textContent="Secure email sign-in. A code or sign-in link may be delivered depending on the configured email template; database owner approval is always required.";
     modal.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target===email||e.target===otp)){e.preventDefault();e.target===email?sendCode():verifyCode();}});
   }
   async function sendCode() {
@@ -89,15 +89,15 @@
     try{
       const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:window.location.origin+window.location.pathname}});
       if(error)status("Could not send a sign-in code. Check the email address and Supabase Auth email configuration, then try again.",true);
-      else status("OTP request sent. Check this email inbox and spam folder for the 6-digit code. If this is the newly added owner email, its database owner approval must also be completed before Admin can open.");
+      else status("Secure sign-in email requested. Check your inbox and spam folder. If it contains a 6-digit code, enter it below; if it contains a sign-in link, tap that link and return to this app. Owner database approval is still required.");
     }catch(e){status("Could not request a code because of a connection error.",true);}
-    finally{if(btn){btn.disabled=false;btn.textContent="Send 6-digit OTP";}}
+    finally{if(btn){btn.disabled=false;btn.textContent="Send secure sign-in email";}}
   }
   async function verifyCode() {
     const client=db(), email=($("#adminEmail")?.value||"").trim().toLowerCase(), token=($("#adminOtp")?.value||"").trim();
     if(!client)return status("Supabase is still connecting. Please wait and try again.",true);
     if(!isOwnerEmail(email))return status("This email is not on the owner's allowed email list.",true);
-    if(!/^\d{6}$/.test(token))return status("Enter the 6-digit code from the email. If Supabase sent a link instead, its email template must be changed to show the OTP token.",true);
+    if(!/^\d{6}$/.test(token))return status("Enter the 6-digit code if your email contains one. If the email contains a sign-in link instead, tap that link and return to this app; the app will verify the owner account.",true);
     const btn=$(".login-actions button:nth-child(2)");
     if(btn){btn.disabled=true;btn.textContent="Verifying…";}
     try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
@@ -118,7 +118,7 @@
       else {const m=$("#adminAccessModal");if(m)m.style.display="none";}
       openOwnerDashboard();
     }catch(e){status("Could not verify the code because of a connection error.",true);}
-    finally{if(btn){btn.disabled=false;btn.textContent="Verify OTP & open admin";}}
+    finally{if(btn){btn.disabled=false;btn.textContent="Verify code & open Admin";}}
   }
   function installUnifiedLiveTools(){
     const control=document.getElementById("controlRoomModal");
