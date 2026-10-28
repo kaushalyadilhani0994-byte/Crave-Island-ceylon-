@@ -219,10 +219,10 @@
         <div class="cic-dash-wrap">
           <header class="cic-dash-top"><div><h1>CRAVE ISLAND CEYLON</h1><p>Owner workspace · Manage your business from one place.</p></div><button class="cic-dash-action" type="button" id="cicDashSignOut">Sign out</button></header>
           <div class="cic-dash-grid">
-            <button class="cic-dash-card" type="button" data-open="cicOwnerCatalogueButton"><strong>Products & Catalogue</strong><span>Add and update products, prices, ingredients, images and availability.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicOwnerCatalogueButton" data-section="products"><strong>Owner Products</strong><span>Add and update verified products, prices, images and availability.</span></button>
             <button class="cic-dash-card" type="button" data-open="cicOwnerOrdersButton"><strong>Owner Orders</strong><span>Review incoming orders and update their progress.</span></button>
-            <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>QR Product Passports</strong><span>Manage product traceability and passport details.</span></button>
-            <button class="cic-dash-card" type="button" data-open="storefront"><strong>Open Storefront</strong><span>Return to the customer-facing CRAVE ISLAND CEYLON shop.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicOwnerCatalogueButton" data-section="categories"><strong>Owner Categories</strong><span>Create and manage product collections and subcategories.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>Owner QR Passport</strong><span>Manage verified product traceability and public passport details.</span></button>
           </div>
           <div class="cic-dash-footer"><p>Owner access is checked against your approved account.</p><button class="cic-dash-action" type="button" id="cicDashClose">Back to shop</button></div>
         </div>`;
@@ -231,11 +231,26 @@
         const card=e.target.closest("[data-open]");
         if(card){
           const target=card.getAttribute("data-open");
+          const section=card.getAttribute("data-section");
           if(target==="storefront"){dashboard.remove();return;}
           let tries=0;
           const launch=()=>{
             const b=document.getElementById(target);
-            if(b){dashboard.remove();b.hidden=false;b.click();return;}
+            if(b){
+              dashboard.remove();
+              b.hidden=false;
+              b.click();
+              if(section==="categories"||section==="products"){
+                const selector=section==="categories"?"#cicCategoryForm":"#cicProductForm";
+                window.setTimeout(()=>{
+                  const form=document.querySelector(selector);
+                  if(form)form.scrollIntoView({behavior:"smooth",block:"start"});
+                  const firstInput=form&&form.querySelector("input,select,textarea");
+                  if(firstInput)firstInput.focus({preventScroll:true});
+                },250);
+              }
+              return;
+            }
             if(++tries<25){setTimeout(launch,200);return;}
             status("This section is still loading. Please try again in a moment.",true);
           };
