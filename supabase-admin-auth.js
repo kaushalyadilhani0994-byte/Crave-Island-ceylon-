@@ -22,30 +22,10 @@
   function isOwnerEmail(email) {
     return OWNER_EMAILS.includes(String(email||"").trim().toLowerCase());
   }
+  // Keep the original bottom-bar Admin entry; do not add a separate floating shortcut.
   function syncOwnerAdminShortcut(visible) {
-    let shortcut = document.getElementById("cicOwnerAdminShortcut");
-    if (!visible) {
-      if (shortcut) shortcut.remove();
-      return;
-    }
-    if (shortcut) return;
-    shortcut = document.createElement("button");
-    shortcut.id = "cicOwnerAdminShortcut";
-    shortcut.type = "button";
-    shortcut.textContent = "Owner Admin";
-    shortcut.setAttribute("aria-label", "Open CRAVE owner admin");
-    shortcut.style.cssText = "position:fixed;z-index:1200;right:14px;bottom:calc(82px + env(safe-area-inset-bottom));min-height:44px;padding:11px 16px;border:1px solid #D4AF37;border-radius:999px;background:#2C1A14;color:#FFF8E7;font:600 13px/1.2 system-ui,sans-serif;box-shadow:0 5px 18px #0003;cursor:pointer";
-    shortcut.addEventListener("click", () => {
-      let otpVerified = false;
-      try { otpVerified = sessionStorage.getItem("cicOwnerOtpVerified") === "1"; } catch (_) {}
-      if (!otpVerified) {
-        shortcut.remove();
-        if (typeof window.openAdminAccess === "function") window.openAdminAccess();
-        return;
-      }
-      openOwnerDashboard();
-    });
-    document.body.appendChild(shortcut);
+    const shortcut = document.getElementById("cicOwnerAdminShortcut");
+    if (shortcut) shortcut.remove();
   }
   function setOwnerNavVisible(visible) {
     const bottom = document.querySelector(".bottom");
