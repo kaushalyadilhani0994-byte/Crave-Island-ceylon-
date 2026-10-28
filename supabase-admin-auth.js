@@ -18,7 +18,7 @@
     if(!client)return;
     try{await client.functions.invoke("owner-alert-notify",{body:{action:"log_denied_owner_access"}});}catch(_){}
   }
-  const OWNER_EMAILS = ["kaushalyadilhani0994@gmail.com", "kaushalyadilhanidissanayake@gmail.com"];
+  const OWNER_EMAILS = ["kaushalyadilhani0994@gmail.com", "kaushalyadhanidissanayake@gmail.com"];
   function isOwnerEmail(email) {
     return OWNER_EMAILS.includes(String(email||"").trim().toLowerCase());
   }
