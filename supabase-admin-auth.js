@@ -177,23 +177,75 @@
     }
   }
   function openOwnerDashboard(){
-    const dashboard=$("#cicOwnerDashboard");
-    if(dashboard)dashboard.remove();
-    if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
-    installUnifiedLiveTools();
-    const control=document.getElementById("controlRoomModal");
-    if(typeof window.roleOpen==="function"){try{window.roleOpen("overview");}catch(_){}}
-    window.setTimeout(()=>{
-      const isOpen=control&&(control.classList.contains("open")||control.getAttribute("aria-hidden")==="false"||(control.style.display&&control.style.display!=="none"));
-      if(control&&!isOpen){
-        if(typeof window.openModal==="function"){try{window.openModal("controlRoomModal");}catch(_){}}
-        const opened=control.classList.contains("open")||control.getAttribute("aria-hidden")==="false"||(control.style.display&&control.style.display!=="none");
-        if(!opened){control.classList.add("open");control.setAttribute("aria-hidden","false");control.style.display="";}
+    // Restore the original CRAVE owner dashboard shown immediately after approved OTP.
+    // Keep the existing Supabase owner verification and RLS-protected tools unchanged.
+    let dashboard=$("#cicOwnerDashboard");
+    if(!dashboard){
+      if(!$("#cicOwnerDashboardStyle")){
+        const style=document.createElement("style");
+        style.id="cicOwnerDashboardStyle";
+        style.textContent=`
+          #cicOwnerDashboard{position:fixed;inset:0;z-index:10001;background:#f6f1ea;color:#2c1a14;overflow:auto;padding:clamp(14px,4vw,28px);font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+          #cicOwnerDashboard .cic-dash-wrap{max-width:760px;margin:0 auto}
+          #cicOwnerDashboard .cic-dash-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid #e4d7c7;padding-bottom:16px;margin-bottom:18px}
+          #cicOwnerDashboard h1{font:400 clamp(27px,6vw,38px)/1.12 Georgia,serif;margin:0 0 7px}
+          #cicOwnerDashboard p{color:#76665b;line-height:1.5;margin:0}
+          #cicOwnerDashboard .cic-dash-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+          #cicOwnerDashboard .cic-dash-card{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:8px;min-height:128px;padding:18px;border:1px solid #e2d5c4;border-radius:15px;background:#fffaf3;color:#2c1a14}
+          #cicOwnerDashboard .cic-dash-card strong{font:400 22px Georgia,serif}
+          #cicOwnerDashboard .cic-dash-card span{font-size:13px;color:#76665b;line-height:1.45}
+          #cicOwnerDashboard .cic-dash-card:active{transform:scale(.99)}
+          #cicOwnerDashboard .cic-dash-action{border:1px solid #d4af37;border-radius:10px;padding:10px 13px;background:#2c1a14;color:#fff8e7;font-weight:650}
+          #cicOwnerDashboard .cic-dash-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}
+          @media(max-width:430px){#cicOwnerDashboard .cic-dash-grid{grid-template-columns:1fr}#cicOwnerDashboard .cic-dash-card{min-height:98px}}
+        `;
+        document.head.appendChild(style);
       }
-      installUnifiedLiveTools();
-    },100);
-    if(control){status("Owner verified. Opening the original CRAVE Control Room…");return;}
-    status("Owner sign-in succeeded, but the original Control Room did not load. Refresh the page and try again.",true);
+      dashboard=document.createElement("div");
+      dashboard.id="cicOwnerDashboard";
+      dashboard.setAttribute("role","dialog");
+      dashboard.setAttribute("aria-modal","true");
+      dashboard.setAttribute("aria-label","CRAVE ISLAND CEYLON owner dashboard");
+      dashboard.innerHTML=`
+        <div class="cic-dash-wrap">
+          <header class="cic-dash-top"><div><h1>CRAVE ISLAND CEYLON</h1><p>Owner workspace · Manage your business from one place.</p></div><button class="cic-dash-action" type="button" id="cicDashSignOut">Sign out</button></header>
+          <div class="cic-dash-grid">
+            <button class="cic-dash-card" type="button" data-open="cicOwnerCatalogueButton"><strong>Products & Catalogue</strong><span>Add and update products, prices, ingredients, images and availability.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicOwnerOrdersButton"><strong>Customer Orders</strong><span>Review incoming orders and update their progress.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>QR Product Passports</strong><span>Manage product traceability and passport details.</span></button>
+            <button class="cic-dash-card" type="button" data-open="storefront"><strong>Open Storefront</strong><span>Return to the customer-facing CRAVE ISLAND CEYLON shop.</span></button>
+          </div>
+          <div class="cic-dash-footer"><p>Owner access is checked against your approved account.</p><button class="cic-dash-action" type="button" id="cicDashClose">Back to shop</button></div>
+        </div>`;
+      document.body.appendChild(dashboard);
+      dashboard.addEventListener("click",async e=>{
+        const card=e.target.closest("[data-open]");
+        if(card){
+          const target=card.getAttribute("data-open");
+          if(target==="storefront"){dashboard.remove();return;}
+          let tries=0;
+          const launch=()=>{
+            const b=document.getElementById(target);
+            if(b){dashboard.remove();b.hidden=false;b.click();return;}
+            if(++tries<25){setTimeout(launch,200);return;}
+            status("This section is still loading. Please try again in a moment.",true);
+          };
+          launch();
+        }
+      });
+      $("#cicDashClose").onclick=()=>dashboard.remove();
+      $("#cicDashSignOut").onclick=async()=>{
+        const client=db();
+        if(client)await client.auth.signOut();
+        dashboard.remove();
+        try{localStorage.removeItem("cicOwnerSignInPending");sessionStorage.removeItem("cicOwnerOtpVerified");}catch(_){}
+        setOwnerNavVisible(false);
+        status("You have signed out.");
+        if(typeof window.openAdminAccess==="function")window.openAdminAccess();
+      };
+    }
+    dashboard.style.display="block";
+    dashboard.scrollTop=0;
   }
   window.CIC_OPEN_OWNER_DASHBOARD = openOwnerDashboard;
   async function handlePendingOwnerSession(session){
