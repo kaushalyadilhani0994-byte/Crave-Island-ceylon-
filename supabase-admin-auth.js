@@ -215,9 +215,30 @@
       const url=new URL(window.location.href);
       const hasAuthCallback=url.searchParams.has("code")||url.hash.includes("access_token=")||url.hash.includes("refresh_token=")||url.searchParams.has("error_description")||url.searchParams.has("error");
       if(hasAuthCallback){
-        try{await client.auth.signOut();}catch(_){}
-        try{localStorage.removeItem("cicOwnerSignInPending");sessionStorage.removeItem("cicOwnerOtpVerified");}catch(_){}
-        history.replaceState(history.state,"",url.origin+url.pathname);
+        // Supabase's email-link callback may be the step that establishes the
+        // owner's persisted session. Never sign out before that session is
+        // checked; doing so destroys a valid owner login and sends the owner
+        // back to the OTP screen instead of the original Control Room.
+        window.setTimeout(async()=>{
+          try{
+            const {data,error}=await client.auth.getSession();
+            const session=!error&&data&&data.session?data.session:null;
+            if(session&&session.user&&await isApprovedOwner(session.user)){
+              try{sessionStorage.setItem("cicOwnerOtpVerified","1");localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+              setOwnerNavVisible(true);
+              if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
+              openOwnerDashboard();
+            }else if(session&&session.user){
+              await recordDeniedOwnerAttempt();
+              await client.auth.signOut();
+              setOwnerNavVisible(false);
+              try{sessionStorage.removeItem("cicOwnerOtpVerified");localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+            }
+          }catch(_){}
+          // Remove one-time callback parameters only after Supabase has had
+          // an opportunity to restore the session. Keep the app path intact.
+          try{history.replaceState(history.state,"",url.origin+url.pathname);}catch(_){}
+        },500);
       }
     }
   }
