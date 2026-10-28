@@ -332,7 +332,7 @@
       setOwnerNavVisible(true);
       if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
       else {const modal=$("#adminAccessModal");if(modal)modal.style.display="none";}
-      openOwnerDashboard();
+      openOriginalControlRoom();
     }catch(_){status("Could not verify the owner session. Please reopen Admin and try again.",true);}
     finally{handlingPendingOwnerSession=false;}
   }
