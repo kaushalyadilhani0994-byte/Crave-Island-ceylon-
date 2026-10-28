@@ -34,7 +34,7 @@
     const adminButton = bottom && (
       bottom.querySelector('[onclick*="openAdminAccess"]') ||
       Array.from(bottom.querySelectorAll(".nav")).find(el =>
-        /(^|\\s)Admin(\\s|$)/i.test((el.innerText || el.textContent || "").replace(/\\s+/g, " ").trim())
+        /(^|\s)Admin(\s|$)/i.test((el.innerText || el.textContent || "").replace(/\s+/g, " ").trim())
       )
     );
     if (visible) {
