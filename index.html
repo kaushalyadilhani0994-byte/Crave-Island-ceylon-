@@ -655,7 +655,7 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
   }
   function installPrivateOwnerEntry(){
     const title=document.querySelector('.hero h2');
-    if(title&&title.dataset.cicOwnerEntry!=='ready'){
+    if(title&&!title.dataset.cicOwnerTrigger&&title.dataset.cicOwnerEntry!=='ready'){
       title.dataset.cicOwnerEntry='ready';
       let taps=0,timer=null;
       title.addEventListener('click',function(){
