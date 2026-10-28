@@ -207,7 +207,7 @@
       if(control){control.classList.add("open");control.style.display="flex";}
     }
     if(typeof window.showAdminView==="function")window.showAdminView("overview");
-    installUnifiedLiveTools();
+    // Keep the original V18 Control Room clean; do not inject a second owner-tools card hub.
   }
   async function openOwnerDashboard(){
     // Fail closed even if a customer calls the exported dashboard function manually.
