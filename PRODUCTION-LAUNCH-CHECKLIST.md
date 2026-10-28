@@ -80,3 +80,14 @@ The site may be online while launch preparation continues. Do not announce that 
 
 - [x] Additional database defense-in-depth fix on 2026-10-27: public passport reads now require both `published = true` and a matching active product. Migration `20261027133941_secure_public_passports_active_product` was applied and the resulting policy was re-read from `pg_policies` to verify it is present.
 - [ ] Supabase Auth leaked-password protection remains a dashboard-only blocker; this connected toolset cannot edit that Auth setting. Do not mark the final security review complete until it is enabled and the advisor warning clears.
+
+
+## Owner dashboard restoration follow-up — 2026-10-28
+
+- [x] Restored the original four-card owner dashboard in `supabase-admin-auth.js` after approved owner OTP: Products & Catalogue, Customer Orders, QR Product Passports, and Open Storefront. Source commit: `748275aff7375429597169559e6c2e6b246257c9`.
+- [x] Confirmed Vercel Production deployment `dpl_J8rJr1r1uxbefaN88a9EEpMaDLBk` reports `READY` and its Git commit matches the restoration commit.
+- [x] Confirmed the restored dashboard retains the approved-owner email/profile check and OTP verification path. The browser Supabase configuration contains a publishable key, not a service-role key.
+- [x] Vercel runtime-error aggregation returned no runtime errors for the selected 24-hour window. This does not verify client-side interactions or guarantee absence of browser errors.
+- [ ] Still required: test the owner OTP flow on a real mobile browser; verify the old four-card dashboard is the first owner screen; click each of the three live-tool cards and confirm the correct panel opens; sign out and confirm owner controls are hidden; test as a separate non-owner customer and confirm no admin UI is exposed.
+- [ ] Still required before launch sign-off: enable leaked-password protection in Supabase Auth; verify the live email actually supplies a six-digit OTP (or adjust the flow to match the configured email template); complete customer checkout/order and public QR passport end-to-end tests; review delivery-fee/policy settings and real product details.
+- [ ] Current catalogue remains at 0 active products. Do not activate placeholder products or claim the shop is ready to accept customer orders until real product data and required end-to-end checks are complete.
