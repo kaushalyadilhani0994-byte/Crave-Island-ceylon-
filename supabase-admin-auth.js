@@ -270,6 +270,9 @@
     finally{handlingPendingOwnerSession=false;}
   }
   async function wire(){
+    // Hide the customer-facing Admin nav immediately on startup, before any
+    // persisted session or auth-state callback is processed.
+    setOwnerNavVisible(false);
     install();
     const original=window.openAdminAccess;
     window.openAdminAccess=function(){
