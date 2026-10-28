@@ -644,39 +644,7 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
 
 <script src="supabase-admin-auth.js"></script>
 
-<script id="cic-hidden-owner-entry">
-/* Private owner entry: only opens the existing Supabase OTP gate. Owner tools remain hidden until the account is verified and approved. */
-(function(){
-  function openPrivateOwnerGate(){
-    const splash=document.querySelector('.splash');
-    if(splash)splash.classList.add('hide');
-    if(typeof window.openAdminAccess==='function')window.openAdminAccess();
-    else setTimeout(function(){if(typeof window.openAdminAccess==='function')window.openAdminAccess();},700);
-  }
-  function installPrivateOwnerEntry(){
-    const title=document.querySelector('.hero h2');
-    if(title&&!title.dataset.cicOwnerTrigger&&title.dataset.cicOwnerEntry!=='ready'){
-      title.dataset.cicOwnerEntry='ready';
-      let taps=0,timer=null;
-      title.addEventListener('click',function(){
-        taps++;
-        clearTimeout(timer);
-        timer=setTimeout(function(){taps=0;},4000);
-        if(taps>=5){taps=0;clearTimeout(timer);openPrivateOwnerGate();}
-      });
-    }
-    const params=new URLSearchParams(window.location.search);
-    if(params.get('owner-access')==='1'){
-      params.delete('owner-access');
-      const cleanUrl=window.location.pathname+(params.toString()?'?'+params.toString():'')+window.location.hash;
-      window.history.replaceState({},'',cleanUrl);
-      setTimeout(openPrivateOwnerGate,350);
-    }
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installPrivateOwnerEntry,{once:true});
-  else installPrivateOwnerEntry();
-})();
-</script>
+
 
 </body>
 </html>
