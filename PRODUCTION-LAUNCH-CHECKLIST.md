@@ -91,3 +91,14 @@ The site may be online while launch preparation continues. Do not announce that 
 - [ ] Still required: test the owner OTP flow on a real mobile browser; verify the old four-card dashboard is the first owner screen; click each of the three live-tool cards and confirm the correct panel opens; sign out and confirm owner controls are hidden; test as a separate non-owner customer and confirm no admin UI is exposed.
 - [ ] Still required before launch sign-off: enable leaked-password protection in Supabase Auth; verify the live email actually supplies a six-digit OTP (or adjust the flow to match the configured email template); complete customer checkout/order and public QR passport end-to-end tests; review delivery-fee/policy settings and real product details.
 - [ ] Current catalogue remains at 0 active products. Do not activate placeholder products or claim the shop is ready to accept customer orders until real product data and required end-to-end checks are complete.
+
+
+## Owner entry and sign-in follow-up — 2026-10-28
+
+- [x] Found and fixed a critical storefront wiring issue: `supabase-admin-auth.js` existed in the repository but was not loaded by `index.html`, so its approved-owner OTP gate and four-card dashboard code could not run from the actual storefront. The storefront now loads the owner-auth script after the Supabase client/catalogue scripts.
+- [x] Removed the duplicate inline five-tap owner trigger so the dedicated owner-auth script owns that entry path and the `?owner-access=1` route.
+- [x] Updated the owner sign-in copy to accurately support either a six-digit email token or an email magic link, depending on the configured Supabase email template. The callback still checks the approved owner profile before opening the dashboard.
+- [x] Source JavaScript syntax checks passed for `supabase-admin-auth.js`, `supabase-store.js`, and `supabase-checkout.js`. HTML is checked structurally by confirming the single auth-script include is after `supabase-store.js`; `index.html` is HTML, not standalone JavaScript.
+- [ ] The latest source commit must deploy to the V18 production alias and then be tested in a real mobile browser. A READY build alone is not proof that the sign-in interaction works.
+- [ ] Only the primary owner currently has an Auth user linked to an approved `staff_profiles` owner row. The second intended owner email is allowlisted in the front end but has no Auth user/profile approval yet; it must not be treated as active until provisioned and approved.
+- [ ] Supabase Auth leaked-password protection remains a dashboard-only security action. Do not mark the security review complete until it is enabled and the advisor warning clears.
