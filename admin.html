@@ -16,32 +16,29 @@
 </head>
 <body>
   <div id="status" role="status" aria-live="polite">Opening secure owner sign-in…</div>
-  <iframe id="storefront" title="CRAVE ISLAND CEYLON secure owner sign-in" src="/" referrerpolicy="same-origin"></iframe>
+  <iframe id="storefront" title="CRAVE ISLAND CEYLON secure owner sign-in" src="/?owner-access=1" referrerpolicy="same-origin"></iframe>
   <script>
     (function(){
       const frame=document.getElementById("storefront");
       const status=document.getElementById("status");
-      let attempts=0, finished=false;
-      function launch(){
-        if(finished)return;
+      let attempts=0;
+      function check(){
         try{
-          const w=frame.contentWindow;
-          const d=w.document;
+          const d=frame.contentWindow.document;
           const splash=d.querySelector(".splash");
           if(splash)splash.classList.add("hide");
-          if(typeof w.openAdminAccess==="function"){
-            w.openAdminAccess();
-            finished=true;
+          const modal=d.getElementById("adminAccessModal");
+          if(modal && (modal.classList.contains("open") || modal.getAttribute("aria-hidden")==="false" || (modal.style.display && modal.style.display!=="none"))){
             status.hidden=true;
             return;
           }
         }catch(_){}
         attempts++;
-        if(attempts<80){setTimeout(launch,250);return;}
-        status.innerHTML='Secure sign-in did not open automatically. <a href="/">Open the storefront</a> and use Secure Admin Access.';
+        if(attempts<80){setTimeout(check,250);return;}
+        status.innerHTML='Sign-in did not open automatically. <a href="/?owner-access=1" target="_top">Tap here to open secure owner sign-in</a>.';
       }
-      frame.addEventListener("load",function(){setTimeout(launch,100);});
-      setTimeout(launch,500);
+      frame.addEventListener("load",function(){setTimeout(check,250);});
+      setTimeout(check,500);
     })();
   </script>
 </body>
