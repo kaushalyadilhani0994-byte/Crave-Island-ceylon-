@@ -157,12 +157,18 @@
     install();
     const original=window.openAdminAccess;
     window.openAdminAccess=function(){
-      let otpVerified=false;try{otpVerified=sessionStorage.getItem("cicOwnerOtpVerified")==="1";}catch(_){}
-      if(otpVerified&&typeof original==="function")original.apply(this,arguments);
-      else if(typeof window.openModal==="function")window.openModal("adminAccessModal");
+      // Let the original entry point check Supabase's persisted session first.
+      // It opens the existing Control Room only for an approved owner; everyone
+      // else is shown the secure OTP panel. sessionStorage must not be the gate,
+      // because it can reset while Supabase's authenticated session remains valid.
+      if(typeof original==="function"){
+        try{
+          const result=original.apply(this,arguments);
+          if(result&&typeof result.catch==="function")result.catch(()=>{});
+        }catch(_){}
+      }else if(typeof window.openModal==="function")window.openModal("adminAccessModal");
       else {const m=$("#adminAccessModal");if(m)m.style.display="";}
       const s=$("#cicOwnerAuthStatus");if(s)s.hidden=true;
-      const email=$("#adminEmail");if(email)email.focus({preventScroll:true});
     };
     const ownerEntryTargets=[document.querySelector(".hero-copy h2"),document.querySelector(".hero-copy"),document.querySelector("header .logo"),document.querySelector(".brand-logo"),document.querySelector("[data-brand-logo]")].filter((el,index,all)=>el&&all.indexOf(el)===index);
     ownerEntryTargets.forEach(target=>{
