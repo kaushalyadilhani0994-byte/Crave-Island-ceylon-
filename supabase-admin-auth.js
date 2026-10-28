@@ -38,7 +38,9 @@
     } else {
       document.body.classList.remove("cic-owner-shortcuts-unified");
       if (bottom) bottom.style.removeProperty("grid-template-columns");
-      if (adminButton) adminButton.style.removeProperty("display");
+      // Keep the Admin entry completely out of the customer storefront.
+      // Owners can still open sign-in through the existing hidden owner trigger.
+      if (adminButton) adminButton.style.setProperty("display", "none", "important");
       syncOwnerAdminShortcut(false);
     }
   }
