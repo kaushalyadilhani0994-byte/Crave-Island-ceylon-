@@ -253,30 +253,30 @@
   document.body.appendChild(ownerOrdersScript);
   const ownerProductsScript = document.createElement("script");
   ownerProductsScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerProductsScript.src = "supabase-admin-products.js?v=20261028-owner-email-fix";
+  ownerProductsScript.src = "supabase-admin-products.js?v=20261028-customer-admin-nav-fix";
   ownerProductsScript.defer = true;
   document.body.appendChild(ownerProductsScript);
   const secureCheckoutScript = document.createElement("script");
   secureCheckoutScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  secureCheckoutScript.src = "supabase-checkout.js?v=20261028-owner-email-fix";
+  secureCheckoutScript.src = "supabase-checkout.js?v=20261028-customer-admin-nav-fix";
   secureCheckoutScript.defer = true;
   document.body.appendChild(secureCheckoutScript);
 
   const ownerPassportsScript = document.createElement("script");
   ownerPassportsScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerPassportsScript.src = "supabase-admin-passports.js?v=20261028-owner-email-fix";
+  ownerPassportsScript.src = "supabase-admin-passports.js?v=20261028-customer-admin-nav-fix";
   ownerPassportsScript.defer = true;
   document.body.appendChild(ownerPassportsScript);
 
   const ownerAuthScript = document.createElement("script");
   ownerAuthScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerAuthScript.src = "supabase-admin-auth.js?v=20261028-owner-email-fix";
+  ownerAuthScript.src = "supabase-admin-auth.js?v=20261028-customer-admin-nav-fix";
   ownerAuthScript.defer = true;
   document.body.appendChild(ownerAuthScript);
 
   const ownerWorkspaceScript = document.createElement("script");
   ownerWorkspaceScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerWorkspaceScript.src = "supabase-admin-workspace.js?v=20261028-owner-email-fix";
+  ownerWorkspaceScript.src = "supabase-admin-workspace.js?v=20261028-customer-admin-nav-fix";
   ownerWorkspaceScript.defer = true;
   document.body.appendChild(ownerWorkspaceScript);
 
