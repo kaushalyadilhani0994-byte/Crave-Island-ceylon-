@@ -160,7 +160,7 @@ main{display:block!important;position:relative!important;margin:0!important;padd
 </style>
 <meta name="cic-startup" content="clean-single-state-entrance">
 <meta name="cic-update" content="V18-OWNER-MEDIA-INVITATION-REFINEMENT">
-<style id="cic-public-admin-nav-guard">/* Customer storefront: never force the owner-only Admin entry visible. The approved-owner script may reveal it after OTP verification. */.bottom .nav[onclick*="openAdminAccess"]{display:none!important}.bottom{grid-template-columns:repeat(6,minmax(0,1fr))!important}</style>
+<style id="cic-public-admin-nav-guard">/* Public storefront shows customer navigation only. Admin and QR-generation controls stay private; scanned product passport links remain available. */.bottom .nav[onclick*="openAdminAccess"],.bottom .nav[onclick*="qrModal"]{display:none!important}.bottom{grid-template-columns:repeat(5,minmax(0,1fr))!important}</style>
 <style id="cic-owner-shortcuts-public-cleanup">
 /* Keep live owner modules off the storefront; launch them from the original Control Room hub. */
 #cicOwnerOrdersButton,#cicOwnerCatalogueButton,#cicPassportButton,#cicOwnerAlertsButton,#cicOwnerAlertButton,#cicAlertsButton{display:none!important;visibility:hidden!important;pointer-events:none!important}
@@ -641,5 +641,24 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
 })();
 </script>
 
+
+<script id="cic-hidden-owner-entry">
+/* Private owner entry: tap the CRAVE hero title five times within 4 seconds. This does not display Admin to customers. */
+(function(){
+  function installPrivateOwnerEntry(){
+    const title=document.querySelector('.hero h2');
+    if(!title||title.dataset.cicOwnerEntry==='ready')return;
+    title.dataset.cicOwnerEntry='ready';
+    let taps=0,timer=null;
+    title.addEventListener('click',function(){
+      taps++;
+      clearTimeout(timer);
+      timer=setTimeout(function(){taps=0;},4000);
+      if(taps>=5){taps=0;clearTimeout(timer);if(typeof window.openAdminAccess==='function')window.openAdminAccess();}
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installPrivateOwnerEntry,{once:true});else installPrivateOwnerEntry();
+})();
+</script>
 </body>
 </html>
