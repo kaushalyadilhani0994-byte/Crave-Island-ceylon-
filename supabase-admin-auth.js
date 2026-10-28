@@ -173,8 +173,26 @@
     try{
       const ownerUrl=new URL(window.location.href);
       if(ownerUrl.searchParams.get("owner-access")==="1"){
-        ownerUrl.searchParams.delete("owner-access");history.replaceState(history.state,"",ownerUrl.pathname+ownerUrl.search+ownerUrl.hash);
-        window.setTimeout(()=>window.openAdminAccess(),350);
+        ownerUrl.searchParams.delete("owner-access");
+        history.replaceState(history.state,"",ownerUrl.pathname+ownerUrl.search+ownerUrl.hash);
+        // Reuse the existing Control Room when this browser already has a
+        // verified owner session; only show the sign-in panel when needed.
+        window.setTimeout(async()=>{
+          let verified=false;
+          try{verified=sessionStorage.getItem("cicOwnerOtpVerified")==="1";}catch(_){}
+          const client=db();
+          if(verified&&client){
+            try{
+              const {data}=await client.auth.getSession();
+              if(data&&data.session&&await isApprovedOwner(data.session.user)){
+                setOwnerNavVisible(true);
+                openOwnerDashboard();
+                return;
+              }
+            }catch(_){}
+          }
+          window.openAdminAccess();
+        },350);
       }
     }catch(_){}
     window.requestAdminOtp=sendCode;window.verifyAdminOtpDemo=function(){verifyCode();};
