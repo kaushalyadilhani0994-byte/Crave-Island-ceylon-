@@ -185,9 +185,31 @@
       window.__cicOwnerToolsObserver.observe(document.body,{childList:true,subtree:true});
     }
   }
-  function openOwnerDashboard(){
-    // Restore the original CRAVE owner dashboard shown immediately after approved OTP.
-    // Keep the existing Supabase owner verification and RLS-protected tools unchanged.
+  async function openOwnerDashboard(){
+    // Fail closed even if a customer calls the exported dashboard function manually.
+    const client=db();
+    if(!client){
+      setOwnerNavVisible(false);
+      status("Owner verification is unavailable. Please sign in again.",true);
+      return;
+    }
+    try{
+      const {data,error}=await client.auth.getUser();
+      if(error||!data||!data.user||!(await isApprovedOwner(data.user))){
+        const existing=$("#cicOwnerDashboard");
+        if(existing)existing.remove();
+        setOwnerNavVisible(false);
+        status("Owner access denied. Sign in with an approved owner account.",true);
+        return;
+      }
+    }catch(_){
+      const existing=$("#cicOwnerDashboard");
+      if(existing)existing.remove();
+      setOwnerNavVisible(false);
+      status("Owner verification failed. Please sign in again.",true);
+      return;
+    }
+    // Restore the original V18 owner dashboard after a fresh server-verified owner check.
     let dashboard=$("#cicOwnerDashboard");
     if(!dashboard){
       if(!$("#cicOwnerDashboardStyle")){
@@ -219,10 +241,10 @@
         <div class="cic-dash-wrap">
           <header class="cic-dash-top"><div><h1>CRAVE ISLAND CEYLON</h1><p>Owner workspace · Manage your business from one place.</p></div><button class="cic-dash-action" type="button" id="cicDashSignOut">Sign out</button></header>
           <div class="cic-dash-grid">
-            <button class="cic-dash-card" type="button" data-open="cicOwnerCatalogueButton"><strong>Products & Catalogue</strong><span>Add and update products, prices, ingredients, images and availability.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicOwnerCatalogueButton" data-section="products"><strong>Owner Products</strong><span>Add and manage verified products, prices, images and availability.</span></button>
             <button class="cic-dash-card" type="button" data-open="cicOwnerOrdersButton"><strong>Owner Orders</strong><span>Review incoming orders and update their progress.</span></button>
-            <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>QR Product Passports</strong><span>Manage product traceability and passport details.</span></button>
-            <button class="cic-dash-card" type="button" data-open="storefront"><strong>Open Storefront</strong><span>Return to the customer-facing CRAVE ISLAND CEYLON shop.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicOwnerCatalogueButton" data-section="categories"><strong>Owner Categories</strong><span>Create and manage product categories and subcategories.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>Owner QR Passport</strong><span>Manage product passports and public QR destinations.</span></button>
           </div>
           <div class="cic-dash-footer"><p>Owner access is checked against your approved account.</p><button class="cic-dash-action" type="button" id="cicDashClose">Back to shop</button></div>
         </div>`;
@@ -231,11 +253,25 @@
         const card=e.target.closest("[data-open]");
         if(card){
           const target=card.getAttribute("data-open");
+          const section=card.getAttribute("data-section");
           if(target==="storefront"){dashboard.remove();return;}
           let tries=0;
           const launch=()=>{
             const b=document.getElementById(target);
-            if(b){dashboard.remove();b.hidden=false;b.click();return;}
+            if(b){
+              dashboard.remove();
+              b.hidden=false;
+              b.click();
+              if(section==="categories"||section==="products"){
+                const form=document.getElementById(section==="categories"?"cicCategoryForm":"cicProductForm");
+                if(form){
+                  form.scrollIntoView({behavior:"smooth",block:"start"});
+                  const input=form.querySelector("input,select,textarea");
+                  if(input)input.focus({preventScroll:true});
+                }
+              }
+              return;
+            }
             if(++tries<25){setTimeout(launch,200);return;}
             status("This section is still loading. Please try again in a moment.",true);
           };
