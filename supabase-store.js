@@ -248,7 +248,7 @@
   // Load the live owner order panel only after the authenticated Supabase client is configured.
   const ownerOrdersScript = document.createElement("script");
   ownerOrdersScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerOrdersScript.src = "supabase-admin-orders.js?v=20261028-owner-email-fix";
+  ownerOrdersScript.src = "supabase-admin-orders.js?v=20261028-customer-admin-nav-fix";
   ownerOrdersScript.defer = true;
   document.body.appendChild(ownerOrdersScript);
   const ownerProductsScript = document.createElement("script");
