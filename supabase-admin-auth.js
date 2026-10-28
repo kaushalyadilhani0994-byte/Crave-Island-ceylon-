@@ -29,7 +29,14 @@
   }
   function setOwnerNavVisible(visible) {
     const bottom = document.querySelector(".bottom");
-    const adminButton = bottom && bottom.querySelector(".nav:last-child");
+    // Find the real Admin entry by its action, not by :last-child:
+    // owner modules can append their own buttons to the bottom bar.
+    const adminButton = bottom && (
+      bottom.querySelector('[onclick*="openAdminAccess"]') ||
+      Array.from(bottom.querySelectorAll(".nav")).find(el =>
+        /(^|\\s)Admin(\\s|$)/i.test((el.innerText || el.textContent || "").replace(/\\s+/g, " ").trim())
+      )
+    );
     if (visible) {
       document.body.classList.add("cic-owner-shortcuts-unified");
       if (bottom) bottom.style.setProperty("grid-template-columns", "repeat(7,minmax(0,1fr))", "important");
