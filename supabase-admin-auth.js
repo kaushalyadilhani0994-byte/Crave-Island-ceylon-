@@ -116,7 +116,7 @@
       setOwnerNavVisible(true);
       if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
       else {const m=$("#adminAccessModal");if(m)m.style.display="none";}
-      openOwnerDashboard();
+      openOriginalControlRoom();
     }catch(e){status("Could not verify the code because of a connection error.",true);}
     finally{if(btn){btn.disabled=false;btn.textContent="Verify code & open Admin";}}
   }
@@ -184,6 +184,30 @@
       window.__cicOwnerToolsObserver=new MutationObserver(()=>relocate());
       window.__cicOwnerToolsObserver.observe(document.body,{childList:true,subtree:true});
     }
+  }
+  async function openOriginalControlRoom(){
+    // Return the owner to the existing V18 Control Room instead of adding another dashboard layer.
+    const client=db();
+    if(!client){setOwnerNavVisible(false);status("Owner verification is unavailable. Please sign in again.",true);return;}
+    try{
+      const {data,error}=await client.auth.getUser();
+      if(error||!data||!data.user||!(await isApprovedOwner(data.user))){
+        setOwnerNavVisible(false);
+        status("Owner access denied. Sign in with an approved owner account.",true);
+        return;
+      }
+    }catch(_){setOwnerNavVisible(false);status("Owner verification failed. Please sign in again.",true);return;}
+    const extra=document.getElementById("cicOwnerDashboard");
+    if(extra)extra.remove();
+    setOwnerNavVisible(true);
+    if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
+    if(typeof window.openModal==="function")window.openModal("controlRoomModal");
+    else{
+      const control=document.getElementById("controlRoomModal");
+      if(control){control.classList.add("open");control.style.display="flex";}
+    }
+    if(typeof window.showAdminView==="function")window.showAdminView("overview");
+    installUnifiedLiveTools();
   }
   async function openOwnerDashboard(){
     // Fail closed even if a customer calls the exported dashboard function manually.
@@ -292,7 +316,7 @@
     dashboard.style.display="block";
     dashboard.scrollTop=0;
   }
-  window.CIC_OPEN_OWNER_DASHBOARD = openOwnerDashboard;
+  window.CIC_OPEN_OWNER_DASHBOARD = openOriginalControlRoom;
   async function handlePendingOwnerSession(session){
     if(!session||!session.user||handlingPendingOwnerSession)return;
     handlingPendingOwnerSession=true;
@@ -354,7 +378,7 @@
               const {data}=await client.auth.getSession();
               if(data&&data.session&&await isApprovedOwner(data.session.user)){
                 setOwnerNavVisible(true);
-                openOwnerDashboard();
+                openOriginalControlRoom();
                 return;
               }
             }catch(_){}
@@ -389,7 +413,7 @@
               try{sessionStorage.setItem("cicOwnerOtpVerified","1");localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
               setOwnerNavVisible(true);
               if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
-              openOwnerDashboard();
+              openOriginalControlRoom();
             }else if(session&&session.user){
               await recordDeniedOwnerAttempt();
               await client.auth.signOut();
