@@ -112,7 +112,69 @@
     finally{if(btn){btn.disabled=false;btn.textContent="Verify OTP & open admin";}}
   }
   function installUnifiedLiveTools(){
-    if(document.getElementById("controlRoomModal"))document.body.classList.add("cic-owner-shortcuts-unified");
+    const control=document.getElementById("controlRoomModal");
+    if(!control)return;
+    document.body.classList.add("cic-owner-shortcuts-unified");
+
+    // Keep the original Control Room as the single owner workspace.
+    // Live modules retain their own session/RLS checks; only their launch
+    // buttons are relocated here so they no longer float over the storefront.
+    let hub=document.getElementById("cicOwnerToolsHub");
+    if(!hub){
+      hub=document.createElement("section");
+      hub.id="cicOwnerToolsHub";
+      hub.setAttribute("aria-label","Owner tools");
+      hub.innerHTML='<h4>Live owner tools</h4><p>Manage your live store from this Control Room.</p><div class="cic-owner-tool-grid"><button type="button" data-cic-launch="catalogue">Catalogue & products</button><button type="button" data-cic-launch="orders">Orders & fulfilment</button><button type="button" data-cic-launch="passports">QR product passports</button><button type="button" data-cic-launch="alerts">Owner alerts</button></div><div class="cic-owner-tool-status" role="status" aria-live="polite"></div>';
+      const tabs=control.querySelector(".admin-tabs");
+      if(tabs)tabs.insertAdjacentElement("afterend",hub);
+      else control.querySelector(".sheet")?.prepend(hub);
+      hub.addEventListener("click",function(event){
+        const button=event.target.closest("[data-cic-launch]");
+        if(!button)return;
+        const kind=button.dataset.cicLaunch;
+        const selectors={
+          catalogue:["#cicOwnerCatalogueButton"],
+          orders:["#cicOwnerOrdersButton"],
+          passports:["#cicPassportButton"],
+          alerts:["#cicOwnerAlertsButton","#cicOwnerAlertButton","#cicAlertsButton"]
+        };
+        let target=null;
+        for(const selector of (selectors[kind]||[])){target=document.querySelector(selector);if(target)break;}
+        if(!target&&kind==="alerts"){
+          target=Array.from(document.querySelectorAll("button")).find(el=>/owner\s*alerts/i.test(el.textContent||""));
+        }
+        const status=hub.querySelector(".cic-owner-tool-status");
+        if(target){target.click();if(status)status.textContent="Opened "+button.textContent.trim()+".";}
+        else if(status)status.textContent="This tool is still connecting. Close and reopen Control Room in a moment.";
+      });
+      const style=document.createElement("style");
+      style.id="cic-owner-tools-hub-style";
+      style.textContent="#cicOwnerToolsHub{margin:12px 0;padding:14px;border:1px solid #d4af37;border-radius:14px;background:#fffaf1;color:#2c1a14}#cicOwnerToolsHub h4{font:400 21px Georgia,serif;margin:0 0 4px}#cicOwnerToolsHub p{font-size:11px;color:#78675c;margin:0 0 10px}#cicOwnerToolsHub .cic-owner-tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}#cicOwnerToolsHub button{border:1px solid #d4af37;background:#2c1a14;color:#fffaf1;border-radius:10px;padding:11px 9px;font-size:12px;font-weight:700}#cicOwnerToolsHub .cic-owner-tool-status{font-size:10px;color:#66564d;margin-top:8px;min-height:12px}#cicOwnerToolsHub button:focus-visible{outline:3px solid #d4af37;outline-offset:2px}@media(max-width:380px){#cicOwnerToolsHub .cic-owner-tool-grid{grid-template-columns:1fr}}";
+      document.head.appendChild(style);
+    }
+
+    const relocate=function(){
+      const known=[
+        ["#cicOwnerCatalogueButton","catalogue"],
+        ["#cicOwnerOrdersButton","orders"],
+        ["#cicPassportButton","passports"]
+      ];
+      known.forEach(([selector,kind])=>{
+        const button=document.querySelector(selector);
+        if(button){
+          button.hidden=true;
+          button.style.setProperty("display","none","important");
+          button.setAttribute("aria-hidden","true");
+        }
+      });
+      const alerts=Array.from(document.querySelectorAll("button")).find(el=>/owner\s*alerts/i.test(el.textContent||"")&&!hub.contains(el));
+      if(alerts){alerts.hidden=true;alerts.style.setProperty("display","none","important");alerts.setAttribute("aria-hidden","true");}
+    };
+    relocate();
+    if(!window.__cicOwnerToolsObserver){
+      window.__cicOwnerToolsObserver=new MutationObserver(()=>relocate());
+      window.__cicOwnerToolsObserver.observe(document.body,{childList:true,subtree:true});
+    }
   }
   function openOwnerDashboard(){
     const dashboard=$("#cicOwnerDashboard");
