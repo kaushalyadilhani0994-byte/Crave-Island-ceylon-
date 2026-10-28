@@ -220,7 +220,7 @@
           <header class="cic-dash-top"><div><h1>CRAVE ISLAND CEYLON</h1><p>Owner workspace · Manage your business from one place.</p></div><button class="cic-dash-action" type="button" id="cicDashSignOut">Sign out</button></header>
           <div class="cic-dash-grid">
             <button class="cic-dash-card" type="button" data-open="cicOwnerCatalogueButton"><strong>Products & Catalogue</strong><span>Add and update products, prices, ingredients, images and availability.</span></button>
-            <button class="cic-dash-card" type="button" data-open="cicOwnerOrdersButton"><strong>Customer Orders</strong><span>Review incoming orders and update their progress.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicOwnerOrdersButton"><strong>Owner Orders</strong><span>Review incoming orders and update their progress.</span></button>
             <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>QR Product Passports</strong><span>Manage product traceability and passport details.</span></button>
             <button class="cic-dash-card" type="button" data-open="storefront"><strong>Open Storefront</strong><span>Return to the customer-facing CRAVE ISLAND CEYLON shop.</span></button>
           </div>
