@@ -165,6 +165,14 @@ main{display:block!important;position:relative!important;margin:0!important;padd
 /* Keep live owner modules off the storefront; launch them from the original Control Room hub. */
 #cicOwnerOrdersButton,#cicOwnerCatalogueButton,#cicPassportButton,#cicOwnerAlertsButton,#cicOwnerAlertButton,#cicAlertsButton{display:none!important;visibility:hidden!important;pointer-events:none!important}
 </style>
+<style id="cic-control-room-simplify">
+/* Keep the existing V18 Control Room simple: original tabs and working views stay available. */
+#controlRoomModal .sheet>.muted-note,
+#controlRoomModal #v7AdminMap,
+#controlRoomModal .health-bar{display:none!important}
+#controlRoomModal .admin-tabs{position:sticky;top:0;z-index:5;background:#fffaf1;padding:8px 0}
+#controlRoomModal .admin-view{margin-top:12px}
+</style>
 </head>
 <body>
 <div class="success-toast" id="successToast">✓ Saved successfully</div>
