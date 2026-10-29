@@ -217,6 +217,25 @@
     if(typeof window.showAdminView==="function")window.showAdminView("overview");
     // Keep the original V18 Control Room clean; do not inject a second owner-tools card hub.
   }
+  function addOwnerMenuReturnButton(dashboard){
+    const control=document.getElementById("controlRoomModal");
+    const head=control&&control.querySelector(".sheet-head");
+    if(!control||!head||document.getElementById("cicReturnOwnerMenu"))return;
+    const button=document.createElement("button");
+    button.id="cicReturnOwnerMenu";
+    button.type="button";
+    button.textContent="← Admin menu";
+    button.setAttribute("aria-label","Return to the owner Admin menu");
+    button.style.cssText="border:1px solid #d4af37;border-radius:9px;padding:8px 10px;background:#fff8e7;color:#2c1a14;font-weight:700;margin-right:8px;min-height:40px";
+    const close=head.querySelector(".close");
+    if(close)head.insertBefore(button,close);else head.appendChild(button);
+    button.addEventListener("click",function(){
+      if(typeof window.closeModal==="function")window.closeModal("controlRoomModal");
+      else{control.classList.remove("open");control.style.display="none";}
+      dashboard.style.display="block";
+      dashboard.scrollTop=0;
+    });
+  }
   async function openOwnerDashboard(){
     // Fail closed even if a customer calls the exported dashboard function manually.
     const client=db();
@@ -300,6 +319,7 @@
           // Android/browser Back then returns to this menu instead of the storefront.
           dashboard.style.display="none";
           if(typeof window.openModal==="function")window.openModal("controlRoomModal");
+          addOwnerMenuReturnButton(dashboard);
           if(typeof window.showAdminView==="function")window.showAdminView(view);
           return;
         }
@@ -314,6 +334,7 @@
             if(b){
               // Preserve the dashboard so Back from the tool restores the owner menu.
               dashboard.style.display="none";
+              addOwnerMenuReturnButton(dashboard);
               b.hidden=false;
               b.click();
               if(section==="categories"||section==="products"){
