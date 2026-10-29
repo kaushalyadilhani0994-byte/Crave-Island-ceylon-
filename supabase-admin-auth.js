@@ -116,7 +116,7 @@
       setOwnerNavVisible(true);
       if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
       else {const m=$("#adminAccessModal");if(m)m.style.display="none";}
-      openOriginalControlRoom();
+      openOwnerDashboard();
     }catch(e){status("Could not verify the code because of a connection error.",true);}
     finally{if(btn){btn.disabled=false;btn.textContent="Verify code & open Admin";}}
   }
@@ -316,7 +316,7 @@
     dashboard.style.display="block";
     dashboard.scrollTop=0;
   }
-  window.CIC_OPEN_OWNER_DASHBOARD = openOriginalControlRoom;
+  window.CIC_OPEN_OWNER_DASHBOARD = openOwnerDashboard;
   async function handlePendingOwnerSession(session){
     if(!session||!session.user||handlingPendingOwnerSession)return;
     handlingPendingOwnerSession=true;
@@ -332,7 +332,7 @@
       setOwnerNavVisible(true);
       if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
       else {const modal=$("#adminAccessModal");if(modal)modal.style.display="none";}
-      openOriginalControlRoom();
+      openOwnerDashboard();
     }catch(_){status("Could not verify the owner session. Please reopen Admin and try again.",true);}
     finally{handlingPendingOwnerSession=false;}
   }
@@ -378,7 +378,7 @@
               const {data}=await client.auth.getSession();
               if(data&&data.session&&await isApprovedOwner(data.session.user)){
                 setOwnerNavVisible(true);
-                openOriginalControlRoom();
+                openOwnerDashboard();
                 return;
               }
             }catch(_){}
@@ -413,7 +413,7 @@
               try{sessionStorage.setItem("cicOwnerOtpVerified","1");localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
               setOwnerNavVisible(true);
               if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
-              openOriginalControlRoom();
+              openOwnerDashboard();
             }else if(session&&session.user){
               await recordDeniedOwnerAttempt();
               await client.auth.signOut();
