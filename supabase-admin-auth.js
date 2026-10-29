@@ -282,7 +282,7 @@
           #cicOwnerDashboard .cic-dash-section{margin-top:20px}
           #cicOwnerDashboard .cic-dash-section h2{font:400 22px Georgia,serif;margin:0 0 10px}
           #cicOwnerDashboard .cic-dash-note{font-size:12px;margin-top:12px;padding:12px;border-radius:12px;background:#efe5d8}
-          @media(max-width:430px){#cicOwnerDashboard .cic-dash-grid{grid-template-columns:1fr}#cicOwnerDashboard .cic-dash-card{min-height:88px}}
+          @media(max-width:430px){#cicOwnerDashboard{padding:12px}#cicOwnerDashboard .cic-dash-top{gap:8px;padding-bottom:12px;margin-bottom:12px}#cicOwnerDashboard .cic-dash-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#cicOwnerDashboard .cic-dash-card{min-height:92px;padding:11px;gap:5px;border-radius:12px}#cicOwnerDashboard .cic-dash-card strong{font:400 16px/1.15 Georgia,serif}#cicOwnerDashboard .cic-dash-card span{font-size:11px;line-height:1.35}#cicOwnerDashboard .cic-dash-section{margin-top:14px}#cicOwnerDashboard .cic-dash-section h2{font-size:20px;margin-bottom:8px}#cicOwnerDashboard .cic-dash-note{font-size:11px;padding:10px}}
         `;
         document.head.appendChild(style);
       }
