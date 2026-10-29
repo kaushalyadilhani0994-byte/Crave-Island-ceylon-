@@ -322,6 +322,7 @@
           // Keep the owner menu in the history stack, hidden behind the work area.
           // Android/browser Back then returns to this menu instead of the storefront.
           dashboard.style.display="none";
+          try{history.pushState({cicOwnerDashboard:true,cicOwnerTool:true},"","#owner-tool");}catch(_){}
           if(typeof window.openModal==="function")window.openModal("controlRoomModal");
           addOwnerMenuReturnButton(dashboard);
           if(typeof window.showAdminView==="function")window.showAdminView(view);
@@ -334,6 +335,7 @@
           if(target==="storefront"){dashboard.style.display="none";return;}
           if(target==="mediaModal"||target==="loyaltyModal"||target==="scratchModal"){
             dashboard.style.display="none";
+            try{history.pushState({cicOwnerDashboard:true,cicOwnerTool:true},"","#owner-tool");}catch(_){}
             if(typeof window.openModal==="function")window.openModal(target);
             addOwnerMenuReturnButton(dashboard);
             return;
@@ -342,8 +344,9 @@
           const launch=()=>{
             const b=document.getElementById(target);
             if(b){
-              // Preserve the dashboard so Back from the tool restores the owner menu.
+              // Preserve the dashboard so Android/browser Back returns to the owner menu.
               dashboard.style.display="none";
+              try{history.pushState({cicOwnerDashboard:true,cicOwnerTool:true},"","#owner-tool");}catch(_){}
               addOwnerMenuReturnButton(dashboard);
               b.hidden=false;
               b.click();
@@ -385,7 +388,8 @@
     const dashboard=document.getElementById("cicOwnerDashboard");
     if(!dashboard)return;
     if(event.state&&event.state.cicOwnerDashboard){
-      // Back from a Control Room/tool panel: return to the owner menu, not Home.
+      // Back from a Control Room/tool panel: close the active work modal and return to Admin, not Home.
+      document.querySelectorAll(".modal.open").forEach(modal=>{if(typeof window.closeModal==="function")window.closeModal(modal.id);else{modal.classList.remove("open");modal.style.display="none";}});
       dashboard.style.display="block";
       dashboard.scrollTop=0;
     }else{
