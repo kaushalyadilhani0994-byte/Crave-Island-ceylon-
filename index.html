@@ -342,7 +342,7 @@ main{display:block!important;position:relative!important;margin:0!important;padd
 <div class="modal" id="certModal"><div class="sheet"><div class="sheet-head"><h3>Certificates & Product Documents</h3><button class="close" onclick="closeModal('certModal')">×</button></div><p class="muted-note">Each product passport can show only documents and claims that have actually been verified.</p><div class="detail-grid"><div class="detail-card"><b>Batch Record</b><span>Batch ID · MFG · EXP · traceability</span></div><div class="detail-card"><b>Certificate Vault</b><span>Upload verified certificates and documents</span></div><div class="detail-card"><b>Ingredients</b><span>Ingredient and allergen information</span></div><div class="detail-card"><b>QR Passport</b><span>Connect the label QR to this product record</span></div></div></div></div>
 <div class="modal" id="historyModal"><div class="sheet"><div class="sheet-head"><h3>Our Island History</h3><button class="close" onclick="closeModal('historyModal')">×</button></div><p class="muted-note">A simple timeline for the brand story — kept separate from unverified claims.</p><div class="history-list"><div class="history-item"><div class="history-year">01</div><div><b>The Idea</b><span>CRAVE ISLAND CEYLON begins as a curated island food concept.</span></div></div><div class="history-item"><div class="history-year">02</div><div><b>The House</b><span>Categories, products, gifting and café-inspired discovery come together.</span></div></div><div class="history-item"><div class="history-year">03</div><div><b>The Passport</b><span>QR traceability connects physical labels with digital product stories.</span></div></div></div></div></div>
 
-<div class="modal" id="nextModal"><div class="sheet"><div class="sheet-head"><h3>CRAVE Next</h3><button class="close" onclick="closeModal('nextModal')">×</button></div><p class="muted-note">The next layer of the Island House — stories, proof, media and the product passport.</p><div class="next-sheet"><div class="next-feature"><button onclick="closeModal('nextModal');openModal('certModal')"><b>Certificates</b><span>Batch details, verified documents and product records.</span></button><button onclick="closeModal('nextModal');openModal('historyModal')"><b>Our History</b><span>The CRAVE story, milestones and Ceylon heritage.</span></button><button class="wide" onclick="closeModal('nextModal');openModal('mediaModal')"><b>Media Lounge</b><span>Reels · voice stories · photography · short films · customer moments.</span></button></div></div></div></div>
+<div class="modal" id="nextModal"><div class="sheet"><div class="sheet-head"><h3>CRAVE Next</h3><button class="close" onclick="closeModal('nextModal')">×</button></div><p class="muted-note">The next layer of the Island House — stories, proof, media and the product passport.</p><div class="next-sheet"><div class="next-feature"><button onclick="closeModal('nextModal');openModal('certModal')"><b>Certificates</b><span>Batch details, verified documents and product records.</span></button><button onclick="closeModal('nextModal');openModal('historyModal')"><b>Our History</b><span>The CRAVE story, milestones and Ceylon heritage.</span></button><button class="wide" onclick="closeModal('nextModal');openModal('mediaModal')"><b>Media Lounge</b><span>Reels · voice stories · photography · short films · customer moments.</span></button><button class="wide" onclick="closeModal('nextModal');openModal('cicSettingsModal')"><b>Settings &amp; Preferences</b><span>Language · appearance · reading comfort</span></button></div></div></div></div>
 <div class="modal" id="hamperModal"><div class="sheet"><div class="sheet-head"><h3>Gift Hampers</h3><button class="close" onclick="closeModal('hamperModal')">×</button></div><p class="muted-note">Gift mode is separate from normal shopping. Select any products you want in this hamper; when you add the hamper, those items are marked as one gift pack.</p><div class="hamper-picker" id="hamperPicker"></div><div class="hamper-summary"><span>Selected: <b id="hamperCount">0</b></span><b id="hamperTotal">LKR 0</b></div><div class="login-actions"><button class="goldbtn" onclick="addSelectedHamperToCart()">Add Hamper to Order</button><button class="gold-outline" onclick="clearHamperSelection()">Clear</button></div><p class="admin-note">Normal product orders remain manual. Only items chosen inside Gift Hampers become part of the hamper group.</p></div></div>
 <div class="modal" id="adminAccessModal"><div class="sheet cic-owner-login-sheet"><div class="sheet-head"><h3>Owner Sign In</h3><button class="close" onclick="closeModal('adminAccessModal')" aria-label="Close owner sign in">×</button></div><p class="muted-note">Sign in with an approved owner email to open the original CRAVE Control Room. Customers cannot access owner tools.</p><div class="form-grid cic-owner-login-fields"><div class="field full"><label for="adminEmail">Owner email</label><input id="adminEmail" type="email" placeholder="Approved owner email" autocomplete="email"></div><div class="field full"><label for="adminOtp">6-digit one-time code</label><input id="adminOtp" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="Enter 6-digit code"></div></div><div class="login-actions"><button class="goldbtn" type="button" onclick="requestAdminOtp()">Send secure code</button><button class="gold-outline" type="button" onclick="verifyAdminOtpDemo()">Verify &amp; open Control Room</button></div><div class="access-note">Access is checked against the approved owner account and Supabase permissions.</div></div></div>
 <style id="cic-owner-login-clean-style">
@@ -692,5 +692,44 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
 </script>
 
 
+
+<style id="cic-preferences-style">
+body.cic-dark-preference{--paper:#171310;--cream:#211b17;--ink:#f8eee2;--muted:#c0aea0;--line:#49382e;--white:#211b17}
+body.cic-dark-preference .shell{background:var(--paper);color:var(--ink)}
+body.cic-dark-preference .sheet{background:#211b17;color:#f8eee2;border-color:#49382e}
+body.cic-dark-preference .sheet-head,body.cic-dark-preference .field input,body.cic-dark-preference select{background:#2b211b;color:#f8eee2;border-color:#594437}
+body.cic-dark-preference .muted-note,body.cic-dark-preference .nav-sub{color:#c0aea0}
+.cic-pref-grid{display:grid;gap:12px;margin-top:12px}.cic-pref-row{display:grid;gap:7px;padding:13px;border:1px solid var(--line);border-radius:14px;background:var(--cream)}.cic-pref-row label{font-size:12px;font-weight:700}.cic-pref-row p{font-size:11px;line-height:1.5;color:var(--muted);margin:0}.cic-pref-row select{width:100%;min-height:42px;border:1px solid var(--line);border-radius:10px;padding:9px;background:white;color:var(--ink)}.cic-pref-options{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cic-pref-options button{border:1px solid var(--line);border-radius:11px;padding:12px;background:var(--cream);color:var(--ink)}.cic-pref-options button.active{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold);font-weight:700}
+</style>
+<div class="modal" id="cicSettingsModal"><div class="sheet"><div class="sheet-head"><h3 id="cicSettingsTitle">Settings &amp; Preferences</h3><button class="close" onclick="closeModal('cicSettingsModal')" aria-label="Close settings">×</button></div><p class="muted-note" id="cicSettingsIntro">Personalise your CRAVE experience. Preferences are saved on this device.</p><div class="cic-pref-grid"><div class="cic-pref-row"><label id="cicAppearanceLabel">Appearance</label><div class="cic-pref-options"><button id="cicLightChoice" onclick="window.cicSetTheme('light')">☀ Light</button><button id="cicDarkChoice" onclick="window.cicSetTheme('dark')">☾ Dark</button></div><p>Choose the display style for this device.</p></div><div class="cic-pref-row"><label for="cicLanguageChoice">Interface language</label><select id="cicLanguageChoice" onchange="window.cicSetLanguage(this.value)"><option value="en">English</option><option value="si">සිංහල (Sinhala)</option><option value="ta">தமிழ் (Tamil)</option></select><p id="cicLanguageHelp">Language changes the main navigation and settings labels. Some product content remains in its original language.</p></div><div class="cic-pref-row"><label>Reading comfort</label><div class="cic-pref-options"><button id="cicTextNormal" onclick="window.cicSetTextSize('normal')">A Normal</button><button id="cicTextLarge" onclick="window.cicSetTextSize('large')">A+ Larger</button></div><p>Increase text size for easier reading.</p></div></div><div class="login-actions"><button class="goldbtn" onclick="closeModal('cicSettingsModal')">Done</button></div></div></div>
+<script id="cic-preferences-script">
+(function(){
+const $=id=>document.getElementById(id);
+const navText={
+en:['Home','Next','Categories','Gifts','QR Passport','Orders','Admin'],
+si:['මුල් පිටුව','තවත්','කාණ්ඩ','තෑගි','QR පාස්පෝට්','ඇණවුම්','පරිපාලක'],
+ta:['முகப்பு','மேலும்','வகைகள்','பரிசுகள்','QR பாஸ்போர்ட்','ஆர்டர்கள்','நிர்வாகம்']
+};
+window.cicSetLanguage=function(lang){
+document.documentElement.lang=lang;
+document.querySelectorAll('nav.bottom .nav').forEach((b,i)=>{const l=b.querySelector('.nav-label');if(l&&navText[lang]&&navText[lang][i])l.textContent=navText[lang][i]});
+try{localStorage.setItem('cic-ui-language',lang)}catch(e){}
+};
+window.cicSetTheme=function(theme){
+document.body.classList.toggle('cic-dark-preference',theme==='dark');
+['cicLightChoice','cicDarkChoice'].forEach(id=>$(id)&&$(id).classList.remove('active'));
+const b=$(theme==='dark'?'cicDarkChoice':'cicLightChoice');if(b)b.classList.add('active');
+try{localStorage.setItem('cic-ui-theme',theme)}catch(e){}
+};
+window.cicSetTextSize=function(size){
+document.documentElement.style.fontSize=size==='large'?'18px':'16px';
+['cicTextNormal','cicTextLarge'].forEach(id=>$(id)&&$(id).classList.remove('active'));
+const b=$(size==='large'?'cicTextLarge':'cicTextNormal');if(b)b.classList.add('active');
+try{localStorage.setItem('cic-ui-text-size',size)}catch(e){}
+};
+function init(){let theme='light',lang='en',size='normal';try{theme=localStorage.getItem('cic-ui-theme')||theme;lang=localStorage.getItem('cic-ui-language')||lang;size=localStorage.getItem('cic-ui-text-size')||size}catch(e){}window.cicSetTheme(theme);window.cicSetLanguage(lang);window.cicSetTextSize(size);if($('cicLanguageChoice'))$('cicLanguageChoice').value=lang}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
 </body>
 </html>
