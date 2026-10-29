@@ -456,7 +456,7 @@ function refreshQR(){
  if(download)download.hidden=false;if(copy)copy.hidden=false;
 }
 function downloadQR(){const c=document.querySelector('#modalQR canvas')||document.querySelector('#modalQR img');if(!c){toast('QR is not ready yet');return}const a=document.createElement('a');a.download='crave-island-product-passport-qr.png';a.href=c.tagName==='CANVAS'?c.toDataURL('image/png'):c.src;a.click()}
-async function copyQRLink(){const link=document.getElementById('qrLink');const value=link&&link.textContent||'';if(!/^https?:\\/\\//i.test(value)){toast('No published passport link is available');return}try{await navigator.clipboard.writeText(value);toast('Passport link copied')}catch(_){window.prompt('Copy the public passport link',value)}}
+async function copyQRLink(){const link=document.getElementById('qrLink');const value=link&&link.textContent||'';if(!/^https?:\/\//i.test(value)){toast('No published passport link is available');return}try{await navigator.clipboard.writeText(value);toast('Passport link copied')}catch(_){window.prompt('Copy the public passport link',value)}}
 renderCats();renderProducts();updateCartBadge();
 </script>
 
