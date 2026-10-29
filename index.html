@@ -235,7 +235,7 @@ main{display:block!important;position:relative!important;margin:0!important;padd
   <button class="nav nav-gold nav-owner-admin" aria-label="Secure owner Admin access" onclick="setNav(this);openAdminAccess()"><svg viewBox="0 0 24 24"><path d="M12 3 4 7v5c0 5 3.5 8 8 9 4.5-1 8-4 8-9V7z"/><path d="M9 12h6M12 9v6"/></svg><span class="nav-label">Admin</span><span class="nav-sub">Secure access</span></button>
 </nav>
 <div class="modal" id="ordersModal"><div class="sheet"><div class="sheet-head"><h3>Order Details</h3><button class="close" onclick="closeModal('ordersModal')">×</button></div><p class="muted-note">Review your basket, then fill customer details and choose a payment method.</p><div id="cartRows"></div><div class="cart-summary"><span>Order total</span><b id="cartTotal">LKR 0</b></div><div style="display:flex;gap:8px;margin-top:10px"><button class="goldbtn" onclick="openCheckout()">Checkout</button><button class="goldbtn" style="background:#2c1a14;color:#fff" onclick="clearCart()">Clear</button></div><button class="goldbtn" style="margin-top:8px;background:#2c1a14;color:#fff8e7" onclick="openCheckout()" title="Orders are saved securely after checkout">Secure Checkout / Save Order</button><button class="secondary-btn" style="width:100%;margin-top:8px" onclick="openLastInvoice()">View Latest Invoice</button></div></div>
-<div class="modal" id="qrModal"><div class="sheet"><div class="sheet-head"><h3>Product QR Passport</h3><button class="close" onclick="closeModal('qrModal')">×</button></div><p style="font-size:11px;color:#7c6d63">A real scannable route for the selected product. In production this can open its Supabase-backed ingredients, batch, certificates and story.</p><select id="qrSelect" onchange="refreshQR()"></select><div class="qrbox"><div id="modalQR"></div></div><div class="row"><span>Passport link</span><b id="qrLink" style="max-width:65%;overflow:hidden;text-overflow:ellipsis"></b></div><button class="goldbtn" onclick="downloadQR()">Download QR PNG</button></div></div>
+<div class="modal" id="qrModal"><div class="sheet"><div class="sheet-head"><h3>Product QR Passport</h3><button class="close" onclick="closeModal('qrModal')">×</button></div><p style="font-size:11px;color:#7c6d63">A real scannable route for the selected product. In production this can open its Supabase-backed ingredients, batch, certificates and story.</p><select id="qrSelect" onchange="refreshQR()"></select><div class="qrbox"><div id="modalQR"></div></div><div class="row"><span>Passport link</span><b id="qrLink" style="max-width:65%;overflow:hidden;text-overflow:ellipsis"></b></div><div class="login-actions" id="qrActions"><button class="goldbtn" onclick="downloadQR()">Download QR PNG</button><button class="gold-outline" onclick="copyQRLink()">Copy passport link</button></div></div></div>
 <div class="modal" id="adminModal"><div class="sheet"><div class="sheet-head"><h3>CRAVE Control Room</h3><button class="close" onclick="closeModal('adminModal')">×</button></div><p style="font-size:11px;color:#7c6d63">Role-based workspace preview. Production access must use Supabase Auth + MFA/OTP + server-side role checks + RLS + audit logs. This HTML preview never stores passwords or OTP secrets.</p><div class="admin"><div><b>Products</b><span>Catalog, variants, pricing and category management.</span></div><div><b>Orders</b><span>Order status, customer details and fulfilment records.</span></div><div><b>QR Passports</b><span>Batch, MFG/EXP, certificates and traceability.</span></div><div><b>Media Lounge</b><span>Photos, reels, voice stories and short films.</span></div></div></div></div>
 
 
@@ -418,9 +418,45 @@ function updateCheckoutTotal(){const el=document.getElementById('checkoutTotal')
 function addGift(name){const p=PRODUCTS.find(x=>x.name===name);if(p)addToCart(p.id);document.getElementById('giftCount').textContent=cart.reduce((a,x)=>a+x.qty,0);toast(name+' added to hamper')}
 function submitCheckout(){if(typeof toast==="function")toast("Secure checkout is unavailable until the live checkout service loads.");}
 function urlFor(id){return location.origin+location.pathname+'?product='+encodeURIComponent(id)}
-function setupQR(){const s=document.getElementById('qrSelect');const box=document.getElementById('modalQR');const link=document.getElementById('qrLink');if(s){s.hidden=true;s.innerHTML='';}if(box){box.innerHTML='<p style="max-width:340px;margin:0;text-align:center;font-size:12px;line-height:1.6;color:#7c6d63">Verified product QR passports will appear here once a product passport is published. We do not create sample or unverified QR codes.</p>';}if(link)link.textContent='Published product passport required';const download=document.querySelector('#qrModal button[onclick="downloadQR()"]');if(download)download.hidden=true}
-function refreshQR(){setupQR()}
-function downloadQR(){const c=document.querySelector('#modalQR canvas');if(!c){toast('QR is loading');return}const a=document.createElement('a');a.download='crave-island-product-qr.png';a.href=c.toDataURL('image/png');a.click()}
+window.CIC_QR_PASSPORTS=window.CIC_QR_PASSPORTS||[];
+async function setupQR(){
+ const s=document.getElementById('qrSelect'),box=document.getElementById('modalQR'),link=document.getElementById('qrLink');
+ const download=document.querySelector('#qrModal button[onclick="downloadQR()"]'),copy=document.querySelector('#qrModal button[onclick="copyQRLink()"]');
+ if(!s||!box)return;
+ const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
+ s.innerHTML='';box.innerHTML='';window.CIC_QR_PASSPORTS=[];
+ if(!db){box.innerHTML='<p style="max-width:340px;margin:0;text-align:center;font-size:12px;line-height:1.6;color:#78665a">Product passport service is not connected. Please try again later.</p>';if(link)link.textContent='Unavailable';if(download)download.hidden=true;if(copy)copy.hidden=true;return}
+ try{
+  const {data:passports,error}=await db.from('product_passports').select('product_id,public_slug').eq('published',true);
+  if(error)throw error;
+  const rows=passports||[];
+  if(!rows.length){s.hidden=true;box.innerHTML='<p style="max-width:340px;margin:0;text-align:center;font-size:12px;line-height:1.6;color:#78665a">No verified product passports have been published yet. Once a real product passport is approved and published, its QR code will appear here. We never create sample or unverified QR codes.</p>';if(link)link.textContent='Published product passport required';if(download)download.hidden=true;if(copy)copy.hidden=true;return}
+  const ids=[...new Set(rows.map(x=>String(x.product_id||'' )).filter(Boolean))];
+  const {data:products,error:productError}=await db.from('products').select('id,name,is_active').in('id',ids).eq('is_active',true);
+  if(productError)throw productError;
+  const byId=new Map((products||[]).map(p=>[String(p.id),p]));
+  window.CIC_QR_PASSPORTS=rows.filter(p=>p.public_slug&&byId.has(String(p.product_id))).map(p=>({...p,productName:byId.get(String(p.product_id)).name||'Product'}));
+  if(!window.CIC_QR_PASSPORTS.length){s.hidden=true;box.innerHTML='<p style="max-width:340px;margin:0;text-align:center;font-size:12px;line-height:1.6;color:#78665a">No published passports are linked to active products yet.</p>';if(link)link.textContent='No active published passport';if(download)download.hidden=true;if(copy)copy.hidden=true;return}
+  s.hidden=false;
+  window.CIC_QR_PASSPORTS.forEach((p,i)=>{const o=document.createElement('option');o.value=p.public_slug;o.textContent=p.productName;s.appendChild(o)});
+  refreshQR();
+ }catch(e){s.hidden=true;box.innerHTML='<p style="max-width:340px;margin:0;text-align:center;font-size:12px;line-height:1.6;color:#78665a">Product passports could not be loaded. Please refresh and try again.</p>';if(link)link.textContent='Temporarily unavailable';if(download)download.hidden=true;if(copy)copy.hidden=true;console.warn('[CRAVE QR] Passport lookup failed',e)}
+}
+function refreshQR(){
+ const s=document.getElementById('qrSelect'),box=document.getElementById('modalQR'),link=document.getElementById('qrLink');
+ const download=document.querySelector('#qrModal button[onclick="downloadQR()"]'),copy=document.querySelector('#qrModal button[onclick="copyQRLink()"]');
+ if(!s||!box)return;
+ const p=(window.CIC_QR_PASSPORTS||[]).find(x=>x.public_slug===s.value);
+ if(!p){if(download)download.hidden=true;if(copy)copy.hidden=true;return}
+ const url=new URL('/passport.html',window.location.origin);url.searchParams.set('slug',p.public_slug);
+ box.replaceChildren();
+ if(typeof QRCode!=='undefined')new QRCode(box,{text:url.href,width:220,height:220,colorDark:'#2C1A14',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M});
+ else{box.textContent='QR generator could not load. Copy the public passport link instead.'}
+ if(link){link.textContent=url.href;link.title=url.href}
+ if(download)download.hidden=false;if(copy)copy.hidden=false;
+}
+function downloadQR(){const c=document.querySelector('#modalQR canvas')||document.querySelector('#modalQR img');if(!c){toast('QR is not ready yet');return}const a=document.createElement('a');a.download='crave-island-product-passport-qr.png';a.href=c.tagName==='CANVAS'?c.toDataURL('image/png'):c.src;a.click()}
+async function copyQRLink(){const link=document.getElementById('qrLink');const value=link&&link.textContent||'';if(!/^https?:\\/\\//i.test(value)){toast('No published passport link is available');return}try{await navigator.clipboard.writeText(value);toast('Passport link copied')}catch(_){window.prompt('Copy the public passport link',value)}}
 renderCats();renderProducts();updateCartBadge();
 </script>
 
