@@ -60,7 +60,7 @@
   function install() {
     const modal=$("#adminAccessModal"), email=$("#adminEmail"), otp=$("#adminOtp");
     // Restore the public QR Passport destination in the mobile bar; Admin remains owner-only.
-    if(!document.getElementById("cic-nav-qr-visibility-fix")){const st=document.createElement("style");st.id="cic-nav-qr-visibility-fix";st.textContent=".bottom .nav[onclick*=\"qrModal\"]{display:grid!important;visibility:visible!important;pointer-events:auto!important}.bottom{grid-template-columns:repeat(6,minmax(0,1fr))!important}@media(max-width:390px){.bottom{grid-template-columns:repeat(6,minmax(0,1fr))!important}}";document.head.appendChild(st);}
+    if(!document.getElementById("cic-nav-qr-visibility-fix")){const st=document.createElement("style");st.id="cic-nav-qr-visibility-fix";st.textContent=".bottom .nav[onclick*=\"qrModal\"]{display:grid!important;visibility:visible!important;pointer-events:auto!important}.bottom .nav-qr-passport .nav-label{font-size:clamp(10px,2.7vw,12px);letter-spacing:-.3px}.bottom .nav-qr-passport .nav-sub{font-size:9px}.bottom .nav-settings svg{stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}@media(max-width:480px){.bottom .nav-qr-passport .nav-label{font-size:0}.bottom .nav-qr-passport .nav-label:after{content:\"QR\";font-size:12px;letter-spacing:0}.bottom .nav-label{white-space:nowrap}.bottom .nav{min-width:0;padding-left:2px;padding-right:2px}}";document.head.appendChild(st);const q=document.querySelector(".bottom .nav-qr-passport .nav-label");if(q)q.textContent="QR";}
     const actions=modal&&$(".login-actions",modal);
     if(!modal||!email||!otp||!actions||modal.dataset.cicRealOtp==="true")return;
     modal.dataset.cicRealOtp="true";
