@@ -373,7 +373,7 @@
           let verified=false;
           try{verified=sessionStorage.getItem("cicOwnerOtpVerified")==="1";}catch(_){}
           const client=db();
-          if(verified&&client){
+          if(client){
             try{
               const {data}=await client.auth.getSession();
               if(data&&data.session&&await isApprovedOwner(data.session.user)){
@@ -394,7 +394,7 @@
         if(event==="SIGNED_OUT"){setOwnerNavVisible(false);try{sessionStorage.removeItem("cicOwnerOtpVerified");}catch(_){}}
         if(session&&session.user)window.setTimeout(async()=>{
           let otpVerified=false;try{otpVerified=sessionStorage.getItem("cicOwnerOtpVerified")==="1";}catch(_){}
-          if(otpVerified&&await isApprovedOwner(session.user)){installUnifiedLiveTools();setOwnerNavVisible(true);}
+          if(await isApprovedOwner(session.user)){try{sessionStorage.setItem("cicOwnerOtpVerified","1");}catch(_){}setOwnerNavVisible(true);}
           else setOwnerNavVisible(false);
         },250);
       });
