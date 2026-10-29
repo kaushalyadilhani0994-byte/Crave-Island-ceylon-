@@ -254,13 +254,16 @@
           #cicOwnerDashboard h1{font:400 clamp(27px,6vw,38px)/1.12 Georgia,serif;margin:0 0 7px}
           #cicOwnerDashboard p{color:#76665b;line-height:1.5;margin:0}
           #cicOwnerDashboard .cic-dash-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-          #cicOwnerDashboard .cic-dash-card{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:8px;min-height:128px;padding:18px;border:1px solid #e2d5c4;border-radius:15px;background:#fffaf3;color:#2c1a14}
-          #cicOwnerDashboard .cic-dash-card strong{font:400 22px Georgia,serif}
+          #cicOwnerDashboard .cic-dash-card{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:8px;min-height:112px;padding:16px;border:1px solid #e2d5c4;border-radius:15px;background:#fffaf3;color:#2c1a14;touch-action:manipulation}
+          #cicOwnerDashboard .cic-dash-card strong{font:400 20px Georgia,serif}
           #cicOwnerDashboard .cic-dash-card span{font-size:13px;color:#76665b;line-height:1.45}
           #cicOwnerDashboard .cic-dash-card:active{transform:scale(.99)}
-          #cicOwnerDashboard .cic-dash-action{border:1px solid #d4af37;border-radius:10px;padding:10px 13px;background:#2c1a14;color:#fff8e7;font-weight:650}
+          #cicOwnerDashboard .cic-dash-action{border:1px solid #d4af37;border-radius:10px;padding:10px 13px;background:#2c1a14;color:#fff8e7;font-weight:650;touch-action:manipulation}
           #cicOwnerDashboard .cic-dash-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}
-          @media(max-width:430px){#cicOwnerDashboard .cic-dash-grid{grid-template-columns:1fr}#cicOwnerDashboard .cic-dash-card{min-height:98px}}
+          #cicOwnerDashboard .cic-dash-section{margin-top:20px}
+          #cicOwnerDashboard .cic-dash-section h2{font:400 22px Georgia,serif;margin:0 0 10px}
+          #cicOwnerDashboard .cic-dash-note{font-size:12px;margin-top:12px;padding:12px;border-radius:12px;background:#efe5d8}
+          @media(max-width:430px){#cicOwnerDashboard .cic-dash-grid{grid-template-columns:1fr}#cicOwnerDashboard .cic-dash-card{min-height:88px}}
         `;
         document.head.appendChild(style);
       }
@@ -272,16 +275,30 @@
       dashboard.innerHTML=`
         <div class="cic-dash-wrap">
           <header class="cic-dash-top"><div><h1>CRAVE ISLAND CEYLON</h1><p>Owner workspace · Manage your business from one place.</p></div><button class="cic-dash-action" type="button" id="cicDashSignOut">Sign out</button></header>
+          <section class="cic-dash-section"><h2>Main Admin · Full business control</h2>
           <div class="cic-dash-grid">
-            <button class="cic-dash-card" type="button" data-open="cicOwnerCatalogueButton" data-section="products"><strong>Owner Products</strong><span>Add and manage verified products, prices, images and availability.</span></button>
-            <button class="cic-dash-card" type="button" data-open="cicOwnerOrdersButton"><strong>Owner Orders</strong><span>Review incoming orders and update their progress.</span></button>
-            <button class="cic-dash-card" type="button" data-open="cicOwnerCatalogueButton" data-section="categories"><strong>Owner Categories</strong><span>Create and manage product categories and subcategories.</span></button>
-            <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>Owner QR Passport</strong><span>Manage product passports and public QR destinations.</span></button>
+            <button class="cic-dash-card" type="button" data-view="overview"><strong>Business Overview</strong><span>Orders, catalogue status, Star Points and customer follow-up.</span></button>
+            <button class="cic-dash-card" type="button" data-view="catalog"><strong>Products & Categories</strong><span>Catalogue, prices, availability and collections.</span></button>
+            <button class="cic-dash-card" type="button" data-view="orders"><strong>Orders & Customers</strong><span>Incoming orders, fulfilment and order records.</span></button>
+            <button class="cic-dash-card" type="button" data-view="brand"><strong>Brand & Media</strong><span>Store settings, brand content and promotion settings.</span></button>
+            <button class="cic-dash-card" type="button" data-view="automation"><strong>Payments & Accounts</strong><span>Payment configuration, invoice and business workflow settings.</span></button>
+            <button class="cic-dash-card" type="button" data-view="team"><strong>Team & Roles</strong><span>Main Admin, Supervisor, Staff, Media and Accounts access setup.</span></button>
+            <button class="cic-dash-card" type="button" data-view="security"><strong>Security & Audit</strong><span>Owner access checks and security review.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>QR Passports & Certificates</strong><span>Product batch records, traceability and public QR destinations.</span></button>
           </div>
-          <div class="cic-dash-footer"><p>Owner access is checked against your approved account.</p><button class="cic-dash-action" type="button" id="cicDashClose">Back to shop</button></div>
+          <p class="cic-dash-note">Role names and access areas are shown in Team & Roles. Staff access must be approved and enforced by the database before staff accounts are enabled.</p></section>
+          <div class="cic-dash-footer"><p>Verified owner access · CRAVE ISLAND CEYLON</p><button class="cic-dash-action" type="button" id="cicDashClose">Back to shop</button></div>
         </div>`;
       document.body.appendChild(dashboard);
       dashboard.addEventListener("click",async e=>{
+        const viewCard=e.target.closest("[data-view]");
+        if(viewCard){
+          const view=viewCard.getAttribute("data-view");
+          dashboard.remove();
+          if(typeof window.openModal==="function")window.openModal("controlRoomModal");
+          if(typeof window.showAdminView==="function")window.showAdminView(view);
+          return;
+        }
         const card=e.target.closest("[data-open]");
         if(card){
           const target=card.getAttribute("data-open");
