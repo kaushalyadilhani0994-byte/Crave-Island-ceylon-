@@ -62,8 +62,16 @@
     const actions=modal&&$(".login-actions",modal);
     if(!modal||!email||!otp||!actions||modal.dataset.cicRealOtp==="true")return;
     modal.dataset.cicRealOtp="true";
-    modal.querySelectorAll(".role-grid-v9,.role-workspace,#roleWorkspace,.permission-list,#permissionList,.invite-box,.demo-warning")
-      .forEach(el=>{el.style.display="none";});
+    modal.querySelectorAll(".role-grid-v9,.role-grid,.role-workspace,#roleWorkspace,.permission-list,#permissionList,.invite-box,.demo-warning,.role-card,.role-option,.role-selector,.access-roles,.team-invite,.team-invitation,.admin-workspace,.legacy-admin-workspace")
+      .forEach(el=>{el.hidden=true;el.setAttribute("aria-hidden","true");el.style.setProperty("display","none","important");});
+    // Hide legacy role and demo copy so the owner sees only the secure sign-in form.
+    modal.querySelectorAll("h1,h2,h3,h4,p,div,section,details").forEach(el=>{
+      if(el.closest(".cic-owner-login-sheet"))return;
+      const label=(el.innerText||el.textContent||"").replace(/\s+/g," ").trim();
+      if(label.length>0&&label.length<260&&/Main Admin|Supervisor|assigned daily tasks|Owner approval flow|Demo limitation|local preview only|Full business control|Access boundary/i.test(label)){
+        el.hidden=true;el.setAttribute("aria-hidden","true");el.style.setProperty("display","none","important");
+      }
+    });
     email.placeholder="Approved owner email";
     email.autocomplete="email";
     otp.type="text"; otp.inputMode="numeric"; otp.maxLength=6; otp.pattern="[0-9]{6}"; otp.autocomplete="one-time-code"; otp.placeholder="Enter code if the email contains one";
