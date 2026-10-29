@@ -296,7 +296,9 @@
         const viewCard=e.target.closest("[data-view]");
         if(viewCard){
           const view=viewCard.getAttribute("data-view");
-          dashboard.remove();
+          // Keep the owner menu in the history stack, hidden behind the work area.
+          // Android/browser Back then returns to this menu instead of the storefront.
+          dashboard.style.display="none";
           if(typeof window.openModal==="function")window.openModal("controlRoomModal");
           if(typeof window.showAdminView==="function")window.showAdminView(view);
           return;
@@ -310,7 +312,8 @@
           const launch=()=>{
             const b=document.getElementById(target);
             if(b){
-              dashboard.remove();
+              // Preserve the dashboard so Back from the tool restores the owner menu.
+              dashboard.style.display="none";
               b.hidden=false;
               b.click();
               if(section==="categories"||section==="products"){
@@ -348,7 +351,15 @@
   }
   window.addEventListener("popstate",function(event){
     const dashboard=document.getElementById("cicOwnerDashboard");
-    if(dashboard&&!(event.state&&event.state.cicOwnerDashboard))dashboard.remove();
+    if(!dashboard)return;
+    if(event.state&&event.state.cicOwnerDashboard){
+      // Back from a Control Room/tool panel: return to the owner menu, not Home.
+      dashboard.style.display="block";
+      dashboard.scrollTop=0;
+    }else{
+      // Back from the owner menu itself: leave Admin and return to the prior page.
+      dashboard.remove();
+    }
   });
   window.CIC_OPEN_OWNER_DASHBOARD = openOwnerDashboard;
   async function handlePendingOwnerSession(session){
