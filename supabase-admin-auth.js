@@ -59,6 +59,8 @@
   }
   function install() {
     const modal=$("#adminAccessModal"), email=$("#adminEmail"), otp=$("#adminOtp");
+    // Restore the public QR Passport destination in the mobile bar; Admin remains owner-only.
+    if(!document.getElementById("cic-nav-qr-visibility-fix")){const st=document.createElement("style");st.id="cic-nav-qr-visibility-fix";st.textContent=".bottom .nav[onclick*=\"qrModal\"]{display:grid!important;visibility:visible!important;pointer-events:auto!important}.bottom{grid-template-columns:repeat(6,minmax(0,1fr))!important}@media(max-width:390px){.bottom{grid-template-columns:repeat(6,minmax(0,1fr))!important}}";document.head.appendChild(st);}
     const actions=modal&&$(".login-actions",modal);
     if(!modal||!email||!otp||!actions||modal.dataset.cicRealOtp==="true")return;
     modal.dataset.cicRealOtp="true";
@@ -299,11 +301,13 @@
             <button class="cic-dash-card" type="button" data-view="overview"><strong>Business Overview</strong><span>Orders, catalogue status, Star Points and customer follow-up.</span></button>
             <button class="cic-dash-card" type="button" data-view="catalog"><strong>Products & Categories</strong><span>Catalogue, prices, availability and collections.</span></button>
             <button class="cic-dash-card" type="button" data-view="orders"><strong>Orders & Customers</strong><span>Incoming orders, fulfilment and order records.</span></button>
-            <button class="cic-dash-card" type="button" data-view="brand"><strong>Brand & Media</strong><span>Store settings, brand content and promotion settings.</span></button>
-            <button class="cic-dash-card" type="button" data-view="automation"><strong>Payments & Accounts</strong><span>Payment configuration, invoice and business workflow settings.</span></button>
-            <button class="cic-dash-card" type="button" data-view="team"><strong>Team & Roles</strong><span>Main Admin, Supervisor, Staff, Media and Accounts access setup.</span></button>
-            <button class="cic-dash-card" type="button" data-view="security"><strong>Security & Audit</strong><span>Owner access checks and security review.</span></button>
-            <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>QR Passports & Certificates</strong><span>Product batch records, traceability and public QR destinations.</span></button>
+            <button class="cic-dash-card" type="button" data-view="brand"><strong>Brand & Store Settings</strong><span>Brand identity, delivery rules and store preferences.</span></button>
+            <button class="cic-dash-card" type="button" data-open="mediaModal"><strong>Media & Social</strong><span>Product photography, media clips, reels, voice stories and social drafts only.</span></button>
+            <button class="cic-dash-card" type="button" data-open="loyaltyModal"><strong>Loyalty & Star Points</strong><span>Star Points, rewards and scratch-card programme overview.</span></button>
+            <button class="cic-dash-card" type="button" data-view="automation"><strong>Payments & Accounts</strong><span>Invoices, payment records, bank-transfer checks, COD reconciliation and finance reports.</span></button>
+            <button class="cic-dash-card" type="button" data-view="team"><strong>Team, Supervisor & Staff</strong><span>Manage roles and access boundaries for Supervisor, Staff, Media and Accounts.</span></button>
+            <button class="cic-dash-card" type="button" data-view="security"><strong>Security & Audit</strong><span>Owner access checks, database security and audit review.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>QR Passports & Certificates</strong><span>Product batch records, traceability, certificates and public QR destinations.</span></button>
           </div>
           <p class="cic-dash-note">Role names and access areas are shown in Team & Roles. Staff access must be approved and enforced by the database before staff accounts are enabled.</p></section>
           <div class="cic-dash-footer"><p>Verified owner access · CRAVE ISLAND CEYLON</p><button class="cic-dash-action" type="button" id="cicDashClose">Back to shop</button></div>
@@ -327,7 +331,13 @@
         if(card){
           const target=card.getAttribute("data-open");
           const section=card.getAttribute("data-section");
-          if(target==="storefront"){dashboard.remove();return;}
+          if(target==="storefront"){dashboard.style.display="none";return;}
+          if(target==="mediaModal"||target==="loyaltyModal"||target==="scratchModal"){
+            dashboard.style.display="none";
+            if(typeof window.openModal==="function")window.openModal(target);
+            addOwnerMenuReturnButton(dashboard);
+            return;
+          }
           let tries=0;
           const launch=()=>{
             const b=document.getElementById(target);
@@ -354,7 +364,8 @@
         }
       });
       $("#cicDashClose").onclick=()=>{
-        dashboard.remove();
+        // Keep the verified owner workspace in memory. Returning from the shop can reopen it without another OTP.
+        dashboard.style.display="none";
         if(history.state&&history.state.cicOwnerDashboard)history.back();
       };
       $("#cicDashSignOut").onclick=async()=>{
@@ -378,8 +389,8 @@
       dashboard.style.display="block";
       dashboard.scrollTop=0;
     }else{
-      // Back from the owner menu itself: leave Admin and return to the prior page.
-      dashboard.remove();
+      // Back from the owner menu itself: return to the storefront but preserve the verified dashboard in memory.
+      dashboard.style.display="none";
     }
   });
   window.CIC_OPEN_OWNER_DASHBOARD = openOwnerDashboard;
