@@ -290,6 +290,8 @@
           <div class="cic-dash-footer"><p>Verified owner access · CRAVE ISLAND CEYLON</p><button class="cic-dash-action" type="button" id="cicDashClose">Back to shop</button></div>
         </div>`;
       document.body.appendChild(dashboard);
+      // Make the phone/browser Back action close the owner dashboard instead of leaving the app.
+      try{history.pushState({cicOwnerDashboard:true},'','#owner-admin');}catch(_){}
       dashboard.addEventListener("click",async e=>{
         const viewCard=e.target.closest("[data-view]");
         if(viewCard){
@@ -327,7 +329,10 @@
           launch();
         }
       });
-      $("#cicDashClose").onclick=()=>dashboard.remove();
+      $("#cicDashClose").onclick=()=>{
+        dashboard.remove();
+        if(history.state&&history.state.cicOwnerDashboard)history.back();
+      };
       $("#cicDashSignOut").onclick=async()=>{
         const client=db();
         if(client)await client.auth.signOut();
@@ -341,6 +346,10 @@
     dashboard.style.display="block";
     dashboard.scrollTop=0;
   }
+  window.addEventListener("popstate",function(event){
+    const dashboard=document.getElementById("cicOwnerDashboard");
+    if(dashboard&&!(event.state&&event.state.cicOwnerDashboard))dashboard.remove();
+  });
   window.CIC_OPEN_OWNER_DASHBOARD = openOwnerDashboard;
   async function handlePendingOwnerSession(session){
     if(!session||!session.user||handlingPendingOwnerSession)return;
