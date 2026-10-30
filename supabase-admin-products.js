@@ -204,8 +204,17 @@
     box.innerHTML='<b>Product saved · QR generated automatically</b><br>'+esc(name)+
       '<br><img alt="Product QR code" width="180" height="180" style="display:block;background:white;margin:10px 0" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='+encodeURIComponent(qr.url)+'">'+
       '<div class="cic-muted">Passport is a private draft. Complete and publish its verified details in Owner · QR Passports before using this code on customer packs.</div>'+
-      '<input aria-label="QR destination" readonly style="width:100%;padding:8px;margin:8px 0" value="'+esc(qr.url)+'">';
+      '<input aria-label="QR destination" readonly style="width:100%;padding:8px;margin:8px 0" value="'+esc(qr.url)+'">'+
+      '<button type="button" id="cicAutoQrPrint">Print this product label</button>';
     el.appendChild(box);
+    const printBtn=box.querySelector("#cicAutoQrPrint");
+    printBtn.addEventListener("click",()=>{
+      const win=window.open("","_blank","width=480,height=640");
+      if(!win){say("Allow pop-ups to print the product QR label.",true);return;}
+      const qrImage="https://api.qrserver.com/v1/create-qr-code/?size=360x360&data="+encodeURIComponent(qr.url);
+      win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>CRAVE ISLAND CEYLON QR Label</title><style>@page{size:50mm 70mm;margin:3mm}*{box-sizing:border-box}body{margin:0;width:44mm;min-height:64mm;display:flex;flex-direction:column;align-items:center;text-align:center;color:#2C1A14;font-family:Arial,sans-serif;padding:2mm}.brand{font:700 12pt Georgia,serif;letter-spacing:.3px;border-bottom:1px solid #D4AF37;padding-bottom:2mm;width:100%}.tag{font-size:6.5pt;letter-spacing:1px;margin-top:1.5mm}.name{font-size:9pt;font-weight:700;margin:3mm 0 1mm;overflow-wrap:anywhere}.qr{width:34mm;height:34mm;object-fit:contain;margin:1mm auto}.note{font-size:6pt;margin-top:2mm;color:#65554b}@media screen{body{margin:15px auto;border:1px dashed #bbb;padding:10px;width:44mm}}</style></head><body><div class="brand">CRAVE ISLAND CEYLON</div><div class="tag">PRODUCT PASSPORT</div><div class="name">'+esc(name)+'</div><img class="qr" alt="Product passport QR code" src="'+qrImage+'"><div class="note">Scan to discover verified product details</div><script>const q=document.querySelector(".qr");q.onload=()=>setTimeout(()=>window.print(),250);q.onerror=()=>document.body.insertAdjacentHTML("beforeend","<p>QR image could not load. Please retry.</p>");<\/script></body></html>');
+      win.document.close();
+    });
   }
 
   async function saveProduct(event) {
