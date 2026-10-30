@@ -4,6 +4,8 @@
 const $=s=>document.querySelector(s);
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let db;
+const PUBLIC_ORIGIN="https://craveislandceylonv18supabaseintegra.vercel.app";
+const passportUrl=slug=>PUBLIC_ORIGIN+"/passport.html?slug="+encodeURIComponent(slug);
 async function owner(){
 db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
 if(!db)return false;
@@ -56,7 +58,9 @@ const row={product_id:id,public_slug:slug,ingredients:splitList(ingredients),all
 const {error}=await db.from("product_passports").upsert(row,{onConflict:"product_id"});
 btn.disabled=false;btn.textContent="Save product passport";
 if(error){message("Could not save passport. Confirm the latest store migration and owner permissions are active.");return}
-const url=location.origin+"/passport.html?slug="+encodeURIComponent(slug);
+const url=passportUrl(slug);
+const {error:qrUpdateError}=await db.from("products").update({qr_code:url}).eq("id",id);
+if(qrUpdateError){message("Passport saved, but product QR link could not be synchronized. Please retry saving this passport.");return}
 const result=$("#cicPassResult");
 result.innerHTML='<div class="msg">'+(row.published?"Passport saved and published.":"Passport saved as unpublished; public QR page will not reveal it yet.")+'<br><a href="'+esc(url)+'" target="_blank" rel="noopener">Open product passport</a><br><label>QR destination</label><input readonly value="'+esc(url)+'"><button type="button" id="cicPassCopy">Copy QR destination</button>'+(row.published?'<p><img alt="QR code for this product passport" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='+encodeURIComponent(url)+'"></p><button type="button" id="cicPassPrint">Print product QR label</button><p>Print label includes CRAVE ISLAND CEYLON with the QR code underneath.</p>':"")+'</div>';
 $("#cicPassCopy").onclick=async()=>{try{await navigator.clipboard.writeText(url);message("QR destination copied.")}catch(e){message("Select and copy the QR destination from the field.")}};
