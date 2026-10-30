@@ -55,19 +55,31 @@
   }
   function setOwnerNavVisible(visible) {
     const bottom = document.querySelector(".bottom");
+    if (!bottom) return;
+
+    // The legacy Admin sign-in button must never be visible to storefront visitors.
+    // Owners get a separate shortcut only after both email allow-list and approved DB role pass.
+    const legacyAdmin = bottom.querySelector('[onclick*="openAdminAccess"]');
+    if (legacyAdmin) {
+      legacyAdmin.hidden = true;
+      legacyAdmin.setAttribute("aria-hidden", "true");
+      legacyAdmin.setAttribute("tabindex", "-1");
+      legacyAdmin.style.setProperty("display", "none", "important");
+    }
+
     if (visible) {
       document.body.classList.add("cic-owner-shortcuts-unified");
       syncOwnerAdminShortcut(true);
-      if (bottom) {
-        const count = Math.max(1, Array.from(bottom.querySelectorAll(".nav")).filter(el => el.getClientRects().length || el.id === "cicOwnerAdminShortcut").length);
-        bottom.style.setProperty("grid-template-columns", "repeat(" + count + ",minmax(0,1fr))", "important");
-      }
     } else {
       document.body.classList.remove("cic-owner-shortcuts-unified");
       syncOwnerAdminShortcut(false);
-      if (bottom) bottom.style.removeProperty("grid-template-columns");
-      // Remove the owner-only entry entirely on sign-out; no customer-facing Admin link remains.
     }
+
+    // Six public destinations for customers; six plus the private Admin shortcut for owners.
+    const count = Array.from(bottom.querySelectorAll(".nav")).filter(el =>
+      !el.hidden && getComputedStyle(el).display !== "none"
+    ).length;
+    bottom.style.setProperty("grid-template-columns", "repeat(" + Math.max(1, count) + ",minmax(0,1fr))", "important");
   }
   async function isApprovedOwner(user) {
     const client=db(); if(!client||!user)return false;
