@@ -290,6 +290,16 @@
     }catch(_){status("Could not verify the owner session. Please reopen Admin and try again.",true);}
     finally{handlingPendingOwnerSession=false;}
   }
+  async function waitForSupabaseClient(timeoutMs=10000){
+    const started=Date.now();
+    while(Date.now()-started<timeoutMs){
+      const client=db();
+      if(client)return client;
+      await new Promise(resolve=>window.setTimeout(resolve,100));
+    }
+    return null;
+  }
+
   async function wire(){
     // Hide the customer-facing Admin nav immediately on startup, before any
     // persisted session or auth-state callback is processed.
@@ -364,7 +374,9 @@
       }
     }catch(_){}
     window.requestAdminOtp=sendCode;window.verifyAdminOtpDemo=function(){verifyCode();};
-    const client=db();
+    // The storefront bridge may initialize Supabase after this auth module.
+    // Wait briefly so persisted sessions and email-link callbacks are not missed.
+    const client=await waitForSupabaseClient();
     if(client){
       client.auth.onAuthStateChange((event,session)=>{
         if(event==="SIGNED_OUT"){approvedOwnerUserId=null;setOwnerNavVisible(false);try{sessionStorage.removeItem("cicOwnerOtpVerified");}catch(_){}}
