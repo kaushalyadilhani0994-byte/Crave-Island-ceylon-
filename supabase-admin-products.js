@@ -93,11 +93,12 @@
     select.innerHTML='<option value="">Choose a category or subcategory</option>'+(cats.data||[]).filter(c=>c.is_active).map(c=>{const parent=(cats.data||[]).find(p=>p.id===c.parent_id);return '<option value="'+esc(c.name)+'">'+(parent?esc(parent.name)+' › ':'')+esc(c.name)+'</option>';}).join("");
      const parentSelect=$("#cicCatParent"); if(parentSelect)parentSelect.innerHTML='<option value="">Main category</option>'+(cats.data||[]).filter(c=>!c.parent_id).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join("");
     const catList=(cats.data||[]).map(c=>{const parent=(cats.data||[]).find(p=>p.id===c.parent_id);return '<div class="cic-card"><div><b>'+(parent?esc(parent.name)+' › ':'')+esc(c.name)+'</b><div class="cic-muted">'+(c.parent_id?"Subcategory · ":"Main category · ")+(c.is_active?"Active":"Hidden")+'</div></div><button type="button" data-cic-category-toggle="'+esc(c.id)+'" data-active="'+String(!!c.is_active)+'">'+(c.is_active?"Hide":"Activate")+'</button></div>';}).join("");
-    const prodList=productRows.map(p=>'<div class="cic-card"><div><b>'+esc(p.name)+'</b><div class="cic-muted">'+esc(p.category||"Uncategorised")+' · '+money(p.price)+' · '+(p.is_active?"Active":"Hidden")+'</div><div class="cic-muted">'+(p.track_inventory?"Stock: "+Number(p.stock_quantity||0)+" · Low-stock threshold: "+Number(p.low_stock_threshold||5):"Stock tracking off")+(p.expiry_date?" · Best before: "+esc(p.expiry_date):" · No expiry date recorded")+(p.sku?" · SKU: "+esc(p.sku):"") +'</div></div><div><button type="button" data-cic-product-edit="'+esc(p.id)+'">Edit details</button> <button type="button" data-cic-product-toggle="'+esc(p.id)+'" data-active="'+String(!!p.is_active)+'">'+(p.is_active?"Hide product":"Activate product")+'</button></div></div>').join("");
+    const prodList=productRows.map(p=>'<div class="cic-card"><div><b>'+esc(p.name)+'</b><div class="cic-muted">'+esc(p.category||"Uncategorised")+' · '+money(p.price)+' · '+(p.is_active?"Active":"Hidden")+'</div><div class="cic-muted">'+(p.track_inventory?"Stock: "+Number(p.stock_quantity||0)+" · Low-stock threshold: "+Number(p.low_stock_threshold||5):"Stock tracking off")+(p.expiry_date?" · Best before: "+esc(p.expiry_date):" · No expiry date recorded")+(p.sku?" · SKU: "+esc(p.sku):"")+'</div></div><div><button type="button" data-cic-product-edit="'+esc(p.id)+'">Edit details</button> <button type="button" data-cic-product-qr="'+esc(p.id)+'">'+(p.qr_code?"View / print QR":"Generate / repair QR")+'</button> <button type="button" data-cic-product-toggle="'+esc(p.id)+'" data-active="'+String(!!p.is_active)+'">'+(p.is_active?"Hide product":"Activate product")+'</button></div></div>').join("");
     $("#cicOwnerCatalogueList").innerHTML='<h3 style="margin-top:14px">Collections ('+(cats.data||[]).length+')</h3>'+(catList||'<p class="cic-muted">No collections yet. Create one above.</p>')+'<h3 style="margin-top:18px">Products ('+(products.data||[]).length+')</h3>'+(prodList||'<p class="cic-muted">No products yet. Add verified product details above.</p>');
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-category-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("categories",btn.getAttribute("data-cic-category-toggle"),btn.getAttribute("data-active")==="true")));
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-product-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("products",btn.getAttribute("data-cic-product-toggle"),btn.getAttribute("data-active")==="true")));
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-product-edit]").forEach(btn=>btn.addEventListener("click",()=>editProduct(btn.getAttribute("data-cic-product-edit"))));
+    $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-product-qr]").forEach(btn=>btn.addEventListener("click",()=>openProductQr(btn.getAttribute("data-cic-product-qr"),btn)));
     say("Connected. "+(cats.data||[]).length+" collections and "+(products.data||[]).length+" products loaded.");
   }
 
@@ -180,23 +181,59 @@
   const PUBLIC_ORIGIN = "https://craveislandceylonv18supabaseintegra.vercel.app";
   const passportUrl = slug => PUBLIC_ORIGIN + "/passport.html?slug=" + encodeURIComponent(slug);
   async function ensureProductPassport(productId, productRow) {
-    const {data:existing,error:readError}=await client.from("product_passports").select("id,public_slug").eq("product_id",String(productId)).maybeSingle();
+    const ingredients=String(productRow.ingredients||"").split(/[,;\\n]/).map(x=>x.trim()).filter(Boolean);
+    let {data:passport,error:readError}=await client.from("product_passports")
+      .select("id,public_slug,ingredients,batch_code,published")
+      .eq("product_id",String(productId)).maybeSingle();
     if(readError) throw readError;
-    let slug=existing&&existing.public_slug;
-    if(!existing){
-      slug="cic-"+String(productId).toLowerCase();
+    if(!passport){
+      const slug="cic-"+String(productId).toLowerCase();
       const {error:insertError}=await client.from("product_passports").insert({
-        product_id:String(productId),public_slug:slug,
-        ingredients:String(productRow.ingredients||"").split(/[,;\\n]/).map(x=>x.trim()).filter(Boolean),
+        product_id:String(productId),public_slug:slug,ingredients,
         allergen_information:[],batch_code:productRow.batch_number||null,published:false,updated_at:new Date().toISOString()
       });
-      if(insertError) throw insertError;
+      if(insertError){
+        const retry=await client.from("product_passports")
+          .select("id,public_slug,ingredients,batch_code,published")
+          .eq("product_id",String(productId)).maybeSingle();
+        if(retry.error||!retry.data) throw insertError;
+        passport=retry.data;
+      } else {
+        passport={public_slug:slug,ingredients,batch_code:productRow.batch_number||null,published:false};
+      }
     }
+    const sameIngredients=JSON.stringify(Array.isArray(passport.ingredients)?passport.ingredients:[])===JSON.stringify(ingredients);
+    const sameBatch=String(passport.batch_code||"")===String(productRow.batch_number||"");
+    const changedPublishedDetails=passport.published===true&&(!sameIngredients||!sameBatch);
+    const passportUpdate={ingredients,batch_code:productRow.batch_number||null,updated_at:new Date().toISOString(),...(changedPublishedDetails?{published:false}:{})};
+    const {error:passportUpdateError}=await client.from("product_passports").update(passportUpdate).eq("product_id",String(productId));
+    if(passportUpdateError) throw passportUpdateError;
+    const slug=passport.public_slug;
+    if(!slug) throw new Error("Product passport is missing its public slug.");
     const url=passportUrl(slug);
     const {error:updateError}=await client.from("products").update({qr_code:url}).eq("id",productId);
     if(updateError) throw updateError;
-    return {slug,url};
+    return {slug,url,needsRepublish:changedPublishedDetails};
   }
+  async function openProductQr(productId, button) {
+    if(!await checkAccess()){say("Owner session expired. Please sign in again.",true);return;}
+    const product=productRows.find(row=>String(row.id)===String(productId));
+    if(!product){say("Product not found. Refresh the catalogue and try again.",true);return;}
+    const idle=button?button.textContent:"";
+    if(button){button.disabled=true;button.textContent="Preparing QR…";}
+    try {
+      const qr=await ensureProductPassport(productId,product);
+      showGeneratedQr(product.name,qr);
+      if(qr.needsRepublish) say("Product details changed. Its passport is now private; review and publish it again before attaching this label.",true);
+    } catch(error) {
+      console.error("Product QR recovery failed",error);
+      say("QR setup could not be completed. Check owner permissions and retry.",true);
+    } finally {
+      if(button){button.disabled=false;button.textContent=idle;}
+      await loadAll();
+    }
+  }
+
   function showGeneratedQr(name, qr) {
     const el=$("#cicOwnerCatalogueMessage"); if(!el)return;
     el.textContent="";
