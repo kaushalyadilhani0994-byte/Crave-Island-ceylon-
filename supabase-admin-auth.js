@@ -283,6 +283,12 @@
           #cicOwnerDashboard .cic-dash-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}
           #cicOwnerDashboard .cic-dash-section{margin-top:20px}
           #cicOwnerDashboard .cic-dash-section h2{font:400 22px Georgia,serif;margin:0 0 10px}
+          #cicOwnerDashboard .cic-dash-more{margin-top:16px;border:1px solid #e2d5c4;border-radius:13px;background:#fffaf3;padding:0 14px}
+          #cicOwnerDashboard .cic-dash-more summary{cursor:pointer;list-style:none;padding:14px 2px;font-weight:700;color:#5b4030}
+          #cicOwnerDashboard .cic-dash-more summary::-webkit-details-marker{display:none}
+          #cicOwnerDashboard .cic-dash-more summary:after{content:"＋";float:right;color:#9a762e}
+          #cicOwnerDashboard .cic-dash-more[open] summary:after{content:"−"}
+          #cicOwnerDashboard .cic-dash-more .cic-dash-grid{padding-bottom:14px}
           #cicOwnerDashboard .cic-dash-note{font-size:12px;margin-top:12px;padding:12px;border-radius:12px;background:#efe5d8}
           @media(max-width:430px){#cicOwnerDashboard{padding:12px}#cicOwnerDashboard .cic-dash-top{gap:8px;padding-bottom:12px;margin-bottom:12px}#cicOwnerDashboard .cic-dash-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#cicOwnerDashboard .cic-dash-card{min-height:92px;padding:11px;gap:5px;border-radius:12px}#cicOwnerDashboard .cic-dash-card strong{font:400 16px/1.15 Georgia,serif}#cicOwnerDashboard .cic-dash-card span{font-size:11px;line-height:1.35}#cicOwnerDashboard .cic-dash-section{margin-top:14px}#cicOwnerDashboard .cic-dash-section h2{font-size:20px;margin-bottom:8px}#cicOwnerDashboard .cic-dash-note{font-size:11px;padding:10px}}
         `;
@@ -296,20 +302,24 @@
       dashboard.innerHTML=`
         <div class="cic-dash-wrap">
           <header class="cic-dash-top"><div><h1>CRAVE ISLAND CEYLON</h1><p>Owner workspace · Manage your business from one place.</p></div><button class="cic-dash-action" type="button" id="cicDashSignOut">Sign out</button></header>
-          <section class="cic-dash-section"><h2>Main Admin · Full business control</h2>
+          <section class="cic-dash-section"><h2>Main Admin</h2>
           <div class="cic-dash-grid">
-            <button class="cic-dash-card" type="button" data-view="overview"><strong>Business Overview</strong><span>Orders, catalogue status, Star Points and customer follow-up.</span></button>
-            <button class="cic-dash-card" type="button" data-view="catalog"><strong>Products & Categories</strong><span>Catalogue, prices, availability and collections.</span></button>
-            <button class="cic-dash-card" type="button" data-view="orders"><strong>Orders & Customers</strong><span>Incoming orders, fulfilment and order records.</span></button>
-            <button class="cic-dash-card" type="button" data-view="brand"><strong>Brand & Store Settings</strong><span>Brand identity, delivery rules and store preferences.</span></button>
-            <button class="cic-dash-card" type="button" data-open="mediaModal"><strong>Media & Social</strong><span>Product photography, media clips, reels, voice stories and social drafts only.</span></button>
-            <button class="cic-dash-card" type="button" data-open="loyaltyModal"><strong>Loyalty & Star Points</strong><span>Star Points, rewards and scratch-card programme overview.</span></button>
-            <button class="cic-dash-card" type="button" data-view="automation"><strong>Payments & Accounts</strong><span>Invoices, payment records, bank-transfer checks, COD reconciliation and finance reports.</span></button>
-            <button class="cic-dash-card" type="button" data-view="team"><strong>Team, Supervisor & Staff</strong><span>Manage roles and access boundaries for Supervisor, Staff, Media and Accounts.</span></button>
-            <button class="cic-dash-card" type="button" data-view="security"><strong>Security & Audit</strong><span>Owner access checks, database security and audit review.</span></button>
-            <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>QR Passports & Certificates</strong><span>Product batch records, traceability, certificates and public QR destinations.</span></button>
+            <button class="cic-dash-card" type="button" data-view="overview"><strong>Business Overview</strong><span>Daily activity, orders and store status.</span></button>
+            <button class="cic-dash-card" type="button" data-view="catalog"><strong>Products & Categories</strong><span>Add products, manage prices and collections.</span></button>
+            <button class="cic-dash-card" type="button" data-view="orders"><strong>Owner Orders</strong><span>View incoming orders and update fulfilment.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>QR Passport</strong><span>Product batches, certificates and public QR pages.</span></button>
           </div>
-          <p class="cic-dash-note">Role names and access areas are shown in Team & Roles. Staff access must be approved and enforced by the database before staff accounts are enabled.</p></section>
+          <details class="cic-dash-more"><summary>More business tools</summary>
+            <div class="cic-dash-grid">
+              <button class="cic-dash-card" type="button" data-view="brand"><strong>Brand & Store Settings</strong><span>Brand identity, delivery rules and store preferences.</span></button>
+              <button class="cic-dash-card" type="button" data-open="mediaModal"><strong>Media & Social</strong><span>Photography, media clips, reels and social drafts.</span></button>
+              <button class="cic-dash-card" type="button" data-open="loyaltyModal"><strong>Loyalty & Star Points</strong><span>Rewards and scratch-card programme overview.</span></button>
+              <button class="cic-dash-card" type="button" data-view="automation"><strong>Payments & Accounts</strong><span>Invoices, COD reconciliation and finance reports.</span></button>
+              <button class="cic-dash-card" type="button" data-view="team"><strong>Team & Staff</strong><span>Review staff roles and access boundaries.</span></button>
+              <button class="cic-dash-card" type="button" data-view="security"><strong>Security & Audit</strong><span>Owner access checks and security review.</span></button>
+            </div>
+          </details>
+          <p class="cic-dash-note">Only approved owner accounts can open this workspace. Staff access remains restricted until role permissions are verified.</p></section>
           <div class="cic-dash-footer"><p>Verified owner access · CRAVE ISLAND CEYLON</p><button class="cic-dash-action" type="button" id="cicDashClose">Back to shop</button></div>
         </div>`;
       document.body.appendChild(dashboard);
