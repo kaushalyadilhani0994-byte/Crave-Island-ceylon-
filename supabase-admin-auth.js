@@ -97,7 +97,7 @@
     const btn=$(".login-actions button");
     if(btn){btn.disabled=true;btn.textContent="Sending…";}
     try{
-      const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:window.location.origin+window.location.pathname}});
+      const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:window.location.origin+window.location.pathname}});
       if(error)status("Could not send a sign-in code. Check the email address and Supabase Auth email configuration, then try again.",true);
       else status("Secure sign-in email requested. Check your inbox and spam folder. If it contains a 6-digit code, enter it below; if it contains a sign-in link, tap that link and return to this app. Owner database approval is still required.");
     }catch(e){status("Could not request a code because of a connection error.",true);}
