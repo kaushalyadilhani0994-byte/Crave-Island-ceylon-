@@ -239,9 +239,9 @@
     try { generatedQr=await ensureProductPassport(productId,row); }
     catch(qrError){ console.error("Automatic product passport setup failed",qrError); }
     event.target.reset(); delete event.target.dataset.editId; const saveButton=event.target.querySelector("button[type=submit]"); if(saveButton)saveButton.textContent="Save product as draft";
+    await loadAll();
     if(generatedQr) showGeneratedQr(name,generatedQr);
     else say("Product saved, but automatic QR setup needs attention. Refresh and retry from Owner · QR Passports.",true);
-    await loadAll();
     if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function") await window.CIC_SUPABASE.refreshCatalogue();
   }
 
