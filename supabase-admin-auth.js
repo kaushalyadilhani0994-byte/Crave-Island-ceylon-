@@ -22,33 +22,51 @@
   function isOwnerEmail(email) {
     return OWNER_EMAILS.includes(String(email||"").trim().toLowerCase());
   }
-  // Keep the original bottom-bar Admin entry; do not add a separate floating shortcut.
+  // The Admin entry is created only after Supabase confirms an approved owner.
+  // Customers never receive an Admin button in the public navigation.
   function syncOwnerAdminShortcut(visible) {
-    const shortcut = document.getElementById("cicOwnerAdminShortcut");
-    if (shortcut) shortcut.remove();
+    const bottom = document.querySelector(".bottom");
+    let shortcut = document.getElementById("cicOwnerAdminShortcut");
+    if (!visible) {
+      if (shortcut) shortcut.remove();
+      return;
+    }
+    if (!bottom) return;
+    if (!shortcut) {
+      shortcut = document.createElement("button");
+      shortcut.id = "cicOwnerAdminShortcut";
+      shortcut.type = "button";
+      shortcut.className = "nav cic-owner-admin-nav";
+      shortcut.setAttribute("aria-label", "Open owner Admin");
+      shortcut.innerHTML = '<span aria-hidden="true" style="font-size:19px;line-height:1">♙</span><span class="nav-label">Admin</span>';
+      shortcut.addEventListener("click", function () {
+        openOwnerDashboard();
+      });
+      bottom.appendChild(shortcut);
+    }
+    shortcut.hidden = false;
+    shortcut.style.setProperty("display", "flex", "important");
+    shortcut.style.setProperty("flex-direction", "column", "important");
+    shortcut.style.setProperty("align-items", "center", "important");
+    shortcut.style.setProperty("justify-content", "center", "important");
+    shortcut.style.setProperty("gap", "3px", "important");
+    shortcut.style.setProperty("min-width", "0", "important");
+    shortcut.style.setProperty("width", "100%", "important");
   }
   function setOwnerNavVisible(visible) {
     const bottom = document.querySelector(".bottom");
-    // Find the real Admin entry by its action, not by :last-child:
-    // owner modules can append their own buttons to the bottom bar.
-    const adminButton = bottom && (
-      bottom.querySelector('[onclick*="openAdminAccess"]') ||
-      Array.from(bottom.querySelectorAll(".nav")).find(el =>
-        /(^|\s)Admin(\s|$)/i.test((el.innerText || el.textContent || "").replace(/\s+/g, " ").trim())
-      )
-    );
     if (visible) {
       document.body.classList.add("cic-owner-shortcuts-unified");
-      if (bottom) bottom.style.setProperty("grid-template-columns", "repeat(7,minmax(0,1fr))", "important");
-      if (adminButton) adminButton.style.setProperty("display", "flex", "important");
       syncOwnerAdminShortcut(true);
+      if (bottom) {
+        const count = Math.max(1, Array.from(bottom.querySelectorAll(".nav")).filter(el => el.getClientRects().length || el.id === "cicOwnerAdminShortcut").length);
+        bottom.style.setProperty("grid-template-columns", "repeat(" + count + ",minmax(0,1fr))", "important");
+      }
     } else {
       document.body.classList.remove("cic-owner-shortcuts-unified");
-      if (bottom) bottom.style.removeProperty("grid-template-columns");
-      // Keep the Admin entry completely out of the customer storefront.
-      // Owners can still open sign-in through the existing hidden owner trigger.
-      if (adminButton) adminButton.style.setProperty("display", "none", "important");
       syncOwnerAdminShortcut(false);
+      if (bottom) bottom.style.removeProperty("grid-template-columns");
+      // Remove the owner-only entry entirely on sign-out; no customer-facing Admin link remains.
     }
   }
   async function isApprovedOwner(user) {
