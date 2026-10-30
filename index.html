@@ -209,7 +209,7 @@ main{display:block!important;position:relative!important;margin:0!important;padd
 </div>
 <nav class="bottom" aria-label="Primary navigation">
   <button class="nav active nav-gold" onclick="setNav(this);tabHome(this)"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span class="nav-label">Home</span><span class="nav-sub">Island House</span></button>
-  <button class="nav nav-gold" onclick="setNav(this);openModal('nextModal')"><svg viewBox="0 0 24 24"><path d="m13 2-9 12h7l-1 8 9-12h-7z"/></svg><span class="nav-label">Next</span><span class="nav-sub">Stories</span></button>
+  <button class="nav nav-gold nav-settings" aria-label="Open Settings and Preferences" onclick="setNav(this);openModal('cicSettingsModal')"><svg viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="m19.4 13.5 1.2.9-1.2 2.1-1.5-.5a7.8 7.8 0 0 1-1.5.9l-.3 1.6h-2.5l-.3-1.6a7.8 7.8 0 0 1-1.5-.9l-1.5.5-1.2-2.1 1.2-.9a7 7 0 0 1 0-1.8l-1.2-.9 1.2-2.1 1.5.5a7.8 7.8 0 0 1 1.5-.9l.3-1.6h2.5l.3 1.6a7.8 7.8 0 0 1 1.5.9l1.5-.5 1.2 2.1-1.2.9a7 7 0 0 1 0 1.8Z"/></svg><span class="nav-label">Settings</span><span class="nav-sub">Preferences</span></button>
   <button class="nav nav-gold" onclick="setNav(this);jump('categories',this)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="nav-label">All</span><span class="nav-sub">Collections</span></button>
   <button class="nav nav-gold" onclick="setNav(this);openModal('hamperModal')"><svg viewBox="0 0 24 24"><path d="M20 12v8H4v-8M2 8h20v4H2zM12 8v12M12 8H7.5a2.5 2.5 0 1 1 0-5C10 3 12 8 12 8Zm0 0h4.5a2.5 2.5 0 1 0 0-5C14 3 12 8 12 8Z"/></svg><span class="nav-label">Gifts</span><span class="nav-sub">Hampers</span></button>
   <button class="nav nav-gold" onclick="setNav(this);openModal('qrModal')"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h3v3h-3zM18 18h2v2h-2z"/></svg><span class="nav-label">QR</span><span class="nav-sub">Passport</span></button>
@@ -643,6 +643,116 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
 
 
 
+<style id="cic-preferences-style">
+/* Customer appearance and navigation preferences; owner Control Room layout is not modified. */
+body.cic-dark-preference .shell{--paper:#171310;--cream:#211b17;--ink:#f8eee2;--muted:#c0aea0;--line:#49382e;--white:#211b17;background:var(--paper);color:var(--ink)}
+body.cic-dark-preference .shell .service,
+body.cic-dark-preference .shell .utility-wrap,
+body.cic-dark-preference .shell .utility,
+body.cic-dark-preference .shell .cat,
+body.cic-dark-preference .shell .product-card,
+body.cic-dark-preference .shell .product-tile,
+body.cic-dark-preference .shell .collection-card,
+body.cic-dark-preference .shell .next-card,
+body.cic-dark-preference .shell .gift-builder,
+body.cic-dark-preference .shell .gift-pick{background:#211b17!important;color:#f8eee2!important;border-color:#49382e!important}
+body.cic-dark-preference .shell .gift-builder h3,
+body.cic-dark-preference .shell .gift-builder p,
+body.cic-dark-preference .shell .gift-builder b,
+body.cic-dark-preference .shell .utility,
+body.cic-dark-preference .shell .cat b,
+body.cic-dark-preference .shell .product-card *,
+body.cic-dark-preference .shell .product-tile *,
+body.cic-dark-preference .shell .collection-card *,
+body.cic-dark-preference .shell .next-card{color:#f8eee2}
+body.cic-dark-preference .bottom{background:#211b17f5;border-color:#594437;box-shadow:0 15px 40px #0008}
+body.cic-dark-preference .bottom .nav{color:#c0aea0}
+body.cic-dark-preference .bottom .nav.active{background:#49382e;color:#fff8ed}
+body.cic-dark-preference #cicSettingsModal .sheet{background:#211b17;color:#f8eee2;border-color:#49382e}
+body.cic-dark-preference #cicSettingsModal .sheet-head,
+body.cic-dark-preference #cicSettingsModal select{background:#2b211b;color:#f8eee2;border-color:#594437}
+body.cic-dark-preference #cicSettingsModal .muted-note,
+body.cic-dark-preference #cicSettingsModal .cic-pref-row p{color:#c0aea0}
+.cic-pref-grid{display:grid;gap:12px;margin-top:12px}
+.cic-pref-row{display:grid;gap:7px;padding:13px;border:1px solid var(--line);border-radius:14px;background:var(--cream)}
+.cic-pref-row label{font-size:12px;font-weight:700}
+.cic-pref-row p{font-size:11px;line-height:1.5;color:var(--muted);margin:0}
+.cic-pref-row select{width:100%;min-height:42px;border:1px solid var(--line);border-radius:10px;padding:9px;background:white;color:var(--ink)}
+.cic-pref-options{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cic-pref-options button{border:1px solid var(--line);border-radius:11px;padding:12px;background:var(--cream);color:var(--ink)}
+.cic-pref-options button.active{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold);font-weight:700}
+.cic-size-options button{min-height:44px;font-size:12px}
+@media(max-width:480px){
+ .bottom{width:calc(100% - 10px)!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:2px!important;padding:5px 4px!important}
+ .bottom .nav{min-width:0!important;overflow:hidden;padding:7px 0 6px!important;border-radius:12px!important;gap:4px!important}
+ .bottom .nav .nav-label{font-size:0!important;white-space:nowrap!important;line-height:1.1!important}
+ .bottom .nav .nav-label:after{content:attr(data-short-label);font-size:clamp(8px,2.5vw,10px)!important;display:block!important;white-space:nowrap!important}
+ .bottom .nav .nav-sub{display:none!important}
+ .bottom .nav svg{width:19px!important;height:19px!important}
+}
+</style>
+<div class="modal" id="cicSettingsModal" aria-label="Settings and preferences">
+ <div class="sheet">
+  <div class="sheet-head"><h3 id="cicSettingsTitle">Settings &amp; Preferences</h3><button class="close" onclick="closeModal('cicSettingsModal')" aria-label="Close settings">×</button></div>
+  <p class="muted-note" id="cicSettingsIntro">Personalise your CRAVE experience. Preferences are saved on this device.</p>
+  <div class="cic-pref-grid">
+   <div class="cic-pref-row"><label id="cicAppearanceLabel">Appearance</label><div class="cic-pref-options"><button id="cicLightChoice" onclick="window.cicSetTheme('light')">☀ Light</button><button id="cicDarkChoice" onclick="window.cicSetTheme('dark')">☾ Dark</button></div><p id="cicAppearanceHelp">Choose the display style for this device.</p></div>
+   <div class="cic-pref-row"><label id="cicLanguageLabel" for="cicLanguageChoice">Interface language</label><select id="cicLanguageChoice" onchange="window.cicSetLanguage(this.value)"><option value="en">English</option><option value="si">සිංහල (Sinhala)</option><option value="ta">தமிழ் (Tamil)</option></select><p id="cicLanguageHelp">Language changes the main navigation and settings labels. Some product content remains in its original language.</p></div>
+   <div class="cic-pref-row"><label id="cicReadingLabel">Reading comfort</label><div class="cic-pref-options cic-size-options"><button id="cicTextSmall" onclick="window.cicSetTextSize('small')">A− Small</button><button id="cicTextNormal" onclick="window.cicSetTextSize('normal')">A Normal</button><button id="cicTextLarge" onclick="window.cicSetTextSize('large')">A+ Large</button><button id="cicTextXLarge" onclick="window.cicSetTextSize('xlarge')">A++ Extra large</button></div><p id="cicReadingHelp">Choose a comfortable reading size for this device.</p></div>
+  </div>
+  <div class="login-actions"><button class="goldbtn" id="cicSettingsDone" onclick="closeModal('cicSettingsModal')">Done</button></div>
+ </div>
+</div>
+<script id="cic-preferences-script">
+(function(){
+ const $=id=>document.getElementById(id);
+ const navText={
+  en:{full:['Home','Settings','Categories','Gifts','QR Passport','Orders','Admin'],short:['Home','Set','Shop','Gifts','QR','Orders','Admin']},
+  si:{full:['මුල් පිටුව','සැකසුම්','කාණ්ඩ','තෑගි','QR පාස්පෝට්','ඇණවුම්','පරිපාලක'],short:['මුල්','සැකසුම්','කාණ්ඩ','තෑගි','QR','ඇණවුම්','Admin']},
+  ta:{full:['முகப்பு','அமைப்புகள்','வகைகள்','பரிசுகள்','QR பாஸ்போர்ட்','ஆர்டர்கள்','நிர்வாகம்'],short:['முகப்பு','அமைப்பு','வகை','பரிசு','QR','ஆர்டர்','Admin']}
+ };
+ const copy={
+  en:{title:'Settings & Preferences',intro:'Personalise your CRAVE experience. Preferences are saved on this device.',appearance:'Appearance',appearanceHelp:'Choose the display style for this device.',language:'Interface language',languageHelp:'Language changes the main navigation and settings labels. Some product content remains in its original language.',reading:'Reading comfort',readingHelp:'Choose a comfortable reading size for this device.',light:'☀ Light',dark:'☾ Dark',small:'A− Small',normal:'A Normal',large:'A+ Large',xlarge:'A++ Extra large',done:'Done'},
+  si:{title:'සැකසුම් සහ කැමැත්තන්',intro:'ඔබගේ CRAVE අත්දැකීම කැමති ලෙස සකසන්න. සැකසුම් මෙම උපාංගයේ සුරැකේ.',appearance:'පෙනුම',appearanceHelp:'ඔබ කැමති තිර පෙනුම තෝරන්න.',language:'අතුරුමුහුණත් භාෂාව',languageHelp:'භාෂාව ප්‍රධාන සංචාලන සහ සැකසුම් ලේබල වෙනස් කරයි. සමහර නිෂ්පාදන විස්තර මුල් භාෂාවෙන් පවතී.',reading:'කියවීමේ පහසුව',readingHelp:'ඔබට පහසු අකුරු ප්‍රමාණය තෝරන්න.',light:'☀ ආලෝකමත්',dark:'☾ අඳුරු',small:'A− කුඩා',normal:'A සාමාන්‍ය',large:'A+ විශාල',xlarge:'A++ ඉතා විශාල',done:'හරි'},
+  ta:{title:'அமைப்புகள் மற்றும் விருப்பங்கள்',intro:'உங்கள் CRAVE அனுபவத்தை விருப்பப்படி அமைக்கவும். இந்த சாதனத்தில் விருப்பங்கள் சேமிக்கப்படும்.',appearance:'தோற்றம்',appearanceHelp:'இந்த சாதனத்திற்கான திரைத் தோற்றத்தைத் தேர்ந்தெடுக்கவும்.',language:'இடைமுக மொழி',languageHelp:'மொழி முக்கிய வழிசெலுத்தல் மற்றும் அமைப்பு பெயர்களை மாற்றும். சில தயாரிப்பு விவரங்கள் அசல் மொழியிலேயே இருக்கும்.',reading:'வாசிப்பு வசதி',readingHelp:'உங்களுக்கு வசதியான எழுத்து அளவைத் தேர்ந்தெடுக்கவும்.',light:'☀ ஒளி',dark:'☾ இருள்',small:'A− சிறியது',normal:'A இயல்பு',large:'A+ பெரியது',xlarge:'A++ மிகப் பெரியது',done:'முடிந்தது'}
+ };
+ window.cicSetLanguage=function(lang){
+  if(!navText[lang])lang='en';
+  document.documentElement.lang=lang;
+  document.querySelectorAll('nav.bottom .nav').forEach((b,i)=>{
+   const label=b.querySelector('.nav-label');
+   if(label){label.textContent=navText[lang].full[i]||navText.en.full[i]||'';label.setAttribute('data-short-label',navText[lang].short[i]||navText.en.short[i]||'');}
+  });
+  const c=copy[lang];
+  const ids={cicSettingsTitle:'title',cicSettingsIntro:'intro',cicAppearanceLabel:'appearance',cicAppearanceHelp:'appearanceHelp',cicLanguageLabel:'language',cicLanguageHelp:'languageHelp',cicReadingLabel:'reading',cicReadingHelp:'readingHelp',cicLightChoice:'light',cicDarkChoice:'dark',cicTextSmall:'small',cicTextNormal:'normal',cicTextLarge:'large',cicTextXLarge:'xlarge',cicSettingsDone:'done'};
+  Object.keys(ids).forEach(id=>{const el=$(id);if(el)el.textContent=c[ids[id]];});
+  if($('cicLanguageChoice'))$('cicLanguageChoice').value=lang;
+  try{localStorage.setItem('cic-ui-language',lang)}catch(e){}
+ };
+ window.cicSetTheme=function(theme){
+  if(theme!=='dark')theme='light';
+  document.body.classList.toggle('cic-dark-preference',theme==='dark');
+  ['cicLightChoice','cicDarkChoice'].forEach(id=>$(id)&&$(id).classList.remove('active'));
+  const b=$(theme==='dark'?'cicDarkChoice':'cicLightChoice');if(b)b.classList.add('active');
+  const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.setAttribute('content',theme==='dark'?'#171310':'#120b08');
+  try{localStorage.setItem('cic-ui-theme',theme)}catch(e){}
+ };
+ window.cicSetTextSize=function(size){
+  const sizes={small:'14px',normal:'16px',large:'18px',xlarge:'20px'};
+  const shell=document.querySelector('.shell');if(shell)shell.style.fontSize=sizes[size]||sizes.normal;
+  ['cicTextSmall','cicTextNormal','cicTextLarge','cicTextXLarge'].forEach(id=>$(id)&&$(id).classList.remove('active'));
+  const ids={small:'cicTextSmall',normal:'cicTextNormal',large:'cicTextLarge',xlarge:'cicTextXLarge'};
+  const b=$(ids[size]||ids.normal);if(b)b.classList.add('active');
+  try{localStorage.setItem('cic-ui-text-size',size)}catch(e){}
+ };
+ function init(){
+  let theme='light',lang='en',size='normal';
+  try{theme=localStorage.getItem('cic-ui-theme')||theme;lang=localStorage.getItem('cic-ui-language')||lang;size=localStorage.getItem('cic-ui-text-size')||size}catch(e){}
+  window.cicSetTheme(theme);window.cicSetLanguage(lang);window.cicSetTextSize(size);
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
 <!-- CRAVE V18 secure Supabase modules: load after the storefront and original Control Room. -->
 <script src="supabase-checkout.js"></script>
 <script src="supabase-admin-workspace.js"></script>
