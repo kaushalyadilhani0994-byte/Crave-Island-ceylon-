@@ -306,6 +306,17 @@
       });
       window.__cicOwnerNavObserver.observe(document.documentElement,{childList:true,subtree:true});
     }
+    if(!window.__cicOwnerNavGuard){
+      // Some legacy V18 UI scripts update nav styles after auth; reconcile only
+      // when the rendered visibility differs from the verified owner state.
+      window.__cicOwnerNavGuard=window.setInterval(()=>{
+        const bottom=document.querySelector(".bottom");
+        if(!bottom)return;
+        const item=bottom.querySelector('#cicOwnerAdminNav,[data-nav="admin"],[onclick*="openAdminAccess"]');
+        const currentlyVisible=!!item&&!item.hidden&&getComputedStyle(item).display!=="none";
+        if(currentlyVisible!==ownerNavVerified)setOwnerNavVisible(ownerNavVerified);
+      },1200);
+    }
     const original=window.openAdminAccess;
     window.openAdminAccess=function(){
       // Let the original entry point check Supabase's persisted session first.
