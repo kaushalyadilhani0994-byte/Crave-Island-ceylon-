@@ -176,6 +176,38 @@
     } finally {if(btn){btn.disabled=false;btn.textContent=idleText;}}
   }
 
+  // Automatically provision a private passport and stable production QR for every saved product.
+  const PUBLIC_ORIGIN = "https://craveislandceylonv18supabaseintegra.vercel.app";
+  const passportUrl = slug => PUBLIC_ORIGIN + "/passport.html?slug=" + encodeURIComponent(slug);
+  async function ensureProductPassport(productId, productRow) {
+    const {data:existing,error:readError}=await client.from("product_passports").select("id,public_slug").eq("product_id",String(productId)).maybeSingle();
+    if(readError) throw readError;
+    let slug=existing&&existing.public_slug;
+    if(!existing){
+      slug="cic-"+String(productId).toLowerCase();
+      const {error:insertError}=await client.from("product_passports").insert({
+        product_id:String(productId),public_slug:slug,
+        ingredients:String(productRow.ingredients||"").split(/[,;\\n]/).map(x=>x.trim()).filter(Boolean),
+        allergen_information:[],batch_code:productRow.batch_number||null,published:false,updated_at:new Date().toISOString()
+      });
+      if(insertError) throw insertError;
+    }
+    const url=passportUrl(slug);
+    const {error:updateError}=await client.from("products").update({qr_code:url}).eq("id",productId);
+    if(updateError) throw updateError;
+    return {slug,url};
+  }
+  function showGeneratedQr(name, qr) {
+    const el=$("#cicOwnerCatalogueMessage"); if(!el)return;
+    el.textContent="";
+    const box=document.createElement("div"); box.className="cic-message";
+    box.innerHTML='<b>Product saved · QR generated automatically</b><br>'+esc(name)+
+      '<br><img alt="Product QR code" width="180" height="180" style="display:block;background:white;margin:10px 0" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='+encodeURIComponent(qr.url)+'">'+
+      '<div class="cic-muted">Passport is a private draft. Complete and publish its verified details in Owner · QR Passports before using this code on customer packs.</div>'+
+      '<input aria-label="QR destination" readonly style="width:100%;padding:8px;margin:8px 0" value="'+esc(qr.url)+'">';
+    el.appendChild(box);
+  }
+
   async function saveProduct(event) {
     event.preventDefault(); if(!await checkAccess()){say("Owner access required.",true);return;}
     const name=$("#cicProdName").value.trim(), category=$("#cicProdCategory").value, price=Number($("#cicProdPrice").value);
@@ -190,9 +222,10 @@
     const stockQuantity=Number($("#cicProdStock").value||0), lowStockThreshold=Number($("#cicProdLowStock").value||5), expiryDate=$("#cicProdExpiry").value||null;
      if(!Number.isInteger(stockQuantity)||stockQuantity<0||!Number.isInteger(lowStockThreshold)||lowStockThreshold<0){say("Stock and low-stock threshold must be whole numbers of zero or more.",true);if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}return;}
      const row={name,category,price,currency:"LKR",description:$("#cicProdDesc").value.trim()||null,image_url:imageUrl||null,ingredients,batch_number:$("#cicProdBatch").value.trim()||null,qr_code:$("#cicProdQr").value.trim()||null,stock_quantity:stockQuantity,low_stock_threshold:lowStockThreshold,expiry_date:expiryDate,track_inventory:$("#cicProdTrackStock").checked,is_active:editId?Boolean(existingProduct&&existingProduct.is_active):false};
-    let result;
+    let result, productId=editId;
     try {
-      result=editId?await client.from("products").update(row).eq("id",editId):await client.from("products").insert(row);
+      if(editId) result=await client.from("products").update(row).eq("id",editId);
+      else { result=await client.from("products").insert(row).select("id").single(); if(!result.error) productId=result.data&&result.data.id; }
     } catch(error) {
       if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}
       say("Product save failed: "+String(error&&error.message||"Network error").slice(0,180),true);return;
@@ -202,8 +235,13 @@
       const code=result.error.code?String(result.error.code)+" · ":"";
       say("Product save failed: "+code+String(result.error.message||"Check the owner permissions and fields").slice(0,180),true);return;
     }
+    let generatedQr=null;
+    try { generatedQr=await ensureProductPassport(productId,row); }
+    catch(qrError){ console.error("Automatic product passport setup failed",qrError); }
     event.target.reset(); delete event.target.dataset.editId; const saveButton=event.target.querySelector("button[type=submit]"); if(saveButton)saveButton.textContent="Save product as draft";
-    say(editId?"Product details updated; its previous visibility setting was preserved.":"Product saved as a hidden draft. Review the details and activate it only when ready to sell."); await loadAll();
+    if(generatedQr) showGeneratedQr(name,generatedQr);
+    else say("Product saved, but automatic QR setup needs attention. Refresh and retry from Owner · QR Passports.",true);
+    await loadAll();
     if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function") await window.CIC_SUPABASE.refreshCatalogue();
   }
 
