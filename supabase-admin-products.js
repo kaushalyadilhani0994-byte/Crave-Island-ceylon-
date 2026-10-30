@@ -224,7 +224,6 @@
     try {
       const qr=await ensureProductPassport(productId,product);
       showGeneratedQr(product.name,qr);
-      if(qr.needsRepublish) say("Product details changed. Its passport is now private; review and publish it again before attaching this label.",true);
     } catch(error) {
       console.error("Product QR recovery failed",error);
       say("QR setup could not be completed. Check owner permissions and retry.",true);
@@ -240,7 +239,7 @@
     const box=document.createElement("div"); box.className="cic-message";
     box.innerHTML='<b>Product saved · QR generated automatically</b><br>'+esc(name)+
       '<br><img alt="Product QR code" width="180" height="180" style="display:block;background:white;margin:10px 0" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='+encodeURIComponent(qr.url)+'">'+
-      '<div class="cic-muted">Passport is a private draft. Complete and publish its verified details in Owner · QR Passports before using this code on customer packs.</div>'+
+      '<div class="cic-muted">'+(qr.needsRepublish?'Product details changed. This passport is private again; review and publish it in Owner · QR Passports before attaching this label.':'Passport is a private draft. Complete and publish its verified details in Owner · QR Passports before using this code on customer packs.')+'</div>'+
       '<input aria-label="QR destination" readonly style="width:100%;padding:8px;margin:8px 0" value="'+esc(qr.url)+'">'+
       '<button type="button" id="cicAutoQrPrint">Print this product label</button>';
     el.appendChild(box);
