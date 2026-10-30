@@ -6,6 +6,9 @@
   const $ = (selector, root=document) => root.querySelector(selector);
   const db = () => window.CIC_SUPABASE && window.CIC_SUPABASE.client;
   let handlingPendingOwnerSession = false;
+  // Preserve a verified owner nav across temporary profile-query failures and nav re-renders.
+  let approvedOwnerUserId = null;
+  let ownerNavVerified = false;
   function status(message, bad=false) {
     const el=$("#cicOwnerAuthStatus");
     if(!el)return;
@@ -28,6 +31,7 @@
     if (shortcut) shortcut.remove();
   }
   function setOwnerNavVisible(visible) {
+    ownerNavVerified = !!visible;
     const bottom = document.querySelector(".bottom");
     if (!bottom) return;
     // Reuse the existing Admin item across older V18 nav variants.
@@ -70,9 +74,14 @@
   }
   async function isApprovedOwner(user) {
     const client=db(); if(!client||!user)return false;
-    if(!isOwnerEmail(user.email))return false;
+    if(!isOwnerEmail(user.email)){approvedOwnerUserId=null;return false;}
     const {data,error}=await client.from("staff_profiles").select("role,approved").eq("id",user.id).maybeSingle();
-    return !error&&!!data&&data.role==="owner"&&data.approved===true;
+    // A temporary network/RLS query error must not revoke an already verified
+    // owner nav. Only a successful negative profile result or SIGNED_OUT does.
+    if(error)return approvedOwnerUserId===user.id;
+    const approved=!!data&&data.role==="owner"&&data.approved===true;
+    approvedOwnerUserId=approved?user.id:null;
+    return approved;
   }
   function install() {
     const modal=$("#adminAccessModal"), email=$("#adminEmail"), otp=$("#adminOtp");
@@ -286,6 +295,17 @@
     // persisted session or auth-state callback is processed.
     setOwnerNavVisible(false);
     install();
+    // V18 may rebuild the bottom navigation after auth has completed. Re-attach
+    // the owner-only Admin entry if that happens, using the last verified state.
+    if(!window.__cicOwnerNavObserver){
+      window.__cicOwnerNavObserver=new MutationObserver(()=>{
+        const bottom=document.querySelector(".bottom");
+        if(bottom && !bottom.querySelector("#cicOwnerAdminNav") && !bottom.querySelector('[onclick*="openAdminAccess"],[data-nav="admin"]')){
+          setOwnerNavVisible(ownerNavVerified);
+        }
+      });
+      window.__cicOwnerNavObserver.observe(document.documentElement,{childList:true,subtree:true});
+    }
     const original=window.openAdminAccess;
     window.openAdminAccess=function(){
       // Let the original entry point check Supabase's persisted session first.
@@ -336,7 +356,7 @@
     const client=db();
     if(client){
       client.auth.onAuthStateChange((event,session)=>{
-        if(event==="SIGNED_OUT"){setOwnerNavVisible(false);try{sessionStorage.removeItem("cicOwnerOtpVerified");}catch(_){}}
+        if(event==="SIGNED_OUT"){approvedOwnerUserId=null;setOwnerNavVisible(false);try{sessionStorage.removeItem("cicOwnerOtpVerified");}catch(_){}}
         if(session&&session.user)window.setTimeout(async()=>{
           let otpVerified=false;try{otpVerified=sessionStorage.getItem("cicOwnerOtpVerified")==="1";}catch(_){}
           if(await isApprovedOwner(session.user)){try{sessionStorage.setItem("cicOwnerOtpVerified","1");}catch(_){}setOwnerNavVisible(true);}
