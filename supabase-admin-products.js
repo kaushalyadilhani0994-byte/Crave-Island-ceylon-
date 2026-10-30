@@ -181,7 +181,7 @@
   const PUBLIC_ORIGIN = "https://craveislandceylonv18supabaseintegra.vercel.app";
   const passportUrl = slug => PUBLIC_ORIGIN + "/passport.html?slug=" + encodeURIComponent(slug);
   async function ensureProductPassport(productId, productRow) {
-    const ingredients=String(productRow.ingredients||"").split(/[,;\\n]/).map(x=>x.trim()).filter(Boolean);
+    const ingredients=String(productRow.ingredients||"").split(/[,;\n]/).map(x=>x.trim()).filter(Boolean);
     let {data:passport,error:readError}=await client.from("product_passports")
       .select("id,public_slug,ingredients,batch_code,published")
       .eq("product_id",String(productId)).maybeSingle();
