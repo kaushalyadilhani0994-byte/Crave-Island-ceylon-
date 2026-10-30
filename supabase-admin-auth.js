@@ -247,7 +247,9 @@
       if(control){control.classList.add("open");control.style.display="flex";}
     }
     if(typeof window.showAdminView==="function")window.showAdminView("overview");
-    // Keep the original V18 Control Room clean; do not inject a second owner-tools card hub.
+    // Put live catalogue, orders, QR passports and alerts inside the Control Room.
+    // Their individual modules continue to enforce approved-owner access and RLS.
+    installUnifiedLiveTools();
   }
   function addOwnerMenuReturnButton(dashboard){
     const control=document.getElementById("controlRoomModal");
@@ -269,175 +271,11 @@
     });
   }
   async function openOwnerDashboard(){
-    // Fail closed even if a customer calls the exported dashboard function manually.
-    const client=db();
-    if(!client){
-      setOwnerNavVisible(false);
-      status("Owner verification is unavailable. Please sign in again.",true);
-      return;
-    }
-    try{
-      const {data,error}=await client.auth.getUser();
-      if(error||!data||!data.user||!(await isApprovedOwner(data.user))){
-        const existing=$("#cicOwnerDashboard");
-        if(existing)existing.remove();
-        setOwnerNavVisible(false);
-        status("Owner access denied. Sign in with an approved owner account.",true);
-        return;
-      }
-    }catch(_){
-      const existing=$("#cicOwnerDashboard");
-      if(existing)existing.remove();
-      setOwnerNavVisible(false);
-      status("Owner verification failed. Please sign in again.",true);
-      return;
-    }
-    // Restore the original V18 owner dashboard after a fresh server-verified owner check.
-    let dashboard=$("#cicOwnerDashboard");
-    if(!dashboard){
-      if(!$("#cicOwnerDashboardStyle")){
-        const style=document.createElement("style");
-        style.id="cicOwnerDashboardStyle";
-        style.textContent=`
-          #cicOwnerDashboard{position:fixed;inset:0;z-index:10001;background:#f6f1ea;color:#2c1a14;overflow:auto;padding:clamp(14px,4vw,28px);font-family:system-ui,-apple-system,Segoe UI,sans-serif}
-          #cicOwnerDashboard .cic-dash-wrap{max-width:760px;margin:0 auto}
-          #cicOwnerDashboard .cic-dash-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid #e4d7c7;padding-bottom:16px;margin-bottom:18px}
-          #cicOwnerDashboard h1{font:400 clamp(27px,6vw,38px)/1.12 Georgia,serif;margin:0 0 7px}
-          #cicOwnerDashboard p{color:#76665b;line-height:1.5;margin:0}
-          #cicOwnerDashboard .cic-dash-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-          #cicOwnerDashboard .cic-dash-card{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:8px;min-height:112px;padding:16px;border:1px solid #e2d5c4;border-radius:15px;background:#fffaf3;color:#2c1a14;touch-action:manipulation}
-          #cicOwnerDashboard .cic-dash-card strong{font:400 20px Georgia,serif}
-          #cicOwnerDashboard .cic-dash-card span{font-size:13px;color:#76665b;line-height:1.45}
-          #cicOwnerDashboard .cic-dash-card:active{transform:scale(.99)}
-          #cicOwnerDashboard .cic-dash-action{border:1px solid #d4af37;border-radius:10px;padding:10px 13px;background:#2c1a14;color:#fff8e7;font-weight:650;touch-action:manipulation}
-          #cicOwnerDashboard .cic-dash-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}
-          #cicOwnerDashboard .cic-dash-section{margin-top:20px}
-          #cicOwnerDashboard .cic-dash-section h2{font:400 22px Georgia,serif;margin:0 0 10px}
-          #cicOwnerDashboard .cic-dash-more{margin-top:16px;border:1px solid #e2d5c4;border-radius:13px;background:#fffaf3;padding:0 14px}
-          #cicOwnerDashboard .cic-dash-more summary{cursor:pointer;list-style:none;padding:14px 2px;font-weight:700;color:#5b4030}
-          #cicOwnerDashboard .cic-dash-more summary::-webkit-details-marker{display:none}
-          #cicOwnerDashboard .cic-dash-more summary:after{content:"＋";float:right;color:#9a762e}
-          #cicOwnerDashboard .cic-dash-more[open] summary:after{content:"−"}
-          #cicOwnerDashboard .cic-dash-more .cic-dash-grid{padding-bottom:14px}
-          #cicOwnerDashboard .cic-dash-note{font-size:12px;margin-top:12px;padding:12px;border-radius:12px;background:#efe5d8}
-          @media(max-width:430px){#cicOwnerDashboard{padding:12px}#cicOwnerDashboard .cic-dash-top{gap:8px;padding-bottom:12px;margin-bottom:12px}#cicOwnerDashboard .cic-dash-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#cicOwnerDashboard .cic-dash-card{min-height:92px;padding:11px;gap:5px;border-radius:12px}#cicOwnerDashboard .cic-dash-card strong{font:400 16px/1.15 Georgia,serif}#cicOwnerDashboard .cic-dash-card span{font-size:11px;line-height:1.35}#cicOwnerDashboard .cic-dash-section{margin-top:14px}#cicOwnerDashboard .cic-dash-section h2{font-size:20px;margin-bottom:8px}#cicOwnerDashboard .cic-dash-note{font-size:11px;padding:10px}}
-        `;
-        document.head.appendChild(style);
-      }
-      dashboard=document.createElement("div");
-      dashboard.id="cicOwnerDashboard";
-      dashboard.setAttribute("role","dialog");
-      dashboard.setAttribute("aria-modal","true");
-      dashboard.setAttribute("aria-label","CRAVE ISLAND CEYLON owner dashboard");
-      dashboard.innerHTML=`
-        <div class="cic-dash-wrap">
-          <header class="cic-dash-top"><div><h1>CRAVE ISLAND CEYLON</h1><p>Owner workspace · Manage your business from one place.</p></div><button class="cic-dash-action" type="button" id="cicDashSignOut">Sign out</button></header>
-          <section class="cic-dash-section"><h2>Main Admin</h2>
-          <div class="cic-dash-grid">
-            <button class="cic-dash-card" type="button" data-view="overview"><strong>Business Overview</strong><span>Daily activity, orders and store status.</span></button>
-            <button class="cic-dash-card" type="button" data-view="catalog"><strong>Products & Categories</strong><span>Add products, manage prices and collections.</span></button>
-            <button class="cic-dash-card" type="button" data-view="orders"><strong>Owner Orders</strong><span>View incoming orders and update fulfilment.</span></button>
-            <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>QR Passport</strong><span>Product batches, certificates and public QR pages.</span></button>
-          </div>
-          <details class="cic-dash-more"><summary>More business tools</summary>
-            <div class="cic-dash-grid">
-              <button class="cic-dash-card" type="button" data-view="brand"><strong>Brand & Store Settings</strong><span>Brand identity, delivery rules and store preferences.</span></button>
-              <button class="cic-dash-card" type="button" data-open="mediaModal"><strong>Media & Social</strong><span>Photography, media clips, reels and social drafts.</span></button>
-              <button class="cic-dash-card" type="button" data-open="loyaltyModal"><strong>Loyalty & Star Points</strong><span>Rewards and scratch-card programme overview.</span></button>
-              <button class="cic-dash-card" type="button" data-view="automation"><strong>Payments & Accounts</strong><span>Invoices, COD reconciliation and finance reports.</span></button>
-              <button class="cic-dash-card" type="button" data-view="team"><strong>Team & Staff</strong><span>Review staff roles and access boundaries.</span></button>
-              <button class="cic-dash-card" type="button" data-view="security"><strong>Security & Audit</strong><span>Owner access checks and security review.</span></button>
-            </div>
-          </details>
-          <p class="cic-dash-note">Only approved owner accounts can open this workspace. Staff access remains restricted until role permissions are verified.</p></section>
-          <div class="cic-dash-footer"><p>Verified owner access · CRAVE ISLAND CEYLON</p><button class="cic-dash-action" type="button" id="cicDashClose">Back to shop</button></div>
-        </div>`;
-      document.body.appendChild(dashboard);
-      // Make the phone/browser Back action close the owner dashboard instead of leaving the app.
-      try{history.pushState({cicOwnerDashboard:true},'','#owner-admin');}catch(_){}
-      dashboard.addEventListener("click",async e=>{
-        const viewCard=e.target.closest("[data-view]");
-        if(viewCard){
-          const view=viewCard.getAttribute("data-view");
-          // Keep the owner menu in the history stack, hidden behind the work area.
-          // Android/browser Back then returns to this menu instead of the storefront.
-          dashboard.style.display="none";
-          try{history.pushState({cicOwnerDashboard:true,cicOwnerTool:true},"","#owner-tool");}catch(_){}
-          if(typeof window.openModal==="function")window.openModal("controlRoomModal");
-          addOwnerMenuReturnButton(dashboard);
-          if(typeof window.showAdminView==="function")window.showAdminView(view);
-          return;
-        }
-        const card=e.target.closest("[data-open]");
-        if(card){
-          const target=card.getAttribute("data-open");
-          const section=card.getAttribute("data-section");
-          if(target==="storefront"){dashboard.style.display="none";return;}
-          if(target==="mediaModal"||target==="loyaltyModal"||target==="scratchModal"){
-            dashboard.style.display="none";
-            try{history.pushState({cicOwnerDashboard:true,cicOwnerTool:true},"","#owner-tool");}catch(_){}
-            if(typeof window.openModal==="function")window.openModal(target);
-            addOwnerMenuReturnButton(dashboard);
-            return;
-          }
-          let tries=0;
-          const launch=()=>{
-            const b=document.getElementById(target);
-            if(b){
-              // Preserve the dashboard so Android/browser Back returns to the owner menu.
-              dashboard.style.display="none";
-              try{history.pushState({cicOwnerDashboard:true,cicOwnerTool:true},"","#owner-tool");}catch(_){}
-              addOwnerMenuReturnButton(dashboard);
-              b.hidden=false;
-              b.click();
-              if(section==="categories"||section==="products"){
-                const form=document.getElementById(section==="categories"?"cicCategoryForm":"cicProductForm");
-                if(form){
-                  form.scrollIntoView({behavior:"smooth",block:"start"});
-                  const input=form.querySelector("input,select,textarea");
-                  if(input)input.focus({preventScroll:true});
-                }
-              }
-              return;
-            }
-            if(++tries<25){setTimeout(launch,200);return;}
-            status("This section is still loading. Please try again in a moment.",true);
-          };
-          launch();
-        }
-      });
-      $("#cicDashClose").onclick=()=>{
-        // Keep the verified owner workspace in memory. Returning from the shop can reopen it without another OTP.
-        dashboard.style.display="none";
-        if(history.state&&history.state.cicOwnerDashboard)history.back();
-      };
-      $("#cicDashSignOut").onclick=async()=>{
-        const client=db();
-        if(client)await client.auth.signOut();
-        dashboard.remove();
-        try{localStorage.removeItem("cicOwnerSignInPending");sessionStorage.removeItem("cicOwnerOtpVerified");}catch(_){}
-        setOwnerNavVisible(false);
-        status("You have signed out.");
-        if(typeof window.openAdminAccess==="function")window.openAdminAccess();
-      };
-    }
-    dashboard.style.display="block";
-    dashboard.scrollTop=0;
+    // Always return the approved owner to the original V18 Control Room.
+    // Keep a fresh server-side owner check before opening the existing admin UI.
+    return openOriginalControlRoom();
   }
-  window.addEventListener("popstate",function(event){
-    const dashboard=document.getElementById("cicOwnerDashboard");
-    if(!dashboard)return;
-    if(event.state&&event.state.cicOwnerDashboard){
-      // Back from a Control Room/tool panel: close the active work modal and return to Admin, not Home.
-      document.querySelectorAll(".modal.open").forEach(modal=>{if(typeof window.closeModal==="function")window.closeModal(modal.id);else{modal.classList.remove("open");modal.style.display="none";}});
-      dashboard.style.display="block";
-      dashboard.scrollTop=0;
-    }else{
-      // Back from the owner menu itself: return to the storefront but preserve the verified dashboard in memory.
-      dashboard.style.display="none";
-    }
-  });
-  window.CIC_OPEN_OWNER_DASHBOARD = openOwnerDashboard;
+
   async function handlePendingOwnerSession(session){
     if(!session||!session.user||handlingPendingOwnerSession)return;
     handlingPendingOwnerSession=true;
