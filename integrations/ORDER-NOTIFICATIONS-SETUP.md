@@ -40,7 +40,10 @@ A template with a different number/order of placeholders will fail; test the tem
 
 ## Safety and current state
 
-- Both integrations are optional and fail independently from order saving.
+- The V18 `create-store-order` Edge Function (deployed version 12 at the latest audit) contains optional Google Sheets and WhatsApp-owner notification hooks. Each hook runs only when all of its required Edge Function secrets are present.
+- A successful order save does not prove a notification was delivered. The function checks provider responses and logs failures; the customer order is retained if a notification provider is unavailable.
+- The checkout currently supports Cash on Delivery only. The server rejects other payment methods, and delivery fee is fixed at LKR 0 until verified delivery rates are configured.
 - No Google Sheet URL, webhook secret, Meta token, sender ID, admin number, or approved template is committed in this repository.
-- The integration code is prepared on the `feature/order-notifications-integration` branch; it is not active in the current production Edge Function until reviewed and deployed.
-- Customer WhatsApp confirmations, opt-in records, delivery charges, online card payments, and customer email receipts are separate work and are not claimed as implemented here.
+- The Google Sheets webhook uses a shared secret in the request query string because Apps Script web-app event objects do not expose arbitrary request headers. Keep that secret private, rotate it if exposed, and restrict the destination sheet to authorized staff.
+- Customer WhatsApp confirmations, customer opt-in records, automatic customer email receipts, 48-hour feedback follow-ups, delivery pricing, and online card payments are not implemented or verified. Do not advertise these as active features.
+- Before enabling either integration, configure its secrets in Supabase Edge Function secrets, place a controlled test order, and confirm the provider-side delivery (a 200 response from the Edge Function alone is not proof of delivery).
