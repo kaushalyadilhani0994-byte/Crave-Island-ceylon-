@@ -24,6 +24,7 @@ button{border:0;border-radius:9px;background:var(--cocoa);color:var(--cream);pad
 .items{font:13px/1.7 Arial,sans-serif;padding:12px 0;color:#5d4a40}.item{display:flex;justify-content:space-between;gap:12px}
 .total{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:12px;font:700 15px Arial,sans-serif}
 .note{font:12px/1.5 Arial,sans-serif;color:var(--muted);margin-top:12px}
+.receipt-btn{margin-top:12px;background:#f4ead3;color:var(--cocoa);border:1px solid #d8c28d;border-radius:9px;padding:10px 13px;font:700 12px Arial,sans-serif}.receipt-btn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 @media(min-width:650px){.panel{padding:26px}.auth-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}}
 </style>
 </head>
@@ -64,6 +65,22 @@ button{border:0;border-radius:9px;background:var(--cocoa);color:var(--cream);pad
   function addText(parent,tag,className,text){
     const el=document.createElement(tag);if(className)el.className=className;el.textContent=escapeText(text);parent.appendChild(el);return el;
   }
+  function printReceipt(order,items){
+    const currency=String(order.currency||"LKR");
+    const money=value=>currency+" "+Number(value||0).toLocaleString("en-LK",{minimumFractionDigits:2,maximumFractionDigits:2});
+    const esc=value=>String(value==null?"":value).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+    const address=order.shipping_address&&typeof order.shipping_address==="object"
+      ?Object.values(order.shipping_address).filter(Boolean).join(", "):String(order.shipping_address||"");
+    const lines=(items||[]).map(item=>'<tr><td>'+esc(item.product_name)+'</td><td>'+esc(item.quantity)+'</td><td>'+money(item.line_total)+'</td></tr>').join("");
+    const subtotal=Number(order.subtotal==null?order.total:order.subtotal);
+    const delivery=Number(order.delivery_fee||0);
+    const win=window.open("","_blank");
+    if(!win){msg("Allow pop-ups to print or save your receipt.");return;}
+    try{win.opener=null;}catch(_){}
+    const receiptHtml='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Receipt '+esc(order.order_number)+'</title><style>*{box-sizing:border-box}body{font:14px/1.5 Arial,sans-serif;color:#2c1a14;margin:0;padding:28px;background:#fff}main{max-width:720px;margin:auto}.brand{text-align:center;border-bottom:2px solid #d4af37;padding-bottom:18px}.brand h1{font:600 24px Georgia,serif;letter-spacing:.08em;margin:0}.brand p{font-size:10px;letter-spacing:.16em;margin:5px 0 0;color:#806f63}.title{text-align:center;font-size:13px;letter-spacing:.14em;margin:22px 0}.meta{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:18px}.meta div{padding:8px;background:#faf6ed;border:1px solid #eadfca;border-radius:7px;overflow-wrap:anywhere}.meta b{display:block;font-size:10px;color:#806f63;text-transform:uppercase}.meta span{display:block;margin-top:3px}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{text-align:left;padding:10px 7px;border-bottom:1px solid #eadfca}th{font-size:10px;text-transform:uppercase;color:#806f63}td:last-child,th:last-child{text-align:right}.totals{max-width:320px;margin:16px 0 0 auto}.total-row{display:flex;justify-content:space-between;padding:6px 0}.grand{border-top:2px solid #d4af37;margin-top:7px;padding-top:12px;font-weight:700;font-size:17px}.note{margin-top:24px;padding:12px;background:#faf6ed;border-radius:8px;color:#806f63;font-size:11px}.foot{text-align:center;margin-top:26px;color:#806f63;font-size:10px}@media print{body{padding:0}.no-print{display:none!important}}@media(max-width:480px){body{padding:14px}.meta{grid-template-columns:1fr}}</style></head><body><main><header class="brand"><h1>CRAVE ISLAND CEYLON</h1><p>CEYLON · CRAFTED WITH A STORY</p></header><h2 class="title">CUSTOMER ORDER RECEIPT</h2><section class="meta"><div><b>Order reference</b><span>'+esc(order.order_number)+'</span></div><div><b>Order date</b><span>'+esc(new Date(order.created_at).toLocaleString())+'</span></div><div><b>Customer</b><span>'+esc(order.customer_name||"Customer")+'</span></div><div><b>Contact</b><span>'+esc(order.phone||"—")+'</span></div><div><b>Delivery address</b><span>'+esc(address||"—")+'</span></div><div><b>Order status</b><span>'+esc(order.order_status||"pending")+'</span></div><div><b>Payment method</b><span>'+esc(String(order.payment_method||"").replaceAll("_"," "))+'</span></div><div><b>Payment status</b><span>'+esc(order.payment_status||"pending")+'</span></div></section><table><thead><tr><th>Item</th><th>Qty</th><th>Amount</th></tr></thead><tbody>'+lines+'</tbody></table><section class="totals"><div class="total-row"><span>Subtotal</span><b>'+money(subtotal)+'</b></div><div class="total-row"><span>Delivery</span><b>'+money(delivery)+'</b></div><div class="total-row grand"><span>Total</span><span>'+money(order.total)+'</span></div></section><p class="note">This receipt confirms that your order was recorded by CRAVE ISLAND CEYLON. It is not proof of payment unless the payment status above is marked as paid. Please retain this receipt for your records.</p><p class="foot">Thank you for choosing CRAVE ISLAND CEYLON.</p><button class="no-print" onclick="window.print()">Print / Save as PDF</button></main></body></html>';
+    win.onload=()=>{win.focus();win.print();};
+    win.document.open();win.document.write(receiptHtml);win.document.close();
+  }
   function renderOrders(orders,items){
     const root=byId("orders");root.replaceChildren();
     if(!orders.length){addText(root,"div","panel","No orders are linked to this account yet.");return;}
@@ -83,6 +100,7 @@ button{border:0;border-radius:9px;background:var(--cocoa);color:var(--cream);pad
       const totals=document.createElement("div");totals.className="total";
       addText(totals,"span","","Total");addText(totals,"span","","LKR "+Number(order.total||0).toLocaleString("en-LK",{minimumFractionDigits:2,maximumFractionDigits:2}));card.appendChild(totals);
       addText(card,"p","note","Payment: "+String(order.payment_method||"").replaceAll("_"," ")+" · Payment status: "+(order.payment_status||"pending"));
+      const receiptButton=document.createElement("button");receiptButton.type="button";receiptButton.className="receipt-btn";receiptButton.textContent="Print / Save receipt";receiptButton.addEventListener("click",()=>printReceipt(order,items[order.id]||[]));card.appendChild(receiptButton);
       root.appendChild(card);
     });
   }
@@ -91,7 +109,7 @@ button{border:0;border-radius:9px;background:var(--cocoa);color:var(--cream);pad
     try{
       const {data:{user},error:userError}=await client.auth.getUser();
       if(userError)throw userError;if(!user){showSignedIn(false);msg("Please sign in to see your orders.");return;}
-      const {data:orders,error}=await client.from("store_orders").select("id,order_number,created_at,order_status,payment_method,payment_status,total").eq("customer_id",user.id).order("created_at",{ascending:false});
+      const {data:orders,error}=await client.from("store_orders").select("id,order_number,created_at,order_status,payment_method,payment_status,total,subtotal,delivery_fee,currency,customer_name,phone,shipping_address").eq("customer_id",user.id).order("created_at",{ascending:false});
       if(error)throw error;
       const ids=(orders||[]).map(o=>o.id);const grouped={};
       if(ids.length){
