@@ -496,6 +496,6 @@
     document.head.appendChild(teamScript);
   }
   if(!document.getElementById("cic-team-workspace-script")){
-    const staffScript=document.createElement("script");staffScript.id="cic-team-workspace-script";staffScript.src="/supabase-team-workspace.js";staffScript.defer=true;document.head.appendChild(staffScript);
+    const staffScript=document.createElement("script");staffScript.id="cic-team-workspace-script";staffScript.src="/supabase-team-workspace.js?v=20261031-team-orders-v1";staffScript.defer=true;document.head.appendChild(staffScript);
   }
 })();
