@@ -4,17 +4,10 @@ Branch: review/atomic-order-idempotency
 Planning and source-review document only. Nothing in this document has been applied to production.
 
 ## Protected scope
-No Admin UI/auth changes, no catalogue edits, no QR changes, no production SQL, no Edge Function deployment, no secret changes, no live order/product creation, and no notification trigger.
+No owner OTP/auth changes, no Admin layout/navigation changes, no QR changes, no production SQL, no Edge Function deployment, no secret changes, no live order/product creation, and no notification trigger. A category-details editor exists on this review branch only; it preserves the existing category name/parent relationship.
 
 ## 1. Inventory Edge Function v2 — confirmed date validation defect candidate
-The deployed update-product-inventory v2 source contains a date expression written as:
-`/^\\\\d{4}-\\\\d{2}-\\\\d{2}$/` in the retrieved source text (two backslash characters before each d in the JavaScript regex literal).
-In a JavaScript regex literal, this tests for a literal backslash followed by d, not a digit class. As written, valid dates such as 2026-11-07 are expected to fail this regex.
-However, repository-wide code search did not find a frontend invocation of update-product-inventory or a named helper call. Therefore:
-- Do not deploy a fix until a real call site is located and its payload contract is confirmed.
-- If this function is intentionally unused, leave it alone for now.
-- If a future call site is added, use a strict date-only validator that checks exact YYYY-MM-DD format and round-trips the calendar date, with tests for leap day, invalid day/month, null, and malformed strings.
-- Do not directly edit product expiry data to test this.
+The deployed update-product-inventory v2 source contains an over-escaped date regex. Direct source-level comparison confirmed it rejects valid dates. The corrected review-branch function uses a strict YYYY-MM-DD expression and round-trip calendar validation. Sample tests passed for valid 2026-10-31 and leap day 2024-02-29, and correctly rejected 2025-02-29, 2026-13-01 and 31-10-2026. Null expiry clearing remains supported by the endpoint. The corrected source is not deployed. Repository-wide search did not find a frontend invocation of update-product-inventory, so do not add UI controls until the caller and payload contract are established. Do not directly edit product expiry data to test this.
 
 ## 2. Customer order receipt — current behavior
 The checkout code shows a successful order reference, total, payment method, and a link to My Orders after server confirmation. It does not create or send a PDF/email invoice.
@@ -52,7 +45,10 @@ Order creation's optional Google Sheets / WhatsApp provider calls are best-effor
 Recommended design is a transactional outbox written in the same order transaction, then a scheduled worker with bounded retries, dedupe keys, redacted logs, and a visible failed-delivery alert for owner review.
 Telegram daily owner report is separate from customer order notification. Oct 31 function response was HTTP 200 with sent:true; function code only returns sent:true after Telegram API HTTP success. This is provider acknowledgement, not independent proof of receipt on the owner's device.
 
-## 6. Schema and safety observations
+## 6. Owner alert centre — live access check
+The existing owner alert panel is already present in the V18 source and preserves the current dashboard: it shows open alerts, invokes the owner notification function, offers a daily Telegram report, and supports Acknowledge. A read-only privilege/policy check confirmed authenticated has UPDATE privilege on public.admin_alerts and the table has RLS enabled with only two policies: approved owners may SELECT, and approved owners may UPDATE (USING and WITH CHECK both call private.is_approved_owner()). No customer or ordinary staff access is granted by these policies. The panel's direct acknowledgement update is therefore aligned with the live policy. The table currently contains zero rows. No alert was created or acknowledged during this review.
+
+## 7. Schema and safety observations
 - store_orders.customer_id references auth.users with ON DELETE SET NULL.
 - store_order_items.order_id references store_orders with ON DELETE CASCADE.
 - store_order_items has quantity > 0 and nonnegative unit_price/line_total checks.
@@ -61,7 +57,7 @@ Telegram daily owner report is separate from customer order notification. Oct 31
 - Current baseline remains 0 orders. Do not create a sample order merely to test constraints.
 - Existing stock triggers decrement tracked stock on order-item insert and restore it on item delete. Cancellation status trigger separately restores tracked stock. Deleting order-item rows after cancellation can therefore double-restore inventory; preserve cancelled order lines and define a stock ledger before any line deletion/edit feature.
 
-## 7. Recommended isolated engineering sequence
+## 8. Recommended isolated engineering sequence
 1. Implement a narrow atomic order RPC with server-side auth/owner-safe grants and idempotency table.
 2. Move order + order items + inventory triggers + order alert + notification outbox write into one transaction. Do not manually decrement stock in the Edge Function if the database trigger already does so.
 3. Use a stable browser idempotency key per checkout attempt; same key/same payload returns the original order; same key/different payload returns conflict; retain key across network retries and clear after confirmed success.
@@ -71,5 +67,5 @@ Telegram daily owner report is separate from customer order notification. Oct 31
 7. Add delivered_at + feedback scheduler only after consent/message policy is decided.
 8. Only then request explicit approval for production rollout and rollback plan.
 
-## 8. Explicit non-actions
-No SQL has been run to change schema. No deployed function was modified. No product/order rows were written. No staff role or Admin access was changed. No Telegram/WhatsApp/email was sent. Main branch and production deployment remain untouched.
+## 9. Explicit non-actions
+Read-only SQL checks only; no schema-changing SQL was run. No deployed function was modified. No product/order rows were written. No staff role or Admin access was changed. No Telegram/WhatsApp/email was sent. Main branch and production deployment remain untouched.
