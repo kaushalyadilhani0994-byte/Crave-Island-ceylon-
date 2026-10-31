@@ -26,9 +26,16 @@ Deno.serve(async (req: Request) => {
     if (authError || !authData.user) return reply(401, { error: "Session invalid or expired." });
 
     const { data: staff, error: staffError } = await admin.from("staff_profiles")
-      .select("role,approved").eq("id", authData.user.id).maybeSingle();
-    if (staffError || !staff || staff.approved !== true || staff.role !== "owner") {
-      return reply(403, { error: "Only an approved owner can update order status." });
+      .select("role,approved,permissions").eq("id", authData.user.id).maybeSingle();
+    if (staffError || !staff || staff.approved !== true) {
+      return reply(403, { error: "An approved CRAVE team account is required." });
+    }
+    const isOwner = staff.role === "owner";
+    const permissions = staff.permissions && typeof staff.permissions === "object" ? staff.permissions as Record<string, unknown> : {};
+    const hasOrdersUpdate = Array.isArray(permissions.orders) && permissions.orders.includes("update");
+    const hasDispatchUpdate = Array.isArray(permissions.dispatch) && permissions.dispatch.includes("update");
+    if (!isOwner && !hasOrdersUpdate && !hasDispatchUpdate) {
+      return reply(403, { error: "Your account does not have order-status update permission." });
     }
 
     let body: Record<string, unknown>;
@@ -53,8 +60,15 @@ Deno.serve(async (req: Request) => {
       delivered: [],
       cancelled: [],
     };
-    if (!(transitions[order.order_status] || []).includes(next)) {
-      return reply(409, { error: "Invalid status transition." });
+    const allowedTransitions = isOwner || hasOrdersUpdate
+      ? (transitions[order.order_status] || [])
+      : order.order_status === "processing" && next === "shipped"
+        ? ["shipped"]
+        : order.order_status === "shipped" && next === "delivered"
+          ? ["delivered"]
+          : [];
+    if (!allowedTransitions.includes(next)) {
+      return reply(403, { error: "This status change is outside your assigned order/dispatch permissions." });
     }
 
     const { data: updated, error: updateError } = await admin.from("store_orders")

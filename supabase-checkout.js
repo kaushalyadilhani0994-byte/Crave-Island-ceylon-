@@ -188,7 +188,28 @@
       message("Order placed successfully. Order number: " + order.order_number + ". Total: " + money(order.total) + ". You can view its status under My Orders.", false);
       const form = document.getElementById("cicCheckoutForm");
       form.style.display = "none";
-      document.getElementById("cicCheckoutSummary").innerHTML = '<b>Order confirmed: ' + esc(order.order_number) + '</b><div class="cic-checkout-line"><span>Order total</span><b>' + money(order.total) + '</b></div><p>Payment: ' + esc(order.payment_method === "cod" ? "Cash on delivery" : "Bank transfer") + ' · Status: ' + esc(order.order_status) + '</p><a href="my-orders.html" style="color:#2C1A14">View My Orders</a>';
+      const receiptItems = Array.isArray(data.items) ? data.items : [];
+      const receiptRows = receiptItems.map(item =>
+        '<div class="cic-checkout-line"><span>' + esc(item.product_name) + ' × ' + Number(item.quantity) + '<br><small>' + money(item.unit_price) + ' each</small></span><b>' + money(item.line_total) + '</b></div>'
+      ).join("");
+      document.getElementById("cicCheckoutSummary").innerHTML =
+        '<b>Order confirmed: ' + esc(order.order_number) + '</b>' +
+        receiptRows +
+        '<div class="cic-checkout-line"><span>Subtotal</span><b>' + money(order.subtotal) + '</b></div>' +
+        '<div class="cic-checkout-line"><span>Delivery</span><b>' + money(order.delivery_fee) + '</b></div>' +
+        '<div class="cic-checkout-line" style="border-top:1px solid #e2d5c4;padding-top:10px"><b>Total</b><b>' + money(order.total) + '</b></div>' +
+        '<p>Payment: ' + esc(order.payment_method === "cod" ? "Cash on delivery" : "Bank transfer") + ' · Status: ' + esc(order.order_status) + '</p>' +
+        '<div class="cic-checkout-actions"><button type="button" id="cicPrintReceipt">Print / Save receipt</button><a href="my-orders.html" style="align-self:center;color:#2C1A14">View My Orders</a></div>';
+      const printButton = document.getElementById("cicPrintReceipt");
+      if (printButton) printButton.addEventListener("click", () => {
+        const receiptWindow = window.open("", "_blank", "width=720,height=800");
+        if (!receiptWindow) { message("Allow pop-ups for this site to print or save your receipt.", true); return; }
+        const rows = receiptItems.map(item =>
+          '<tr><td>' + esc(item.product_name) + '</td><td>' + Number(item.quantity) + '</td><td>' + money(item.unit_price) + '</td><td>' + money(item.line_total) + '</td></tr>'
+        ).join("");
+        receiptWindow.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Receipt ' + esc(order.order_number) + '</title><style>body{font:14px Arial,sans-serif;color:#2C1A14;max-width:720px;margin:35px auto;padding:20px}h1{font:26px Georgia,serif}small{color:#665}table{width:100%;border-collapse:collapse;margin:24px 0}th,td{text-align:left;padding:10px 6px;border-bottom:1px solid #ddd}th:last-child,td:last-child{text-align:right}.total{font-size:19px;font-weight:bold;border-top:2px solid #2C1A14;padding-top:12px;text-align:right}.muted{color:#665;font-size:12px}</style></head><body><h1>CRAVE ISLAND CEYLON</h1><p class="muted">ORDER RECEIPT · Ceylon · Crafted with a Story</p><h2>' + esc(order.order_number) + '</h2><p>Order date: ' + esc(new Date(order.created_at).toLocaleString()) + '<br>Payment: ' + esc(order.payment_method === "cod" ? "Cash on delivery" : "Bank transfer") + '<br>Status: ' + esc(order.order_status) + '</p><table><thead><tr><th>Item</th><th>Qty</th><th>Unit price</th><th>Total</th></tr></thead><tbody>' + rows + '</tbody></table><p>Subtotal: ' + money(order.subtotal) + '</p><p>Delivery: ' + money(order.delivery_fee) + '</p><p class="total">Grand total: ' + money(order.total) + '</p><p class="muted">Thank you for choosing CRAVE ISLAND CEYLON. Please retain this receipt for your records.</p><script>window.onload=()=>window.print()<\/script></body></html>');
+        receiptWindow.document.close();
+      });
       try { if (typeof window.clearCart === "function") window.clearCart(); else { localStorage.removeItem("crave_cart_v4"); localStorage.removeItem("crave_cart"); } } catch (_) {}
       try { if (typeof window.renderCart === "function") window.renderCart(); } catch (_) {}
     } catch (e) {

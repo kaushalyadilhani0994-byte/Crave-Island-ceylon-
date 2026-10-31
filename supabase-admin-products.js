@@ -93,11 +93,12 @@
     select.innerHTML='<option value="">Choose a category or subcategory</option>'+(cats.data||[]).filter(c=>c.is_active).map(c=>{const parent=(cats.data||[]).find(p=>p.id===c.parent_id);return '<option value="'+esc(c.name)+'">'+(parent?esc(parent.name)+' › ':'')+esc(c.name)+'</option>';}).join("");
      const parentSelect=$("#cicCatParent"); if(parentSelect)parentSelect.innerHTML='<option value="">Main category</option>'+(cats.data||[]).filter(c=>!c.parent_id).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join("");
     const catList=(cats.data||[]).map(c=>{const parent=(cats.data||[]).find(p=>p.id===c.parent_id);return '<div class="cic-card"><div><b>'+(parent?esc(parent.name)+' › ':'')+esc(c.name)+'</b><div class="cic-muted">'+(c.parent_id?"Subcategory · ":"Main category · ")+(c.is_active?"Active":"Hidden")+'</div></div><button type="button" data-cic-category-toggle="'+esc(c.id)+'" data-active="'+String(!!c.is_active)+'">'+(c.is_active?"Hide":"Activate")+'</button></div>';}).join("");
-    const prodList=productRows.map(p=>'<div class="cic-card"><div><b>'+esc(p.name)+'</b><div class="cic-muted">'+esc(p.category||"Uncategorised")+' · '+money(p.price)+' · '+(p.is_active?"Active":"Hidden")+'</div><div class="cic-muted">'+(p.track_inventory?"Stock: "+Number(p.stock_quantity||0)+" · Low-stock threshold: "+Number(p.low_stock_threshold||5):"Stock tracking off")+(p.expiry_date?" · Best before: "+esc(p.expiry_date):" · No expiry date recorded")+(p.sku?" · SKU: "+esc(p.sku):"") +'</div></div><div><button type="button" data-cic-product-edit="'+esc(p.id)+'">Edit details</button> <button type="button" data-cic-product-toggle="'+esc(p.id)+'" data-active="'+String(!!p.is_active)+'">'+(p.is_active?"Hide product":"Activate product")+'</button></div></div>').join("");
+    const prodList=productRows.map(p=>'<div class="cic-card"><div><b>'+esc(p.name)+'</b><div class="cic-muted">'+esc(p.category||"Uncategorised")+' · '+money(p.price)+' · '+(p.is_active?"Active":"Hidden")+'</div><div class="cic-muted">'+(p.track_inventory?"Stock: "+Number(p.stock_quantity||0)+" · Low-stock threshold: "+Number(p.low_stock_threshold||5):"Stock tracking off")+(p.expiry_date?" · Best before: "+esc(p.expiry_date):" · No expiry date recorded")+(p.sku?" · SKU: "+esc(p.sku):"")+'</div></div><div><button type="button" data-cic-product-edit="'+esc(p.id)+'">Edit details</button> <button type="button" data-cic-product-qr="'+esc(p.id)+'">'+(p.qr_code?"View / print QR":"Generate / repair QR")+'</button> <button type="button" data-cic-product-toggle="'+esc(p.id)+'" data-active="'+String(!!p.is_active)+'">'+(p.is_active?"Hide product":"Activate product")+'</button></div></div>').join("");
     $("#cicOwnerCatalogueList").innerHTML='<h3 style="margin-top:14px">Collections ('+(cats.data||[]).length+')</h3>'+(catList||'<p class="cic-muted">No collections yet. Create one above.</p>')+'<h3 style="margin-top:18px">Products ('+(products.data||[]).length+')</h3>'+(prodList||'<p class="cic-muted">No products yet. Add verified product details above.</p>');
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-category-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("categories",btn.getAttribute("data-cic-category-toggle"),btn.getAttribute("data-active")==="true")));
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-product-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("products",btn.getAttribute("data-cic-product-toggle"),btn.getAttribute("data-active")==="true")));
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-product-edit]").forEach(btn=>btn.addEventListener("click",()=>editProduct(btn.getAttribute("data-cic-product-edit"))));
+    $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-product-qr]").forEach(btn=>btn.addEventListener("click",()=>openProductQr(btn.getAttribute("data-cic-product-qr"),btn)));
     say("Connected. "+(cats.data||[]).length+" collections and "+(products.data||[]).length+" products loaded.");
   }
 
@@ -176,6 +177,82 @@
     } finally {if(btn){btn.disabled=false;btn.textContent=idleText;}}
   }
 
+  // Automatically provision a private passport and stable production QR for every saved product.
+  const PUBLIC_ORIGIN = "https://craveislandceylonv18supabaseintegra.vercel.app";
+  const passportUrl = slug => PUBLIC_ORIGIN + "/passport.html?slug=" + encodeURIComponent(slug);
+  async function ensureProductPassport(productId, productRow) {
+    const ingredients=String(productRow.ingredients||"").split(/[,;\n]/).map(x=>x.trim()).filter(Boolean);
+    let {data:passport,error:readError}=await client.from("product_passports")
+      .select("id,public_slug,ingredients,batch_code,published")
+      .eq("product_id",String(productId)).maybeSingle();
+    if(readError) throw readError;
+    if(!passport){
+      const slug="cic-"+String(productId).toLowerCase();
+      const {error:insertError}=await client.from("product_passports").insert({
+        product_id:String(productId),public_slug:slug,ingredients,
+        allergen_information:[],batch_code:productRow.batch_number||null,published:false,updated_at:new Date().toISOString()
+      });
+      if(insertError){
+        const retry=await client.from("product_passports")
+          .select("id,public_slug,ingredients,batch_code,published")
+          .eq("product_id",String(productId)).maybeSingle();
+        if(retry.error||!retry.data) throw insertError;
+        passport=retry.data;
+      } else {
+        passport={public_slug:slug,ingredients,batch_code:productRow.batch_number||null,published:false};
+      }
+    }
+    const sameIngredients=JSON.stringify(Array.isArray(passport.ingredients)?passport.ingredients:[])===JSON.stringify(ingredients);
+    const sameBatch=String(passport.batch_code||"")===String(productRow.batch_number||"");
+    const changedPublishedDetails=passport.published===true&&(!sameIngredients||!sameBatch);
+    const passportUpdate={ingredients,batch_code:productRow.batch_number||null,updated_at:new Date().toISOString(),...(changedPublishedDetails?{published:false}:{})};
+    const {error:passportUpdateError}=await client.from("product_passports").update(passportUpdate).eq("product_id",String(productId));
+    if(passportUpdateError) throw passportUpdateError;
+    const slug=passport.public_slug;
+    if(!slug) throw new Error("Product passport is missing its public slug.");
+    const url=passportUrl(slug);
+    const {error:updateError}=await client.from("products").update({qr_code:url}).eq("id",productId);
+    if(updateError) throw updateError;
+    return {slug,url,needsRepublish:changedPublishedDetails};
+  }
+  async function openProductQr(productId, button) {
+    if(!await checkAccess()){say("Owner session expired. Please sign in again.",true);return;}
+    const product=productRows.find(row=>String(row.id)===String(productId));
+    if(!product){say("Product not found. Refresh the catalogue and try again.",true);return;}
+    const idle=button?button.textContent:"";
+    if(button){button.disabled=true;button.textContent="Preparing QR…";}
+    try {
+      const qr=await ensureProductPassport(productId,product);
+      showGeneratedQr(product.name,qr);
+    } catch(error) {
+      console.error("Product QR recovery failed",error);
+      say("QR setup could not be completed. Check owner permissions and retry.",true);
+    } finally {
+      if(button){button.disabled=false;button.textContent=idle;}
+      await loadAll();
+    }
+  }
+
+  function showGeneratedQr(name, qr) {
+    const el=$("#cicOwnerCatalogueMessage"); if(!el)return;
+    el.textContent="";
+    const box=document.createElement("div"); box.className="cic-message";
+    box.innerHTML='<b>Product saved · QR generated automatically</b><br>'+esc(name)+
+      '<br><img alt="Product QR code" width="180" height="180" style="display:block;background:white;margin:10px 0" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='+encodeURIComponent(qr.url)+'">'+
+      '<div class="cic-muted">'+(qr.needsRepublish?'Product details changed. This passport is private again; review and publish it in Owner · QR Passports before attaching this label.':'Passport is a private draft. Complete and publish its verified details in Owner · QR Passports before using this code on customer packs.')+'</div>'+
+      '<input aria-label="QR destination" readonly style="width:100%;padding:8px;margin:8px 0" value="'+esc(qr.url)+'">'+
+      '<button type="button" id="cicAutoQrPrint">Print this product label</button>';
+    el.appendChild(box);
+    const printBtn=box.querySelector("#cicAutoQrPrint");
+    printBtn.addEventListener("click",()=>{
+      const win=window.open("","_blank","width=480,height=640");
+      if(!win){say("Allow pop-ups to print the product QR label.",true);return;}
+      const qrImage="https://api.qrserver.com/v1/create-qr-code/?size=360x360&data="+encodeURIComponent(qr.url);
+      win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>CRAVE ISLAND CEYLON QR Label</title><style>@page{size:50mm 70mm;margin:3mm}*{box-sizing:border-box}body{margin:0;width:44mm;min-height:64mm;display:flex;flex-direction:column;align-items:center;text-align:center;color:#2C1A14;font-family:Arial,sans-serif;padding:2mm}.brand{font:700 12pt Georgia,serif;letter-spacing:.3px;border-bottom:1px solid #D4AF37;padding-bottom:2mm;width:100%}.tag{font-size:6.5pt;letter-spacing:1px;margin-top:1.5mm}.name{font-size:9pt;font-weight:700;margin:3mm 0 1mm;overflow-wrap:anywhere}.qr{width:34mm;height:34mm;object-fit:contain;margin:1mm auto}.note{font-size:6pt;margin-top:2mm;color:#65554b}@media screen{body{margin:15px auto;border:1px dashed #bbb;padding:10px;width:44mm}}</style></head><body><div class="brand">CRAVE ISLAND CEYLON</div><div class="tag">PRODUCT PASSPORT</div><div class="name">'+esc(name)+'</div><img class="qr" alt="Product passport QR code" src="'+qrImage+'"><div class="note">Scan to discover verified product details</div><script>const q=document.querySelector(".qr");q.onload=()=>setTimeout(()=>window.print(),250);q.onerror=()=>document.body.insertAdjacentHTML("beforeend","<p>QR image could not load. Please retry.</p>");<\/script></body></html>');
+      win.document.close();
+    });
+  }
+
   async function saveProduct(event) {
     event.preventDefault(); if(!await checkAccess()){say("Owner access required.",true);return;}
     const name=$("#cicProdName").value.trim(), category=$("#cicProdCategory").value, price=Number($("#cicProdPrice").value);
@@ -190,9 +267,10 @@
     const stockQuantity=Number($("#cicProdStock").value||0), lowStockThreshold=Number($("#cicProdLowStock").value||5), expiryDate=$("#cicProdExpiry").value||null;
      if(!Number.isInteger(stockQuantity)||stockQuantity<0||!Number.isInteger(lowStockThreshold)||lowStockThreshold<0){say("Stock and low-stock threshold must be whole numbers of zero or more.",true);if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}return;}
      const row={name,category,price,currency:"LKR",description:$("#cicProdDesc").value.trim()||null,image_url:imageUrl||null,ingredients,batch_number:$("#cicProdBatch").value.trim()||null,qr_code:$("#cicProdQr").value.trim()||null,stock_quantity:stockQuantity,low_stock_threshold:lowStockThreshold,expiry_date:expiryDate,track_inventory:$("#cicProdTrackStock").checked,is_active:editId?Boolean(existingProduct&&existingProduct.is_active):false};
-    let result;
+    let result, productId=editId;
     try {
-      result=editId?await client.from("products").update(row).eq("id",editId):await client.from("products").insert(row);
+      if(editId) result=await client.from("products").update(row).eq("id",editId);
+      else { result=await client.from("products").insert(row).select("id").single(); if(!result.error) productId=result.data&&result.data.id; }
     } catch(error) {
       if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}
       say("Product save failed: "+String(error&&error.message||"Network error").slice(0,180),true);return;
@@ -202,8 +280,13 @@
       const code=result.error.code?String(result.error.code)+" · ":"";
       say("Product save failed: "+code+String(result.error.message||"Check the owner permissions and fields").slice(0,180),true);return;
     }
+    let generatedQr=null;
+    try { generatedQr=await ensureProductPassport(productId,row); }
+    catch(qrError){ console.error("Automatic product passport setup failed",qrError); }
     event.target.reset(); delete event.target.dataset.editId; const saveButton=event.target.querySelector("button[type=submit]"); if(saveButton)saveButton.textContent="Save product as draft";
-    say(editId?"Product details updated; its previous visibility setting was preserved.":"Product saved as a hidden draft. Review the details and activate it only when ready to sell."); await loadAll();
+    await loadAll();
+    if(generatedQr) showGeneratedQr(name,generatedQr);
+    else say("Product saved, but automatic QR setup needs attention. Refresh and retry from Owner · QR Passports.",true);
     if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function") await window.CIC_SUPABASE.refreshCatalogue();
   }
 

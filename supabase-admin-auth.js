@@ -6,6 +6,9 @@
   const $ = (selector, root=document) => root.querySelector(selector);
   const db = () => window.CIC_SUPABASE && window.CIC_SUPABASE.client;
   let handlingPendingOwnerSession = false;
+  // Preserve a verified owner nav across temporary profile-query failures and nav re-renders.
+  let approvedOwnerUserId = null;
+  let ownerNavVerified = false;
   function status(message, bad=false) {
     const el=$("#cicOwnerAuthStatus");
     if(!el)return;
@@ -28,34 +31,67 @@
     if (shortcut) shortcut.remove();
   }
   function setOwnerNavVisible(visible) {
+    ownerNavVerified = !!visible;
     const bottom = document.querySelector(".bottom");
-    // Find the real Admin entry by its action, not by :last-child:
-    // owner modules can append their own buttons to the bottom bar.
-    const adminButton = bottom && (
-      bottom.querySelector('[onclick*="openAdminAccess"]') ||
-      Array.from(bottom.querySelectorAll(".nav")).find(el =>
-        /(^|\s)Admin(\s|$)/i.test((el.innerText || el.textContent || "").replace(/\s+/g, " ").trim())
-      )
-    );
+    if (!bottom) return;
+    // Reuse the existing Admin item across older V18 nav variants.
+    let adminButton = bottom.querySelector('[onclick*="openAdminAccess"],[data-nav="admin"],#cicOwnerAdminNav');
+    if (!adminButton) {
+      adminButton = Array.from(bottom.querySelectorAll(".nav,button,a")).find(el =>
+        /(^|\\s)Admin(\\s|$)/i.test((el.getAttribute("aria-label") || el.innerText || el.textContent || "").replace(/\\s+/g, " ").trim())
+      );
+    }
+    // If this storefront revision has no Admin item, create one. It remains
+    // hidden until the Supabase session AND approved-owner profile are verified.
+    if (!adminButton) {
+      adminButton = document.createElement("button");
+      adminButton.type = "button";
+      adminButton.id = "cicOwnerAdminNav";
+      adminButton.className = "nav";
+      adminButton.setAttribute("data-nav", "admin");
+      adminButton.setAttribute("aria-label", "Admin");
+      adminButton.innerHTML = '<span aria-hidden="true" style="font-size:19px;line-height:1">♙</span><span class="nav-label">Admin</span>';
+      adminButton.addEventListener("click", function () {
+        if (typeof window.openAdminAccess === "function") window.openAdminAccess();
+      });
+      bottom.appendChild(adminButton);
+    }
     if (visible) {
+      adminButton.hidden = false;
+      adminButton.removeAttribute("aria-hidden");
       document.body.classList.add("cic-owner-shortcuts-unified");
-      if (bottom) bottom.style.setProperty("grid-template-columns", "repeat(7,minmax(0,1fr))", "important");
-      if (adminButton) adminButton.style.setProperty("display", "flex", "important");
+      bottom.style.setProperty("grid-template-columns", "repeat(7,minmax(0,1fr))", "important");
+      adminButton.style.setProperty("display", "flex", "important");
       syncOwnerAdminShortcut(true);
     } else {
+      adminButton.hidden = true;
+      adminButton.setAttribute("aria-hidden", "true");
       document.body.classList.remove("cic-owner-shortcuts-unified");
-      if (bottom) bottom.style.removeProperty("grid-template-columns");
-      // Keep the Admin entry completely out of the customer storefront.
-      // Owners can still open sign-in through the existing hidden owner trigger.
-      if (adminButton) adminButton.style.setProperty("display", "none", "important");
+      bottom.style.removeProperty("grid-template-columns");
+      adminButton.style.setProperty("display", "none", "important");
       syncOwnerAdminShortcut(false);
     }
   }
   async function isApprovedOwner(user) {
     const client=db(); if(!client||!user)return false;
-    if(!isOwnerEmail(user.email))return false;
+    if(!isOwnerEmail(user.email)){approvedOwnerUserId=null;return false;}
     const {data,error}=await client.from("staff_profiles").select("role,approved").eq("id",user.id).maybeSingle();
-    return !error&&!!data&&data.role==="owner"&&data.approved===true;
+    // A temporary network/RLS query error must not revoke an already verified
+    // owner nav. Only a successful negative profile result or SIGNED_OUT does.
+    if(error)return approvedOwnerUserId===user.id;
+    const approved=!!data&&data.role==="owner"&&data.approved===true;
+    approvedOwnerUserId=approved?user.id:null;
+    return approved;
+  }
+  async function getTeamProfile(user){
+    const client=db();if(!client||!user)return null;
+    const {data,error}=await client.from("staff_profiles").select("id,email,display_name,role,approved,permissions").eq("id",user.id).maybeSingle();
+    if(error||!data||data.role==="owner")return null;
+    return data;
+  }
+  async function getApprovedTeamProfile(user){
+    const profile=await getTeamProfile(user);
+    return profile&&profile.approved===true?profile:null;
   }
   function install() {
     const modal=$("#adminAccessModal"), email=$("#adminEmail"), otp=$("#adminOtp");
@@ -74,13 +110,13 @@
         el.hidden=true;el.setAttribute("aria-hidden","true");el.style.setProperty("display","none","important");
       }
     });
-    email.placeholder="Approved owner email";
+    email.placeholder="Your approved account email";
     email.autocomplete="email";
     otp.type="text"; otp.inputMode="numeric"; otp.maxLength=6; otp.pattern="[0-9]{6}"; otp.autocomplete="one-time-code"; otp.placeholder="Enter code if the email contains one";
     const label=$('label[for="adminOtp"]',modal); if(label)label.textContent="6-digit one-time code";
     const buttons=actions.querySelectorAll("button");
     if(buttons[0]){buttons[0].textContent="Send secure sign-in email";buttons[0].type="button";buttons[0].onclick=sendCode;}
-    if(buttons[1]){buttons[1].textContent="Verify code & open Admin";buttons[1].type="button";buttons[1].onclick=verifyCode;}
+    if(buttons[1]){buttons[1].textContent="Verify code & continue";buttons[1].type="button";buttons[1].onclick=verifyCode;}
     if(!$("#cicOwnerAuthStatus",modal)){
       const s=document.createElement("div");s.id="cicOwnerAuthStatus";s.hidden=true;s.setAttribute("role","status");s.setAttribute("aria-live","polite");actions.insertAdjacentElement("afterend",s);
     }
@@ -93,21 +129,21 @@
   async function sendCode() {
     const client=db(), email=($("#adminEmail")?.value||"").trim().toLowerCase();
     if(!client)return status("Supabase is still connecting. Please wait and try again.",true);
-    if(!isOwnerEmail(email))return status("This email is not on the owner's allowed email list.",true);
+    if(!email)return status('Enter your owner or team email address.',true);
     const btn=$(".login-actions button");
     if(btn){btn.disabled=true;btn.textContent="Sending…";}
     try{
-      const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:window.location.origin+window.location.pathname}});
+      const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:window.location.origin+window.location.pathname}});
       if(error)status("Could not send a sign-in code. Check the email address and Supabase Auth email configuration, then try again.",true);
-      else status("Secure sign-in email requested. Check your inbox and spam folder. If it contains a 6-digit code, enter it below; if it contains a sign-in link, tap that link and return to this app. Owner database approval is still required.");
+      else status("Secure sign-in email requested. Check your inbox and spam folder. If it contains a 6-digit code, enter it below; if it contains a sign-in link, tap that link and return to this app. Main Admin approval is required for team accounts.");
     }catch(e){status("Could not request a code because of a connection error.",true);}
     finally{if(btn){btn.disabled=false;btn.textContent="Send secure sign-in email";}}
   }
   async function verifyCode() {
     const client=db(), email=($("#adminEmail")?.value||"").trim().toLowerCase(), token=($("#adminOtp")?.value||"").trim();
     if(!client)return status("Supabase is still connecting. Please wait and try again.",true);
-    if(!isOwnerEmail(email))return status("This email is not on the owner's allowed email list.",true);
-    if(!/^\d{6}$/.test(token))return status("Enter the 6-digit code if your email contains one. If the email contains a sign-in link instead, tap that link and return to this app; the app will verify the owner account.",true);
+    if(!email)return status("Enter your owner or team email address.",true);
+    if(!/^\d{6}$/.test(token))return status("Enter the 6-digit code if your email contains one. If the email contains a sign-in link, tap it to return to CRAVE and complete your account check.",true);
     const btn=$(".login-actions button:nth-child(2)");
     if(btn){btn.disabled=true;btn.textContent="Verifying…";}
     try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
@@ -115,20 +151,28 @@
       const {data,error}=await client.auth.verifyOtp({email,token,type:"email"});
       if(error||!data.user){status("The code could not be verified. Check it or request a fresh sign-in email.",true);return;}
       try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
-      if(!(await isApprovedOwner(data.user))){
-        await recordDeniedOwnerAttempt();
-        await client.auth.signOut();
-        status("This email is allowed for owner setup, but its Supabase owner profile is not yet approved. Complete the owner-profile approval before opening Admin.",true);
+      try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+      if(await isApprovedOwner(data.user)){
+        try{sessionStorage.setItem("cicOwnerOtpVerified","1");}catch(_){}
+        status("Main Admin verified. Opening the original CRAVE Control Room…");
+        setOwnerNavVisible(true);
+        if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
+        else {const m=$("#adminAccessModal");if(m)m.style.display="none";}
+        openOwnerDashboard();
         return;
       }
-      try{localStorage.removeItem("cicOwnerSignInPending");sessionStorage.setItem("cicOwnerOtpVerified","1");}catch(_){}
-      status("Owner verified. Opening the original CRAVE Control Room…");
-      setOwnerNavVisible(true);
-      if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
-      else {const m=$("#adminAccessModal");if(m)m.style.display="none";}
-      openOwnerDashboard();
+      const teamProfile=await getApprovedTeamProfile(data.user);
+      if(teamProfile&&typeof window.openApprovedTeamWorkspace==="function"){
+        if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
+        else {const m=$("#adminAccessModal");if(m)m.style.display="none";}
+        window.openApprovedTeamWorkspace(teamProfile);
+        return;
+      }
+      await recordDeniedOwnerAttempt();
+      await client.auth.signOut();
+      status("This account is not an approved CRAVE team member. Ask Main Admin to approve access first.",true);
     }catch(e){status("Could not verify the code because of a connection error.",true);}
-    finally{if(btn){btn.disabled=false;btn.textContent="Verify code & open Admin";}}
+    finally{if(btn){btn.disabled=false;btn.textContent="Verify code & continue";}}
   }
   function installUnifiedLiveTools(){
     const control=document.getElementById("controlRoomModal");
@@ -217,7 +261,8 @@
       if(control){control.classList.add("open");control.style.display="flex";}
     }
     if(typeof window.showAdminView==="function")window.showAdminView("overview");
-    // Keep the original V18 Control Room clean; do not inject a second owner-tools card hub.
+    // Keep live catalogue, orders, QR passports and alerts inside the existing Control Room.
+    installUnifiedLiveTools();
   }
   function addOwnerMenuReturnButton(dashboard){
     const control=document.getElementById("controlRoomModal");
@@ -239,165 +284,11 @@
     });
   }
   async function openOwnerDashboard(){
-    // Fail closed even if a customer calls the exported dashboard function manually.
-    const client=db();
-    if(!client){
-      setOwnerNavVisible(false);
-      status("Owner verification is unavailable. Please sign in again.",true);
-      return;
-    }
-    try{
-      const {data,error}=await client.auth.getUser();
-      if(error||!data||!data.user||!(await isApprovedOwner(data.user))){
-        const existing=$("#cicOwnerDashboard");
-        if(existing)existing.remove();
-        setOwnerNavVisible(false);
-        status("Owner access denied. Sign in with an approved owner account.",true);
-        return;
-      }
-    }catch(_){
-      const existing=$("#cicOwnerDashboard");
-      if(existing)existing.remove();
-      setOwnerNavVisible(false);
-      status("Owner verification failed. Please sign in again.",true);
-      return;
-    }
-    // Restore the original V18 owner dashboard after a fresh server-verified owner check.
-    let dashboard=$("#cicOwnerDashboard");
-    if(!dashboard){
-      if(!$("#cicOwnerDashboardStyle")){
-        const style=document.createElement("style");
-        style.id="cicOwnerDashboardStyle";
-        style.textContent=`
-          #cicOwnerDashboard{position:fixed;inset:0;z-index:10001;background:#f6f1ea;color:#2c1a14;overflow:auto;padding:clamp(14px,4vw,28px);font-family:system-ui,-apple-system,Segoe UI,sans-serif}
-          #cicOwnerDashboard .cic-dash-wrap{max-width:760px;margin:0 auto}
-          #cicOwnerDashboard .cic-dash-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid #e4d7c7;padding-bottom:16px;margin-bottom:18px}
-          #cicOwnerDashboard h1{font:400 clamp(27px,6vw,38px)/1.12 Georgia,serif;margin:0 0 7px}
-          #cicOwnerDashboard p{color:#76665b;line-height:1.5;margin:0}
-          #cicOwnerDashboard .cic-dash-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-          #cicOwnerDashboard .cic-dash-card{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:8px;min-height:112px;padding:16px;border:1px solid #e2d5c4;border-radius:15px;background:#fffaf3;color:#2c1a14;touch-action:manipulation}
-          #cicOwnerDashboard .cic-dash-card strong{font:400 20px Georgia,serif}
-          #cicOwnerDashboard .cic-dash-card span{font-size:13px;color:#76665b;line-height:1.45}
-          #cicOwnerDashboard .cic-dash-card:active{transform:scale(.99)}
-          #cicOwnerDashboard .cic-dash-action{border:1px solid #d4af37;border-radius:10px;padding:10px 13px;background:#2c1a14;color:#fff8e7;font-weight:650;touch-action:manipulation}
-          #cicOwnerDashboard .cic-dash-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}
-          #cicOwnerDashboard .cic-dash-section{margin-top:20px}
-          #cicOwnerDashboard .cic-dash-section h2{font:400 22px Georgia,serif;margin:0 0 10px}
-          #cicOwnerDashboard .cic-dash-note{font-size:12px;margin-top:12px;padding:12px;border-radius:12px;background:#efe5d8}
-          @media(max-width:430px){#cicOwnerDashboard{padding:12px}#cicOwnerDashboard .cic-dash-top{gap:8px;padding-bottom:12px;margin-bottom:12px}#cicOwnerDashboard .cic-dash-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#cicOwnerDashboard .cic-dash-card{min-height:92px;padding:11px;gap:5px;border-radius:12px}#cicOwnerDashboard .cic-dash-card strong{font:400 16px/1.15 Georgia,serif}#cicOwnerDashboard .cic-dash-card span{font-size:11px;line-height:1.35}#cicOwnerDashboard .cic-dash-section{margin-top:14px}#cicOwnerDashboard .cic-dash-section h2{font-size:20px;margin-bottom:8px}#cicOwnerDashboard .cic-dash-note{font-size:11px;padding:10px}}
-        `;
-        document.head.appendChild(style);
-      }
-      dashboard=document.createElement("div");
-      dashboard.id="cicOwnerDashboard";
-      dashboard.setAttribute("role","dialog");
-      dashboard.setAttribute("aria-modal","true");
-      dashboard.setAttribute("aria-label","CRAVE ISLAND CEYLON owner dashboard");
-      dashboard.innerHTML=`
-        <div class="cic-dash-wrap">
-          <header class="cic-dash-top"><div><h1>CRAVE ISLAND CEYLON</h1><p>Owner workspace · Manage your business from one place.</p></div><button class="cic-dash-action" type="button" id="cicDashSignOut">Sign out</button></header>
-          <section class="cic-dash-section"><h2>Main Admin · Full business control</h2>
-          <div class="cic-dash-grid">
-            <button class="cic-dash-card" type="button" data-view="overview"><strong>Business Overview</strong><span>Orders, catalogue status, Star Points and customer follow-up.</span></button>
-            <button class="cic-dash-card" type="button" data-view="catalog"><strong>Products & Categories</strong><span>Catalogue, prices, availability and collections.</span></button>
-            <button class="cic-dash-card" type="button" data-view="orders"><strong>Orders & Customers</strong><span>Incoming orders, fulfilment and order records.</span></button>
-            <button class="cic-dash-card" type="button" data-view="brand"><strong>Brand & Store Settings</strong><span>Brand identity, delivery rules and store preferences.</span></button>
-            <button class="cic-dash-card" type="button" data-open="mediaModal"><strong>Media & Social</strong><span>Product photography, media clips, reels, voice stories and social drafts only.</span></button>
-            <button class="cic-dash-card" type="button" data-open="loyaltyModal"><strong>Loyalty & Star Points</strong><span>Star Points, rewards and scratch-card programme overview.</span></button>
-            <button class="cic-dash-card" type="button" data-view="automation"><strong>Payments & Accounts</strong><span>Invoices, payment records, bank-transfer checks, COD reconciliation and finance reports.</span></button>
-            <button class="cic-dash-card" type="button" data-view="team"><strong>Team, Supervisor & Staff</strong><span>Manage roles and access boundaries for Supervisor, Staff, Media and Accounts.</span></button>
-            <button class="cic-dash-card" type="button" data-view="security"><strong>Security & Audit</strong><span>Owner access checks, database security and audit review.</span></button>
-            <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>QR Passports & Certificates</strong><span>Product batch records, traceability, certificates and public QR destinations.</span></button>
-          </div>
-          <p class="cic-dash-note">Role names and access areas are shown in Team & Roles. Staff access must be approved and enforced by the database before staff accounts are enabled.</p></section>
-          <div class="cic-dash-footer"><p>Verified owner access · CRAVE ISLAND CEYLON</p><button class="cic-dash-action" type="button" id="cicDashClose">Back to shop</button></div>
-        </div>`;
-      document.body.appendChild(dashboard);
-      // Make the phone/browser Back action close the owner dashboard instead of leaving the app.
-      try{history.pushState({cicOwnerDashboard:true},'','#owner-admin');}catch(_){}
-      dashboard.addEventListener("click",async e=>{
-        const viewCard=e.target.closest("[data-view]");
-        if(viewCard){
-          const view=viewCard.getAttribute("data-view");
-          // Keep the owner menu in the history stack, hidden behind the work area.
-          // Android/browser Back then returns to this menu instead of the storefront.
-          dashboard.style.display="none";
-          try{history.pushState({cicOwnerDashboard:true,cicOwnerTool:true},"","#owner-tool");}catch(_){}
-          if(typeof window.openModal==="function")window.openModal("controlRoomModal");
-          addOwnerMenuReturnButton(dashboard);
-          if(typeof window.showAdminView==="function")window.showAdminView(view);
-          return;
-        }
-        const card=e.target.closest("[data-open]");
-        if(card){
-          const target=card.getAttribute("data-open");
-          const section=card.getAttribute("data-section");
-          if(target==="storefront"){dashboard.style.display="none";return;}
-          if(target==="mediaModal"||target==="loyaltyModal"||target==="scratchModal"){
-            dashboard.style.display="none";
-            try{history.pushState({cicOwnerDashboard:true,cicOwnerTool:true},"","#owner-tool");}catch(_){}
-            if(typeof window.openModal==="function")window.openModal(target);
-            addOwnerMenuReturnButton(dashboard);
-            return;
-          }
-          let tries=0;
-          const launch=()=>{
-            const b=document.getElementById(target);
-            if(b){
-              // Preserve the dashboard so Android/browser Back returns to the owner menu.
-              dashboard.style.display="none";
-              try{history.pushState({cicOwnerDashboard:true,cicOwnerTool:true},"","#owner-tool");}catch(_){}
-              addOwnerMenuReturnButton(dashboard);
-              b.hidden=false;
-              b.click();
-              if(section==="categories"||section==="products"){
-                const form=document.getElementById(section==="categories"?"cicCategoryForm":"cicProductForm");
-                if(form){
-                  form.scrollIntoView({behavior:"smooth",block:"start"});
-                  const input=form.querySelector("input,select,textarea");
-                  if(input)input.focus({preventScroll:true});
-                }
-              }
-              return;
-            }
-            if(++tries<25){setTimeout(launch,200);return;}
-            status("This section is still loading. Please try again in a moment.",true);
-          };
-          launch();
-        }
-      });
-      $("#cicDashClose").onclick=()=>{
-        // Keep the verified owner workspace in memory. Returning from the shop can reopen it without another OTP.
-        dashboard.style.display="none";
-        if(history.state&&history.state.cicOwnerDashboard)history.back();
-      };
-      $("#cicDashSignOut").onclick=async()=>{
-        const client=db();
-        if(client)await client.auth.signOut();
-        dashboard.remove();
-        try{localStorage.removeItem("cicOwnerSignInPending");sessionStorage.removeItem("cicOwnerOtpVerified");}catch(_){}
-        setOwnerNavVisible(false);
-        status("You have signed out.");
-        if(typeof window.openAdminAccess==="function")window.openAdminAccess();
-      };
-    }
-    dashboard.style.display="block";
-    dashboard.scrollTop=0;
+    // Keep the original V18 Control Room as the only owner admin workspace.
+    // Access is re-verified by openOriginalControlRoom before it is displayed.
+    return openOriginalControlRoom();
   }
-  window.addEventListener("popstate",function(event){
-    const dashboard=document.getElementById("cicOwnerDashboard");
-    if(!dashboard)return;
-    if(event.state&&event.state.cicOwnerDashboard){
-      // Back from a Control Room/tool panel: close the active work modal and return to Admin, not Home.
-      document.querySelectorAll(".modal.open").forEach(modal=>{if(typeof window.closeModal==="function")window.closeModal(modal.id);else{modal.classList.remove("open");modal.style.display="none";}});
-      dashboard.style.display="block";
-      dashboard.scrollTop=0;
-    }else{
-      // Back from the owner menu itself: return to the storefront but preserve the verified dashboard in memory.
-      dashboard.style.display="none";
-    }
-  });
-  window.CIC_OPEN_OWNER_DASHBOARD = openOwnerDashboard;
+
   async function handlePendingOwnerSession(session){
     if(!session||!session.user||handlingPendingOwnerSession)return;
     handlingPendingOwnerSession=true;
@@ -417,25 +308,75 @@
     }catch(_){status("Could not verify the owner session. Please reopen Admin and try again.",true);}
     finally{handlingPendingOwnerSession=false;}
   }
+  async function waitForSupabaseClient(timeoutMs=10000){
+    const started=Date.now();
+    while(Date.now()-started<timeoutMs){
+      const client=db();
+      if(client)return client;
+      await new Promise(resolve=>window.setTimeout(resolve,100));
+    }
+    return null;
+  }
+
   async function wire(){
     // Hide the customer-facing Admin nav immediately on startup, before any
     // persisted session or auth-state callback is processed.
     setOwnerNavVisible(false);
     install();
-    const original=window.openAdminAccess;
-    window.openAdminAccess=function(){
-      // Let the original entry point check Supabase's persisted session first.
-      // It opens the existing Control Room only for an approved owner; everyone
-      // else is shown the secure OTP panel. sessionStorage must not be the gate,
-      // because it can reset while Supabase's authenticated session remains valid.
-      if(typeof original==="function"){
+    // V18 may rebuild the bottom navigation after auth has completed. Re-attach
+    // the owner-only Admin entry if that happens, using the last verified state.
+    if(!window.__cicOwnerNavObserver){
+      window.__cicOwnerNavObserver=new MutationObserver(()=>{
+        const bottom=document.querySelector(".bottom");
+        if(bottom && !bottom.querySelector("#cicOwnerAdminNav") && !bottom.querySelector('[onclick*="openAdminAccess"],[data-nav="admin"]')){
+          setOwnerNavVisible(ownerNavVerified);
+        }
+      });
+      window.__cicOwnerNavObserver.observe(document.documentElement,{childList:true,subtree:true});
+    }
+    if(!window.__cicOwnerNavGuard){
+      // Some legacy V18 UI scripts update nav styles after auth; reconcile only
+      // when the rendered visibility differs from the verified owner state.
+      window.__cicOwnerNavGuard=window.setInterval(()=>{
+        const bottom=document.querySelector(".bottom");
+        if(!bottom)return;
+        const item=bottom.querySelector('#cicOwnerAdminNav,[data-nav="admin"],[onclick*="openAdminAccess"]');
+        const currentlyVisible=!!item&&!item.hidden&&getComputedStyle(item).display!=="none";
+        if(currentlyVisible!==ownerNavVerified)setOwnerNavVisible(ownerNavVerified);
+      },1200);
+    }
+    // A customer must never see owner tools, but the owner still needs a
+    // reliable way to reach the sign-in form before an authenticated session
+    // exists. Do not depend on a legacy inline openAdminAccess implementation.
+    window.openAdminAccess=async function(){
+      const client=db();
+      if(client){
         try{
-          const result=original.apply(this,arguments);
-          if(result&&typeof result.catch==="function")result.catch(()=>{});
+          const {data,error}=await client.auth.getSession();
+          const session=!error&&data&&data.session?data.session:null;
+          if(session&&session.user&&await isApprovedOwner(session.user)){
+            setOwnerNavVisible(true);
+            await openOwnerDashboard();
+            return;
+          }
         }catch(_){}
-      }else if(typeof window.openModal==="function")window.openModal("adminAccessModal");
-      else {const m=$("#adminAccessModal");if(m)m.style.display="";}
-      const s=$("#cicOwnerAuthStatus");if(s)s.hidden=true;
+      }
+      let modal=$("#adminAccessModal");
+      if(!modal){
+        modal=document.createElement("div");
+        modal.id="adminAccessModal";
+        modal.className="modal";
+        modal.innerHTML='<div class="sheet cic-owner-login-sheet"><div class="sheet-head"><h3>Main Admin & Team Sign In</h3><button class="close" type="button" aria-label="Close owner sign in">×</button></div><p class="muted-note">Sign in with your approved CRAVE account. Main Admin opens the Control Room; team members see their assigned workspace.</p><div class="form-grid cic-owner-login-fields"><div class="field full"><label for="adminEmail">Account email</label><input id="adminEmail" type="email" autocomplete="email" placeholder="Approved owner email"></div><div class="field full"><label for="adminOtp">6-digit one-time code</label><input id="adminOtp" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="Enter code from your email"></div></div><div class="login-actions"><button class="goldbtn" type="button">Send secure sign-in email</button><button class="gold-outline" type="button">Verify code &amp; continue</button></div><div class="access-note">Only an approved owner account can open the Control Room.</div></div>';
+        document.body.appendChild(modal);
+        modal.querySelector(".close")?.addEventListener("click",()=>modal.classList.remove("open"));
+        modal.addEventListener("click",event=>{if(event.target===modal)modal.classList.remove("open");});
+      }
+      install();
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden","false");
+      const statusEl=$("#cicOwnerAuthStatus",modal);
+      if(statusEl)statusEl.hidden=true;
+      window.setTimeout(()=>$("#adminEmail",modal)?.focus(),80);
     };
     const ownerEntryTargets=[document.querySelector(".hero-copy h2"),document.querySelector(".hero-copy"),document.querySelector("header .logo"),document.querySelector(".brand-logo"),document.querySelector("[data-brand-logo]")].filter((el,index,all)=>el&&all.indexOf(el)===index);
     ownerEntryTargets.forEach(target=>{
@@ -469,14 +410,44 @@
       }
     }catch(_){}
     window.requestAdminOtp=sendCode;window.verifyAdminOtpDemo=function(){verifyCode();};
-    const client=db();
+    // The storefront bridge may initialize Supabase after this auth module.
+    // Wait briefly so persisted sessions and email-link callbacks are not missed.
+    const client=await waitForSupabaseClient();
     if(client){
+      // Ensure the dedicated team workspace is ready before restoring an
+      // invited member's persisted Supabase session.
+      await new Promise(resolve=>{
+        if(typeof window.openApprovedTeamWorkspace==="function")return resolve();
+        const script=document.getElementById("cic-team-workspace-script");
+        if(!script)return resolve();
+        script.addEventListener("load",resolve,{once:true});
+        script.addEventListener("error",resolve,{once:true});
+        window.setTimeout(resolve,4000);
+      });
       client.auth.onAuthStateChange((event,session)=>{
-        if(event==="SIGNED_OUT"){setOwnerNavVisible(false);try{sessionStorage.removeItem("cicOwnerOtpVerified");}catch(_){}}
+        if(event==="SIGNED_OUT"){
+          approvedOwnerUserId=null;setOwnerNavVisible(false);
+          const staffView=document.getElementById("cicStaffWorkspace");if(staffView)staffView.remove();
+          try{sessionStorage.removeItem("cicOwnerOtpVerified");}catch(_){}
+        }
         if(session&&session.user)window.setTimeout(async()=>{
-          let otpVerified=false;try{otpVerified=sessionStorage.getItem("cicOwnerOtpVerified")==="1";}catch(_){}
-          if(await isApprovedOwner(session.user)){try{sessionStorage.setItem("cicOwnerOtpVerified","1");}catch(_){}setOwnerNavVisible(true);}
-          else setOwnerNavVisible(false);
+          if(await isApprovedOwner(session.user)){
+            try{sessionStorage.setItem("cicOwnerOtpVerified","1");}catch(_){}
+            setOwnerNavVisible(true);
+            const staffView=document.getElementById("cicStaffWorkspace");if(staffView)staffView.remove();
+          }else{
+            setOwnerNavVisible(false);
+            const teamProfile=await getTeamProfile(session.user);
+            if(teamProfile&&teamProfile.approved===true&&typeof window.openApprovedTeamWorkspace==="function"){
+              window.openApprovedTeamWorkspace(teamProfile);
+            }else if(teamProfile&&teamProfile.approved!==true){
+              const staffView=document.getElementById("cicStaffWorkspace");if(staffView)staffView.remove();
+              // Pending or suspended team accounts must not retain a session.
+              await client.auth.signOut();
+            }
+            // Authenticated customers have no staff_profiles row and retain
+            // their normal customer session without seeing Admin controls.
+          }
         },250);
       });
       const url=new URL(window.location.href);
@@ -496,10 +467,16 @@
               if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
               openOwnerDashboard();
             }else if(session&&session.user){
-              await recordDeniedOwnerAttempt();
-              await client.auth.signOut();
-              setOwnerNavVisible(false);
-              try{sessionStorage.removeItem("cicOwnerOtpVerified");localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+              const teamProfile=await getApprovedTeamProfile(session.user);
+              if(teamProfile&&typeof window.openApprovedTeamWorkspace==="function"){
+                try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+                window.openApprovedTeamWorkspace(teamProfile);
+              }else{
+                await recordDeniedOwnerAttempt();
+                await client.auth.signOut();
+                setOwnerNavVisible(false);
+                try{sessionStorage.removeItem("cicOwnerOtpVerified");localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+              }
             }
           }catch(_){}
           // Remove one-time callback parameters only after Supabase has had
@@ -510,4 +487,15 @@
     }
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",wire);else wire();
+  // Load the owner-only Team & Permissions panel as part of the existing Control Room.
+  if(!document.getElementById("cic-team-permissions-script")){
+    const teamScript=document.createElement("script");
+    teamScript.id="cic-team-permissions-script";
+    teamScript.src="/supabase-team-permissions.js";
+    teamScript.defer=true;
+    document.head.appendChild(teamScript);
+  }
+  if(!document.getElementById("cic-team-workspace-script")){
+    const staffScript=document.createElement("script");staffScript.id="cic-team-workspace-script";staffScript.src="/supabase-team-workspace.js?v=20261031-team-orders-v1";staffScript.defer=true;document.head.appendChild(staffScript);
+  }
 })();
