@@ -435,4 +435,12 @@
     }
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",wire);else wire();
+  // Load the owner-only Team & Permissions panel as part of the existing Control Room.
+  if(!document.getElementById("cic-team-permissions-script")){
+    const teamScript=document.createElement("script");
+    teamScript.id="cic-team-permissions-script";
+    teamScript.src="/supabase-team-permissions.js";
+    teamScript.defer=true;
+    document.head.appendChild(teamScript);
+  }
 })();
