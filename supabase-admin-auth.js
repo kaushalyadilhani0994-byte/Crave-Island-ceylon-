@@ -415,7 +415,11 @@
         if(session&&session.user)window.setTimeout(async()=>{
           let otpVerified=false;try{otpVerified=sessionStorage.getItem("cicOwnerOtpVerified")==="1";}catch(_){}
           if(await isApprovedOwner(session.user)){try{sessionStorage.setItem("cicOwnerOtpVerified","1");}catch(_){}setOwnerNavVisible(true);}
-          else setOwnerNavVisible(false);
+          else{
+            setOwnerNavVisible(false);
+            const teamProfile=await getApprovedTeamProfile(session.user);
+            if(teamProfile&&typeof window.openApprovedTeamWorkspace==="function")window.openApprovedTeamWorkspace(teamProfile);
+          }
         },250);
       });
       const url=new URL(window.location.href);
