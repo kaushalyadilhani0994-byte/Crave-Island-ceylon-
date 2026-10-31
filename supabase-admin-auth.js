@@ -83,11 +83,15 @@
     approvedOwnerUserId=approved?user.id:null;
     return approved;
   }
-  async function getApprovedTeamProfile(user){
+  async function getTeamProfile(user){
     const client=db();if(!client||!user)return null;
     const {data,error}=await client.from("staff_profiles").select("id,email,display_name,role,approved,permissions").eq("id",user.id).maybeSingle();
-    if(error||!data||data.approved!==true||data.role==="owner")return null;
+    if(error||!data||data.role==="owner")return null;
     return data;
+  }
+  async function getApprovedTeamProfile(user){
+    const profile=await getTeamProfile(user);
+    return profile&&profile.approved===true?profile:null;
   }
   function install() {
     const modal=$("#adminAccessModal"), email=$("#adminEmail"), otp=$("#adminOtp");
@@ -410,15 +414,39 @@
     // Wait briefly so persisted sessions and email-link callbacks are not missed.
     const client=await waitForSupabaseClient();
     if(client){
+      // Ensure the dedicated team workspace is ready before restoring an
+      // invited member's persisted Supabase session.
+      await new Promise(resolve=>{
+        if(typeof window.openApprovedTeamWorkspace==="function")return resolve();
+        const script=document.getElementById("cic-team-workspace-script");
+        if(!script)return resolve();
+        script.addEventListener("load",resolve,{once:true});
+        script.addEventListener("error",resolve,{once:true});
+        window.setTimeout(resolve,4000);
+      });
       client.auth.onAuthStateChange((event,session)=>{
-        if(event==="SIGNED_OUT"){approvedOwnerUserId=null;setOwnerNavVisible(false);try{sessionStorage.removeItem("cicOwnerOtpVerified");}catch(_){}}
+        if(event==="SIGNED_OUT"){
+          approvedOwnerUserId=null;setOwnerNavVisible(false);
+          const staffView=document.getElementById("cicStaffWorkspace");if(staffView)staffView.remove();
+          try{sessionStorage.removeItem("cicOwnerOtpVerified");}catch(_){}
+        }
         if(session&&session.user)window.setTimeout(async()=>{
-          let otpVerified=false;try{otpVerified=sessionStorage.getItem("cicOwnerOtpVerified")==="1";}catch(_){}
-          if(await isApprovedOwner(session.user)){try{sessionStorage.setItem("cicOwnerOtpVerified","1");}catch(_){}setOwnerNavVisible(true);}
-          else{
+          if(await isApprovedOwner(session.user)){
+            try{sessionStorage.setItem("cicOwnerOtpVerified","1");}catch(_){}
+            setOwnerNavVisible(true);
+            const staffView=document.getElementById("cicStaffWorkspace");if(staffView)staffView.remove();
+          }else{
             setOwnerNavVisible(false);
-            const teamProfile=await getApprovedTeamProfile(session.user);
-            if(teamProfile&&typeof window.openApprovedTeamWorkspace==="function")window.openApprovedTeamWorkspace(teamProfile);
+            const teamProfile=await getTeamProfile(session.user);
+            if(teamProfile&&teamProfile.approved===true&&typeof window.openApprovedTeamWorkspace==="function"){
+              window.openApprovedTeamWorkspace(teamProfile);
+            }else if(teamProfile&&teamProfile.approved!==true){
+              const staffView=document.getElementById("cicStaffWorkspace");if(staffView)staffView.remove();
+              // Pending or suspended team accounts must not retain a session.
+              await client.auth.signOut();
+            }
+            // Authenticated customers have no staff_profiles row and retain
+            // their normal customer session without seeing Admin controls.
           }
         },250);
       });
