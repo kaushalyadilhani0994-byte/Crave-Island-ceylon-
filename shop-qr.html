@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#21130f">
+<meta name="description" content="Discover CRAVE ISLAND CEYLON — natural island flavours, beautifully presented.">
+<title>Discover CRAVE ISLAND CEYLON</title>
+<style>
+:root{color-scheme:dark;--ink:#21130f;--cream:#fff8e9;--gold:#d8b65c;--muted:#d8c8ad}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#503322 0,#21130f 58%);color:var(--cream);font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;padding:22px}
+main{width:min(680px,100%);text-align:center;border:1px solid #b9984c88;border-radius:24px;padding:clamp(22px,5vw,48px);background:#170e0bd9;box-shadow:0 24px 80px #0008}
+.brand{letter-spacing:.22em;color:var(--gold);font-size:12px;font-weight:800}.eyebrow{color:var(--muted);letter-spacing:.16em;font-size:11px;margin-top:8px}
+h1{font-family:Georgia,serif;font-weight:500;font-size:clamp(30px,7vw,48px);line-height:1.08;margin:16px 0 10px}
+p{color:var(--muted);max-width:480px;margin:0 auto 22px}
+.qr-wrap{display:inline-block;background:#fff;padding:14px;border-radius:16px;margin:8px auto 20px;box-shadow:0 8px 35px #0007}
+#shopQr{display:block;width:min(66vw,280px);height:min(66vw,280px);image-rendering:auto}
+.actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:4px 0 18px}
+button,a.action{appearance:none;border:1px solid var(--gold);border-radius:999px;padding:12px 19px;background:var(--gold);color:#21130f;font-weight:750;text-decoration:none;cursor:pointer;font-size:14px}
+a.secondary,button.secondary{background:transparent;color:var(--cream)}
+.note{font-size:12px;color:#b9a88f;margin:12px auto 0}.url{font-size:12px;overflow-wrap:anywhere;color:var(--gold);margin-top:8px}
+@media print{body{background:#fff;color:#21130f;padding:0;display:block}main{border:0;box-shadow:none;background:#fff;color:#21130f;width:100%;padding:8mm}p,.note,.eyebrow{color:#51443a}.brand,.url{color:#21130f}.qr-wrap{box-shadow:none;border:1px solid #ddd}#shopQr{width:65mm;height:65mm}.actions{display:none}h1{font-size:28pt}}
+</style>
+</head>
+<body>
+<main>
+<div class="brand">CRAVE ISLAND CEYLON</div>
+<div class="eyebrow">LUXURY FOOD · CAFÉ · HERITAGE</div>
+<h1>Discover the taste of Ceylon.</h1>
+<p>Scan this code to explore our island-inspired collections, product stories and the CRAVE ISLAND CEYLON online shop.</p>
+<div class="qr-wrap"><img id="shopQr" alt="QR code to open the CRAVE ISLAND CEYLON online shop"></div>
+<div class="actions">
+<button id="download">Download QR</button>
+<button class="secondary" onclick="window.print()">Print shop QR</button>
+<a class="action secondary" id="openShop" href="/">Open shop</a>
+</div>
+<div class="url" id="shopUrl"></div>
+<div class="note">This is the shop promotion QR. Product-specific QR codes open their own published product passport.</div>
+</main>
+<script>
+(function(){
+ const shopUrl=new URL("/",window.location.origin).href;
+ const qrUrl="https://api.qrserver.com/v1/create-qr-code/?size=720x720&format=png&ecc=H&margin=18&data="+encodeURIComponent(shopUrl);
+ const img=document.getElementById("shopQr");img.src=qrUrl;
+ document.getElementById("shopUrl").textContent=shopUrl;
+ document.getElementById("openShop").href=shopUrl;
+ document.getElementById("download").addEventListener("click",async function(){
+  const btn=this;btn.disabled=true;btn.textContent="Preparing…";
+  try{
+   const response=await fetch(qrUrl,{mode:"cors",cache:"no-store"});
+   if(!response.ok)throw new Error("QR image unavailable");
+   const blob=await response.blob();const objectUrl=URL.createObjectURL(blob);
+   const a=document.createElement("a");a.href=objectUrl;a.download="CRAVE-ISLAND-CEYLON-Shop-QR.png";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(objectUrl);
+   btn.textContent="Downloaded";
+  }catch(e){window.open(qrUrl,"_blank","noopener");btn.textContent="Open QR image";}
+  finally{setTimeout(()=>{btn.disabled=false;if(btn.textContent==="Downloaded")btn.textContent="Download QR";},1800);}
+ });
+})();
+</script>
+</body>
+</html>
