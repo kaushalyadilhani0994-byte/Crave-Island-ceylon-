@@ -244,6 +244,18 @@ main{display:block!important;position:relative!important;margin:0!important;padd
 <div class="admin-tabs">
 <button class="active" onclick="showAdminView('overview',this)">Overview</button><button onclick="showAdminView('catalog',this)">Catalog</button><button onclick="showAdminView('orders',this)">Orders</button><button onclick="showAdminView('brand',this)">Brand</button><button onclick="showAdminView('automation',this)">Automation</button><button onclick="showAdminView('security',this)">Security</button>
 </div>
+<section class="cic-admin-hub" aria-label="Quick workspaces">
+<h4 class="cic-admin-hub-title">Quick Workspaces</h4>
+<div class="cic-admin-hub-grid">
+<button type="button" class="cic-admin-hub-card" onclick="showAdminView('team');document.querySelectorAll('.admin-tabs button').forEach(b=>{if(b.textContent.trim()==='Team')b.classList.add('active')})"><span class="cic-admin-hub-icon">♙</span><b>Supervisor</b><small>Staff access, daily operations &amp; oversight</small></button>
+<button type="button" class="cic-admin-hub-card" onclick="openModal('loyaltyModal')"><span class="cic-admin-hub-icon">✦</span><b>Star Club</b><small>Star Points, loyalty &amp; rewards</small></button>
+<button type="button" class="cic-admin-hub-card" onclick="openModal('mediaModal')"><span class="cic-admin-hub-icon">▶</span><b>Media</b><small>Photos, clips, reels &amp; social content</small></button>
+<button type="button" class="cic-admin-hub-card" onclick="showAdminView('brand')"><span class="cic-admin-hub-icon">▤</span><b>Accounts</b><small>Payments, invoices &amp; business settings</small></button>
+<button type="button" class="cic-admin-hub-card" onclick="showAdminView('catalog')"><span class="cic-admin-hub-icon">▦</span><b>Catalogue &amp; Stock</b><small>Products, collections &amp; inventory</small></button>
+<button type="button" class="cic-admin-hub-card" onclick="showAdminView('orders')"><span class="cic-admin-hub-icon">▣</span><b>Orders &amp; Customers</b><small>Orders, invoices &amp; fulfilment</small></button>
+<button type="button" class="cic-admin-hub-card" onclick="openModal('qrModal')"><span class="cic-admin-hub-icon">▧</span><b>QR &amp; Passports</b><small>Product traceability &amp; batch records</small></button>
+<button type="button" class="cic-admin-hub-card" onclick="showAdminView('security')"><span class="cic-admin-hub-icon">◇</span><b>Security</b><small>Access controls &amp; security checks</small></button>
+</div></section>
 <div id="v7AdminMap" class="admin-map">
   <details class="admin-node"><summary>Store Settings</summary><div class="node-body"><p>Brand, contact, delivery and checkout rules.</p><div class="node-items"><div class="node-item"><b>Brand identity</b><span>Name, tagline, logo, opening</span></div><div class="node-item"><b>Business contact</b><span>WhatsApp, email, support</span></div><div class="node-item"><b>Delivery</b><span>Zones, fees, COD rules</span></div></div><button class="secondary-btn node-open" onclick="showAdminView('brand')">Open settings</button></div></details>
   <details class="admin-node"><summary>Catalogue & Products</summary><div class="node-body"><p>Add and manage items without touching HTML in the production system.</p><div class="node-items"><div class="node-item"><b>Products</b><span>Name, price, photos, variants</span></div><div class="node-item"><b>Categories</b><span>Collections and visibility</span></div><div class="node-item"><b>Stock</b><span>Quantity and low-stock rules</span></div></div><button class="secondary-btn node-open" onclick="showAdminView('catalog')">Open catalogue</button></div></details>
@@ -814,5 +826,16 @@ body.cic-dark-preference .story-card p,body.cic-dark-preference .story p,body.ci
 <script src="supabase-admin-products.js"></script>
 <script src="supabase-admin-orders.js"></script>
 <script src="supabase-admin-passports.js"></script>
+<style id="cic-admin-hub-style">
+.cic-admin-hub{margin:12px 0 16px;padding:14px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,#fffaf3,#f2e8dc)}
+.cic-admin-hub-title{font:400 23px Georgia,serif;margin:0 0 10px;color:#2c1a14}
+.cic-admin-hub-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.cic-admin-hub-card{min-width:0;min-height:105px;text-align:left;border:1px solid #e4d6c9;border-radius:13px;background:#fff;padding:11px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;color:#2c1a14;cursor:pointer}
+.cic-admin-hub-card:active{transform:scale(.985)}
+.cic-admin-hub-icon{font-size:19px;color:#a77b24}
+.cic-admin-hub-card b{font-size:12px;line-height:1.25}
+.cic-admin-hub-card small{font-size:9px;line-height:1.4;color:#806d65}
+@media(min-width:600px){.cic-admin-hub-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+</style>
 </body>
 </html>
