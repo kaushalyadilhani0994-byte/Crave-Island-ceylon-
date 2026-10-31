@@ -47,7 +47,7 @@ Permission actions currently allow: `read`, `create`, `update`, `delete`, `appro
 - Verified permission modules/actions are allowlisted.
 - Verified audit stores before/after state.
 - Verified RPC execute grant is limited to service_role.
-- JavaScript/TypeScript syntax parse: SyntaxError: Cannot use import statement outside a module.
+- Deno type-check / TypeScript syntax validation: not yet run; the local JavaScript parser cannot parse Deno imports and TypeScript annotations.
 
 ## Not yet tested
 
