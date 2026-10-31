@@ -116,7 +116,7 @@
     const label=$('label[for="adminOtp"]',modal); if(label)label.textContent="6-digit one-time code";
     const buttons=actions.querySelectorAll("button");
     if(buttons[0]){buttons[0].textContent="Send secure sign-in email";buttons[0].type="button";buttons[0].onclick=sendCode;}
-    if(buttons[1]){buttons[1].textContent="Verify code & open Admin";buttons[1].type="button";buttons[1].onclick=verifyCode;}
+    if(buttons[1]){buttons[1].textContent="Verify code & continue";buttons[1].type="button";buttons[1].onclick=verifyCode;}
     if(!$("#cicOwnerAuthStatus",modal)){
       const s=document.createElement("div");s.id="cicOwnerAuthStatus";s.hidden=true;s.setAttribute("role","status");s.setAttribute("aria-live","polite");actions.insertAdjacentElement("afterend",s);
     }
@@ -143,7 +143,7 @@
     const client=db(), email=($("#adminEmail")?.value||"").trim().toLowerCase(), token=($("#adminOtp")?.value||"").trim();
     if(!client)return status("Supabase is still connecting. Please wait and try again.",true);
     if(!email)return status("Enter your owner or team email address.",true);
-    if(!/^\d{6}$/.test(token))return status("Enter the 6-digit code if your email contains one. If the email contains a sign-in link instead, tap that link and return to this app; the app will verify the owner account.",true);
+    if(!/^\d{6}$/.test(token))return status("Enter the 6-digit code if your email contains one. If the email contains a sign-in link, tap it to return to CRAVE and complete your account check.",true);
     const btn=$(".login-actions button:nth-child(2)");
     if(btn){btn.disabled=true;btn.textContent="Verifying…";}
     try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
@@ -172,7 +172,7 @@
       await client.auth.signOut();
       status("This account is not an approved CRAVE team member. Ask Main Admin to approve access first.",true);
     }catch(e){status("Could not verify the code because of a connection error.",true);}
-    finally{if(btn){btn.disabled=false;btn.textContent="Verify code & open Admin";}}
+    finally{if(btn){btn.disabled=false;btn.textContent="Verify code & continue";}}
   }
   function installUnifiedLiveTools(){
     const control=document.getElementById("controlRoomModal");
@@ -366,7 +366,7 @@
         modal=document.createElement("div");
         modal.id="adminAccessModal";
         modal.className="modal";
-        modal.innerHTML='<div class="sheet cic-owner-login-sheet"><div class="sheet-head"><h3>Main Admin & Team Sign In</h3><button class="close" type="button" aria-label="Close owner sign in">×</button></div><p class="muted-note">Sign in with your approved CRAVE account. Main Admin opens the Control Room; team members see their assigned workspace.</p><div class="form-grid cic-owner-login-fields"><div class="field full"><label for="adminEmail">Account email</label><input id="adminEmail" type="email" autocomplete="email" placeholder="Approved owner email"></div><div class="field full"><label for="adminOtp">6-digit one-time code</label><input id="adminOtp" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="Enter code from your email"></div></div><div class="login-actions"><button class="goldbtn" type="button">Send secure sign-in email</button><button class="gold-outline" type="button">Verify code &amp; open Admin</button></div><div class="access-note">Only an approved owner account can open the Control Room.</div></div>';
+        modal.innerHTML='<div class="sheet cic-owner-login-sheet"><div class="sheet-head"><h3>Main Admin & Team Sign In</h3><button class="close" type="button" aria-label="Close owner sign in">×</button></div><p class="muted-note">Sign in with your approved CRAVE account. Main Admin opens the Control Room; team members see their assigned workspace.</p><div class="form-grid cic-owner-login-fields"><div class="field full"><label for="adminEmail">Account email</label><input id="adminEmail" type="email" autocomplete="email" placeholder="Approved owner email"></div><div class="field full"><label for="adminOtp">6-digit one-time code</label><input id="adminOtp" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="Enter code from your email"></div></div><div class="login-actions"><button class="goldbtn" type="button">Send secure sign-in email</button><button class="gold-outline" type="button">Verify code &amp; continue</button></div><div class="access-note">Only an approved owner account can open the Control Room.</div></div>';
         document.body.appendChild(modal);
         modal.querySelector(".close")?.addEventListener("click",()=>modal.classList.remove("open"));
         modal.addEventListener("click",event=>{if(event.target===modal)modal.classList.remove("open");});
