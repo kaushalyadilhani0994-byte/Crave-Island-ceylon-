@@ -25,7 +25,7 @@ Current live rows: one approved owner profile only. No team accounts were create
 
 - `public.owner_list_team_members()` returns user_id, email, display_name, role, approved, permissions, created_at; filters through `private.is_approved_owner()`.
 - `public.owner_set_team_member_access(_user_id uuid, _role text, _approved boolean, _permissions jsonb)` validates owner status, role, JSON shape, module/action allowlists, and requires read permission whenever a non-read action is assigned. It updates only non-owner profiles.
-- Both public functions are SECURITY INVOKER and have EXECUTE granted to authenticated; the mutation function independently checks `private.is_approved_owner()`.
+- Both public functions are SECURITY INVOKER and have EXECUTE granted to authenticated; the mutation function independently checks `private.is_approved_owner()`. However, a live privilege check returned `authenticated` has SELECT on `staff_profiles` but **does not have UPDATE** (`has_table_privilege(...,'UPDATE') = false`). Therefore the invoker mutation RPC cannot perform its `UPDATE public.staff_profiles` statement, even for an approved owner. The team list RPC can execute; team approve/suspend/permission updates are currently blocked by this missing privilege. Do not solve this with a broad table UPDATE grant: the existing owner UPDATE RLS policy would then also permit direct owner updates that bypass the RPC's owner-target and validation rules. Use a narrowly scoped private SECURITY DEFINER mutation helper with an explicit `auth.uid()` approved-owner check, owner-target rejection, exact live allowlists, and audit write in the same transaction; expose it only through the public invoker RPC.
 - `private.has_staff_permission(module, action)` is SECURITY DEFINER with pinned search_path; it checks `auth.uid()`, approved profile state, owner role or the requested JSON permission.
 - `private.is_approved_owner()` is SECURITY DEFINER with pinned search_path and checks `auth.uid()`, role owner, approved true.
 
@@ -59,6 +59,10 @@ Risk to address before production UI: invite and profile upsert are separate ope
 - Existing OTP and owner approval checks remain the only way into the owner dashboard. Do not replace these.
 - The requested Team Management entry should be an additional compact card/section inside this existing dashboard. Do not add a customer-visible navigation item or a second dashboard.
 
+## Related order-table grant verification
+
+The live `store_orders` table grants authenticated users SELECT only; no authenticated UPDATE privilege exists. This means the broad team UPDATE RLS policy does not by itself grant direct PostgREST writes. Order status changes must go through the JWT-protected Edge Function. This is a useful safeguard and should be preserved.
+
 ## Missing audit trail
 
 No public or private team audit table was found in the live database. The live `owner_set_team_member_access` RPC updates role/approval/permissions without writing a before/after audit record. This is a launch blocker for granting staff privileges because accidental permission changes cannot be reconstructed reliably.
@@ -76,11 +80,179 @@ The live Supabase migration history contains these team-related migrations:
 
 The GitHub `main` `supabase/migrations` directory does not contain matching migration files. This is migration-history drift. Do not create/apply another migration or merge a new migration until the source SQL for these live migrations has been recovered and committed to the repository in order.
 
+## Inventory date validator regression test
+
+A direct source-level test compared the deployed v2 expiry-date regex with the corrected review-branch source. The deployed regex pattern was `^\\\\d{4}-\\\\d{2}-\\\\d{2}# Live Team Management backend audit — 2026-10-31
+
+## Executive result
+
+The live Supabase database already contains a team-permission backend. The earlier review-only `owner-manage-team-member` Edge Function and its migration were a duplicate implementation with a permission contract that did not match the live database. Those two draft files have been removed from this review branch. Do not deploy or merge them.
+
+The next safe work is to reconcile the live schema migration history with GitHub, add transactional audit logging to the existing backend, then integrate a compact Team Management panel into the existing owner dashboard without changing its OTP or navigation.
+
+## Live database facts (read-only verified)
+
+### Staff profile schema
+
+`public.staff_profiles` columns:
+- `id` UUID
+- `display_name` text
+- `role` text
+- `approved` boolean
+- `created_at` timestamptz
+- `permissions` JSONB
+- `email` text
+
+Current live rows: one approved owner profile only. No team accounts were created by this audit.
+
+### Existing database functions
+
+- `public.owner_list_team_members()` returns user_id, email, display_name, role, approved, permissions, created_at; filters through `private.is_approved_owner()`.
+- `public.owner_set_team_member_access(_user_id uuid, _role text, _approved boolean, _permissions jsonb)` validates owner status, role, JSON shape, module/action allowlists, and requires read permission whenever a non-read action is assigned. It updates only non-owner profiles.
+- Both public functions are SECURITY INVOKER and have EXECUTE granted to authenticated; the mutation function independently checks `private.is_approved_owner()`. However, a live privilege check returned `authenticated` has SELECT on `staff_profiles` but **does not have UPDATE** (`has_table_privilege(...,'UPDATE') = false`). Therefore the invoker mutation RPC cannot perform its `UPDATE public.staff_profiles` statement, even for an approved owner. The team list RPC can execute; team approve/suspend/permission updates are currently blocked by this missing privilege. Do not solve this with a broad table UPDATE grant: the existing owner UPDATE RLS policy would then also permit direct owner updates that bypass the RPC's owner-target and validation rules. Use a narrowly scoped private SECURITY DEFINER mutation helper with an explicit `auth.uid()` approved-owner check, owner-target rejection, exact live allowlists, and audit write in the same transaction; expose it only through the public invoker RPC.
+- `private.has_staff_permission(module, action)` is SECURITY DEFINER with pinned search_path; it checks `auth.uid()`, approved profile state, owner role or the requested JSON permission.
+- `private.is_approved_owner()` is SECURITY DEFINER with pinned search_path and checks `auth.uid()`, role owner, approved true.
+
+### Actual permission contract (must be used by any UI)
+
+Modules:
+`catalogue, inventory, orders, dispatch, media, accounts, star_club, certificates, reports, tasks, settings`
+
+Actions:
+`read, create, update, delete, approve, export`
+
+Any action other than read requires read to be present in the same module's action array.
+
+This is the actual live contract. The earlier review draft's modules/actions were wrong and have been removed.
+
+### Existing invite Edge Function
+
+`owner-invite-team-member` v1 is ACTIVE with JWT verification enabled.
+- Resolves bearer token with Supabase Auth.
+- Checks the caller's live profile is an approved owner using service role.
+- Allows only supervisor, staff, media, accounts, star_club.
+- Sends an Auth invite, then upserts a pending staff profile with `approved=false` and empty permissions.
+- Does not permit inviting/promoting an owner.
+
+Risk to address before production UI: invite and profile upsert are separate operations. If the Auth invite succeeds but profile upsert fails, the function returns an error but the invited Auth identity remains. Add compensating cleanup or a recoverable pending-invite state and do not blindly retry invites.
+
+## UI inspection
+
+- The existing owner dashboard in `supabase-admin-auth.js` contains four cards: Owner Products, Owner Categories, Owner Orders, Owner QR Passport.
+- Repository code search found no caller of `owner_list_team_members` and no Team Management UI.
+- Existing OTP and owner approval checks remain the only way into the owner dashboard. Do not replace these.
+- The requested Team Management entry should be an additional compact card/section inside this existing dashboard. Do not add a customer-visible navigation item or a second dashboard.
+
+## Related order-table grant verification
+
+The live `store_orders` table grants authenticated users SELECT only; no authenticated UPDATE privilege exists. This means the broad team UPDATE RLS policy does not by itself grant direct PostgREST writes. Order status changes must go through the JWT-protected Edge Function. This is a useful safeguard and should be preserved.
+
+## Missing audit trail
+
+No public or private team audit table was found in the live database. The live `owner_set_team_member_access` RPC updates role/approval/permissions without writing a before/after audit record. This is a launch blocker for granting staff privileges because accidental permission changes cannot be reconstructed reliably.
+
+The earlier draft audit migration/function was removed because it duplicated the live function contract and had the wrong allowlist. Design the audit addition against the exact live contract and keep it in review until staging validation.
+
+## Migration drift
+
+The live Supabase migration history contains these team-related migrations:
+- `20261031025555 add_team_permissions_and_rls_access`
+- `20261031025613 secure_team_permission_rpc_as_invoker`
+- `20261031025621 remove_auth_users_join_from_team_list_rpc`
+- `20261031025842 require_read_scope_for_team_actions`
+- `20261031025852 fix_team_permission_read_scope_validation`
+
+The GitHub `main` `supabase/migrations` directory does not contain matching migration files. This is migration-history drift. Do not create/apply another migration or merge a new migration until the source SQL for these live migrations has been recovered and committed to the repository in order.
+
+ and rejected valid `2026-10-31` and `2024-02-29`. The corrected pattern `^\\d{4}-\\d{2}-\\d{2}# Live Team Management backend audit — 2026-10-31
+
+## Executive result
+
+The live Supabase database already contains a team-permission backend. The earlier review-only `owner-manage-team-member` Edge Function and its migration were a duplicate implementation with a permission contract that did not match the live database. Those two draft files have been removed from this review branch. Do not deploy or merge them.
+
+The next safe work is to reconcile the live schema migration history with GitHub, add transactional audit logging to the existing backend, then integrate a compact Team Management panel into the existing owner dashboard without changing its OTP or navigation.
+
+## Live database facts (read-only verified)
+
+### Staff profile schema
+
+`public.staff_profiles` columns:
+- `id` UUID
+- `display_name` text
+- `role` text
+- `approved` boolean
+- `created_at` timestamptz
+- `permissions` JSONB
+- `email` text
+
+Current live rows: one approved owner profile only. No team accounts were created by this audit.
+
+### Existing database functions
+
+- `public.owner_list_team_members()` returns user_id, email, display_name, role, approved, permissions, created_at; filters through `private.is_approved_owner()`.
+- `public.owner_set_team_member_access(_user_id uuid, _role text, _approved boolean, _permissions jsonb)` validates owner status, role, JSON shape, module/action allowlists, and requires read permission whenever a non-read action is assigned. It updates only non-owner profiles.
+- Both public functions are SECURITY INVOKER and have EXECUTE granted to authenticated; the mutation function independently checks `private.is_approved_owner()`. However, a live privilege check returned `authenticated` has SELECT on `staff_profiles` but **does not have UPDATE** (`has_table_privilege(...,'UPDATE') = false`). Therefore the invoker mutation RPC cannot perform its `UPDATE public.staff_profiles` statement, even for an approved owner. The team list RPC can execute; team approve/suspend/permission updates are currently blocked by this missing privilege. Do not solve this with a broad table UPDATE grant: the existing owner UPDATE RLS policy would then also permit direct owner updates that bypass the RPC's owner-target and validation rules. Use a narrowly scoped private SECURITY DEFINER mutation helper with an explicit `auth.uid()` approved-owner check, owner-target rejection, exact live allowlists, and audit write in the same transaction; expose it only through the public invoker RPC.
+- `private.has_staff_permission(module, action)` is SECURITY DEFINER with pinned search_path; it checks `auth.uid()`, approved profile state, owner role or the requested JSON permission.
+- `private.is_approved_owner()` is SECURITY DEFINER with pinned search_path and checks `auth.uid()`, role owner, approved true.
+
+### Actual permission contract (must be used by any UI)
+
+Modules:
+`catalogue, inventory, orders, dispatch, media, accounts, star_club, certificates, reports, tasks, settings`
+
+Actions:
+`read, create, update, delete, approve, export`
+
+Any action other than read requires read to be present in the same module's action array.
+
+This is the actual live contract. The earlier review draft's modules/actions were wrong and have been removed.
+
+### Existing invite Edge Function
+
+`owner-invite-team-member` v1 is ACTIVE with JWT verification enabled.
+- Resolves bearer token with Supabase Auth.
+- Checks the caller's live profile is an approved owner using service role.
+- Allows only supervisor, staff, media, accounts, star_club.
+- Sends an Auth invite, then upserts a pending staff profile with `approved=false` and empty permissions.
+- Does not permit inviting/promoting an owner.
+
+Risk to address before production UI: invite and profile upsert are separate operations. If the Auth invite succeeds but profile upsert fails, the function returns an error but the invited Auth identity remains. Add compensating cleanup or a recoverable pending-invite state and do not blindly retry invites.
+
+## UI inspection
+
+- The existing owner dashboard in `supabase-admin-auth.js` contains four cards: Owner Products, Owner Categories, Owner Orders, Owner QR Passport.
+- Repository code search found no caller of `owner_list_team_members` and no Team Management UI.
+- Existing OTP and owner approval checks remain the only way into the owner dashboard. Do not replace these.
+- The requested Team Management entry should be an additional compact card/section inside this existing dashboard. Do not add a customer-visible navigation item or a second dashboard.
+
+## Related order-table grant verification
+
+The live `store_orders` table grants authenticated users SELECT only; no authenticated UPDATE privilege exists. This means the broad team UPDATE RLS policy does not by itself grant direct PostgREST writes. Order status changes must go through the JWT-protected Edge Function. This is a useful safeguard and should be preserved.
+
+## Missing audit trail
+
+No public or private team audit table was found in the live database. The live `owner_set_team_member_access` RPC updates role/approval/permissions without writing a before/after audit record. This is a launch blocker for granting staff privileges because accidental permission changes cannot be reconstructed reliably.
+
+The earlier draft audit migration/function was removed because it duplicated the live function contract and had the wrong allowlist. Design the audit addition against the exact live contract and keep it in review until staging validation.
+
+## Migration drift
+
+The live Supabase migration history contains these team-related migrations:
+- `20261031025555 add_team_permissions_and_rls_access`
+- `20261031025613 secure_team_permission_rpc_as_invoker`
+- `20261031025621 remove_auth_users_join_from_team_list_rpc`
+- `20261031025842 require_read_scope_for_team_actions`
+- `20261031025852 fix_team_permission_read_scope_validation`
+
+The GitHub `main` `supabase/migrations` directory does not contain matching migration files. This is migration-history drift. Do not create/apply another migration or merge a new migration until the source SQL for these live migrations has been recovered and committed to the repository in order.
+
+ accepted those valid dates while rejecting impossible `2025-02-29`, invalid month `2026-13-01`, and non-ISO `31-10-2026`. The corrected function source remains on the review branch only; no deployment was made.
+
 ## Related role-enforcement findings
 
 - `update-order-status` v5 checks approved team profile and accepts `orders.update` or `dispatch.update`; dispatch-only users are limited to processing → shipped and shipped → delivered. `accounts.update` does not grant status changes in this function even though a broad RLS policy mentions accounts.
 - `update-product-inventory` v2 requires an approved team profile and owner or `inventory.update`.
-- The live v2 expiry-date regex is over-escaped in the deployed source (`/^\\\\d{4}-\\\\d{2}-\\\\d{2}$/` as returned by the source API), so valid ISO dates may be rejected. The corrected review-branch source must remain isolated until tested and approved.
+- The live v2 expiry-date regex is over-escaped in the deployed source and rejects valid ISO dates; direct source-level tests confirmed this. The corrected review-branch source passes the valid/invalid sample matrix above and must remain isolated until staging tests and approval.
 - `supabase-admin-orders.js` currently queries the orders table directly and presents the Owner Orders tool only to an approved owner; the server function separately supports permitted dispatch staff. UI and backend role access are not yet aligned.
 
 ## Security Advisor snapshot
