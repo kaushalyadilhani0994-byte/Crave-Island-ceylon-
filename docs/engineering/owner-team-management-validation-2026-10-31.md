@@ -19,6 +19,7 @@ The isolated owner team-management draft was reviewed and checked without touchi
 - SQL RPC rejects owner targets and unsupported roles.
 - Permission modules/actions are allowlisted and permission values must be arrays.
 - Before/after state is written to the audit table in the same transaction as the profile change.
+- Audit actor/target IDs are retained as UUID values without restrictive auth-user foreign keys, so deleting a former team auth account will not erase or block retained audit history.
 - Audit table has RLS and an approved-owner SELECT policy; anon/authenticated direct writes are revoked.
 - SQL RPC execute privilege is revoked from public/anon/authenticated and granted only to service_role.
 - Internal database error details are not returned to the browser.
