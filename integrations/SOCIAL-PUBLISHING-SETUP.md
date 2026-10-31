@@ -43,3 +43,30 @@ Create one owner-controlled publishing workspace so the Media team can prepare o
 - The repository already contains an owner-facing **Media & Social** entry in the earlier Control Room source, described as product photography, clips, reels, voice stories, and social drafts. It is not evidence of live multi-platform publishing.
 - No connected social accounts, provider credentials, or successful cross-platform publishing test have been verified yet.
 - Do not claim one-click publishing is live until each selected channel has passed an end-to-end test.
+
+## Metricool feasibility check (31 October 2026)
+
+The official Metricool Help Center currently documents a publishing API:
+- API access is included on **Advanced and Custom plans**, not Free or Starter.
+- API authentication requires the account token in the `X-Mc-Auth` header plus the Metricool `userId` and brand `blogId`.
+- Scheduled publishing uses `POST /api/v2/scheduler/posts`; media must first be normalized/hosted by Metricool and then referenced by its media ID.
+- The API supports per-network provider configuration, but platform-specific publishing restrictions still apply. A successful schedule request is not proof that every selected network will auto-publish.
+
+Implementation decision:
+1. Do not build a browser-side Metricool token field. The token must only be stored as a Supabase Edge Function secret (for example `METRICOOL_API_TOKEN`); never place it in a client bundle, database client-readable row, URL, or Git.
+2. Add Metricool `userId` and `blogId` as non-secret owner-only configuration after the owner confirms the correct CRAVE brand. Verify the API plan before promising in-app scheduling.
+3. Build a server-side Edge Function that checks the approved owner/publisher role, validates the selected channels and media, applies an idempotency key, and sends the schedule request to Metricool. Store only safe request/result metadata and per-channel status.
+4. Start with a draft-only test. Enable scheduling/publishing only after a private test confirms the intended Facebook Page and Instagram profile receive the correct media, caption, date and timezone.
+5. If the current Metricool plan does not include API access, do not silently require an upgrade. Use Metricool's own app for scheduling as a temporary route, or evaluate the supported direct Meta API route separately.
+
+## Owner-only account prerequisites
+
+- Instagram must first be converted by its account owner to a Professional account (Business or Creator); the user must complete the Meta/Instagram login and consent screens personally. The assistant cannot safely perform those account-owner consent actions on the user's behalf.
+- For the full Meta feature set, link the professional Instagram profile to the correct Facebook Page and confirm the Facebook profile used for authorization has Full Control/Admin access to that Page.
+- The CRAVE owner workspace can prepare captions, media, campaign links and destination selections, but no live channel is marked connected until provider authorization and a test post are confirmed.
+- Never request or store the user's Instagram/Facebook password in CRAVE or ChatGPT. Use provider OAuth screens only.
+
+Official provider references:
+- Metricool API access and plan requirements: https://help.metricool.com/api-access-export-your-metricool-data-to-other-tools-and-automate-tasks-x8ln5
+- Metricool API integration guide: https://help.metricool.com/basic-guide-for-api-integration-r97af
+- Metricool social account connection requirements: https://metricool.com/connect-social-networks-with-metricool/
