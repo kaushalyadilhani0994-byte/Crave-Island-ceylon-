@@ -137,3 +137,12 @@ The site may be online while launch preparation continues. Do not announce that 
 
 No real products are to be activated and no public launch/production promotion is approved by this audit. Keep V18 available for controlled preparation, but wait for the Auth security setting, exact deployment alignment, mobile browser checks, and end-to-end order/QR tests before accepting customer orders.
 
+
+
+## 2026-10-31 — Follow-up authorization audit (read-only)
+
+- Re-read the live PostgreSQL definitions for `owner_list_team_members()` and `owner_set_team_member_access(...)`. Both are SECURITY INVOKER, have a fixed search_path, and are executable by authenticated only; the setter explicitly requires `private.is_approved_owner()`, validates allowed roles/modules/actions, requires read when other actions are granted, and refuses to update an owner profile.
+- Re-read live RLS policies for staff profiles, products, categories, orders, passports, and admin alerts. Admin alerts remain owner-only. Public product/category reads remain restricted to active rows; public passport reads require published passport + active product.
+- Important implementation gap: live `store_orders` grants currently show authenticated SELECT only (no authenticated INSERT/UPDATE/DELETE table grant), despite team UPDATE RLS policies existing. RLS policies alone do not grant SQL privileges, so order editing is not yet operational for team roles. Do not broaden table-wide UPDATE grants: that could let dispatch/accounts staff alter customer PII, totals, or unrelated order fields. Implement narrowly scoped, owner-approved RPCs or column-level grants for specific order status/payment/dispatch fields before enabling team order mutations.
+- The current team workspace is a permissions summary only; it does not yet render operational module screens/actions. Do not describe team workspaces as fully operational until module UI + backend actions are implemented and tested.
+- No schema or production changes were made during this follow-up audit. This is a documented launch blocker, not a completed feature.
