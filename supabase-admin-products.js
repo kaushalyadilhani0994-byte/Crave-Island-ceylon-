@@ -6,6 +6,13 @@
   const $ = (s, root=document) => root.querySelector(s);
   const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const money = v => "LKR " + Number(v || 0).toLocaleString("en-LK", {maximumFractionDigits:2});
+  const isHttpsUrl = (value) => {
+    if (!value) return true;
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === "https:" && !!parsed.hostname && !parsed.username && !parsed.password;
+    } catch { return false; }
+  };
   let root, client, allowed = false, productRows = [];
 
   function style() {
@@ -188,6 +195,8 @@
     if(!await checkAccess()){say("Owner access required. Sign in with the approved owner account.",true);return;}
     const name=$("#cicCatName").value.trim(), parentId=$("#cicCatParent").value||null;
     if(!name){say("Enter a category or subcategory name.",true);return;}
+    const categoryImage=$("#cicCatImage").value.trim();
+    if(!isHttpsUrl(categoryImage)){say("Collection image URL must be a valid HTTPS URL without embedded credentials.",true);return;}
     const form=event.target,editId=form.dataset.editId||"";
     const btn=$("#cicCategorySave"),idleText=btn?btn.textContent:"Save category";
     if(btn){btn.disabled=true;btn.textContent="Saving…";}
@@ -224,7 +233,7 @@
     const ingredients=$("#cicProdIngredients").value.trim(), allergens=$("#cicProdAllergens").value.trim(), imageUrl=$("#cicProdImage").value.trim();
     const batch=$("#cicProdBatch").value.trim(), mfgDate=$("#cicProdMfg").value||null, expiryDate=$("#cicProdExpiry").value||null, storage=$("#cicProdStorage").value.trim();
     if(!name||!category||!ingredients||!Number.isFinite(price)||price<=0||price>2000000){say("Enter product name, collection, verified ingredients, and a valid LKR price.",true);return;}
-    if(imageUrl&&!/^https:\/\//i.test(imageUrl)){say("Product image URL must start with https://.",true);return;}
+    if(!isHttpsUrl(imageUrl)){say("Product image URL must be a valid HTTPS URL without embedded credentials.",true);return;}
     if(mfgDate&&expiryDate&&mfgDate>expiryDate){say("Manufacturing date cannot be later than the expiry / best-before date.",true);return;}
     const btn=event.submitter;if(btn){btn.disabled=true;btn.textContent="Saving product…";}
     const form=event.target, editId=form.dataset.editId||"", existing=productRows.find(row=>String(row.id)===String(editId));
