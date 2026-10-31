@@ -158,3 +158,5 @@ No real products are to be activated and no public launch/production promotion i
 - [ ] The new team workspace frontend source is committed but must deploy to a V18 Preview and be tested with a real, deliberately provisioned test staff account before staff invitations or production promotion. No staff accounts were invited and no real order was created.
 - [ ] The owner Orders panel remains owner-only. Team users access only the new assigned-permission workspace.
 - [ ] The database's lack of direct browser UPDATE grants remains intentional. Do not add broad table UPDATE grants; continue to use the server-verified status endpoint for permitted changes.
+
+- [ ] Vercel Preview deployment for this new frontend commit is currently blocked by the Vercel team's daily free deployment API quota (HTTP 402, `api-deployments-free-per-day`, retry after 24 hours). The existing READY Preview still points to the older `f8cc3c0` commit; do not claim the new team UI is live until a Preview built from the newer branch head is READY.
