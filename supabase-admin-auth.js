@@ -83,6 +83,12 @@
     approvedOwnerUserId=approved?user.id:null;
     return approved;
   }
+  async function getApprovedTeamProfile(user){
+    const client=db();if(!client||!user)return null;
+    const {data,error}=await client.from("staff_profiles").select("id,email,display_name,role,approved,permissions").eq("id",user.id).maybeSingle();
+    if(error||!data||data.approved!==true||data.role==="owner")return null;
+    return data;
+  }
   function install() {
     const modal=$("#adminAccessModal"), email=$("#adminEmail"), otp=$("#adminOtp");
     // Restore the public QR Passport destination in the mobile bar; Admin remains owner-only.
@@ -119,7 +125,7 @@
   async function sendCode() {
     const client=db(), email=($("#adminEmail")?.value||"").trim().toLowerCase();
     if(!client)return status("Supabase is still connecting. Please wait and try again.",true);
-    if(!isOwnerEmail(email))return status("This email is not on the owner's allowed email list.",true);
+    if(!email)return status('Enter your owner or team email address.',true);
     const btn=$(".login-actions button");
     if(btn){btn.disabled=true;btn.textContent="Sending…";}
     try{
@@ -141,18 +147,26 @@
       const {data,error}=await client.auth.verifyOtp({email,token,type:"email"});
       if(error||!data.user){status("The code could not be verified. Check it or request a fresh sign-in email.",true);return;}
       try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
-      if(!(await isApprovedOwner(data.user))){
-        await recordDeniedOwnerAttempt();
-        await client.auth.signOut();
-        status("This email is allowed for owner setup, but its Supabase owner profile is not yet approved. Complete the owner-profile approval before opening Admin.",true);
+      try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+      if(await isApprovedOwner(data.user)){
+        try{sessionStorage.setItem("cicOwnerOtpVerified","1");}catch(_){}
+        status("Main Admin verified. Opening the original CRAVE Control Room…");
+        setOwnerNavVisible(true);
+        if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
+        else {const m=$("#adminAccessModal");if(m)m.style.display="none";}
+        openOwnerDashboard();
         return;
       }
-      try{localStorage.removeItem("cicOwnerSignInPending");sessionStorage.setItem("cicOwnerOtpVerified","1");}catch(_){}
-      status("Owner verified. Opening the original CRAVE Control Room…");
-      setOwnerNavVisible(true);
-      if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
-      else {const m=$("#adminAccessModal");if(m)m.style.display="none";}
-      openOwnerDashboard();
+      const teamProfile=await getApprovedTeamProfile(data.user);
+      if(teamProfile&&typeof window.openApprovedTeamWorkspace==="function"){
+        if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
+        else {const m=$("#adminAccessModal");if(m)m.style.display="none";}
+        window.openApprovedTeamWorkspace(teamProfile);
+        return;
+      }
+      await recordDeniedOwnerAttempt();
+      await client.auth.signOut();
+      status("This account is not an approved CRAVE team member. Ask Main Admin to approve access first.",true);
     }catch(e){status("Could not verify the code because of a connection error.",true);}
     finally{if(btn){btn.disabled=false;btn.textContent="Verify code & open Admin";}}
   }
@@ -442,5 +456,8 @@
     teamScript.src="/supabase-team-permissions.js";
     teamScript.defer=true;
     document.head.appendChild(teamScript);
+  }
+  if(!document.getElementById("cic-team-workspace-script")){
+    const staffScript=document.createElement("script");staffScript.id="cic-team-workspace-script";staffScript.src="/supabase-team-workspace.js";staffScript.defer=true;document.head.appendChild(staffScript);
   }
 })();
