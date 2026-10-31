@@ -102,3 +102,37 @@ The site may be online while launch preparation continues. Do not announce that 
 - [ ] The latest source commit must deploy to the V18 production alias and then be tested in a real mobile browser. A READY build alone is not proof that the sign-in interaction works.
 - [ ] Only the primary owner currently has an Auth user linked to an approved `staff_profiles` owner row. The second intended owner email is allowlisted in the front end but has no Auth user/profile approval yet; it must not be treated as active until provisioned and approved.
 - [ ] Supabase Auth leaked-password protection remains a dashboard-only security action. Do not mark the security review complete until it is enabled and the advisor warning clears.
+
+
+## Deep infrastructure recheck — 2026-10-31
+
+This is a source/database audit, not a browser-level launch sign-off. Existing business records were left unchanged.
+
+### Current verified state
+- [x] Re-read the live Vercel production alias: deployment `dpl_52YYZjJXWdceacDUBnspawYDXfzb` is READY and points to commit `29549fe6c4aee4f14a28cc06b962daa8e5a915ab` (product-admin text contrast update).
+- [x] Confirmed the later QR Passport contrast source commit exists on GitHub, but it is not yet in the production alias.
+- [x] Confirmed the newest source versions of `supabase-admin-auth.js`, `supabase-admin-products.js`, and `supabase-admin-passports.js` pass JavaScript syntax compilation.
+- [x] Added live `products` traceability fields `manufacturing_date`, `storage_location`, and `allergen_information`; added `manufacturing_date` to `product_passports`. Existing rows were preserved.
+- [x] Product save code creates/updates a hidden draft product, upserts its passport record, and attaches the public passport URL to `products.qr_code`. Passport publication remains a separate owner action.
+- [x] Public passport RLS requires a published passport and an active matching product. Public QR scans therefore do not grant owner access.
+- [x] Re-read core policies and grants: anonymous users have SELECT only on active public catalogue records and published passports; no anonymous write grants were found on products, categories, passports, staff profiles, or order tables. Customer order reads are scoped to their own user ID. Owner access is checked separately.
+- [x] Confirmed active Edge Functions: `create-store-order` v12 (JWT required), `update-order-status` v5 (JWT required), `owner-alert-notify` v11 (cron-secret or authenticated-owner paths), `owner-invite-team-member` v1 (JWT required), and `update-product-inventory` v2 (JWT required).
+- [x] Confirmed scheduled owner-report jobs are active: daily report at 20:00 Sri Lanka time (14:30 UTC), plus a minute-based pending-alert dispatcher. The 64-character cron secret is present; its value is not recorded here.
+- [x] Confirmed no orders currently exist. No test orders or customer records were created.
+- [x] Confirmed current product state remains 1 total / 0 active; current passports remain 1 total / 0 published. No product was activated, published, or edited during this audit.
+
+### Deployment constraint
+- [ ] Vercel rejected further deployment attempts with the free-plan daily build/deployment rate-limit error. Do not retry repeatedly or change billing settings without the owner's approval. The current production alias therefore does not yet contain the later QR Passport contrast commit `ccb46816439abc637237cc6c36322ca713685d5e`.
+
+### Remaining checks / launch blockers
+- [ ] Enable Supabase Auth leaked-password protection in the Auth dashboard and rerun security advisors. This setting is not exposed by the available project database operations.
+- [ ] Review advisor warnings for multiple permissive policies. Current policies intentionally combine owner, permitted-staff, customer-own-record, and public published/active read paths. Do not delete policies without role-by-role regression tests.
+- [ ] Review the advisor's `cron.job` / `cron.job_run_details` anonymous-policy warnings. The scheduled jobs are active and use a private cron secret; verify actual grants and exposure before changing extension-managed cron policies.
+- [ ] Confirm Telegram bot/chat secrets are configured and perform a controlled owner-report delivery test with the owner's consent. The cron schedule and secret row are present, but actual delivery has not been tested.
+- [ ] Confirm WhatsApp Cloud API secrets/template and Google Sheets webhook settings; order function treats these integrations as optional and reports whether they are configured. No order has been placed to verify delivery.
+- [ ] Add idempotency protection and transaction-safe stock reservation before enabling high-volume checkout; the current create-order source accepts an idempotency header but does not yet persist a request key, and its stock validation is separate from order insertion.
+- [ ] Confirm delivery rates, payment policy, cancellation/returns/refunds, privacy policy, and customer-support contact details. COD is the only accepted payment method and delivery fee remains zero in the current order function.
+- [ ] Complete real-device owner OTP/Admin, customer checkout, receipt, QR print-and-scan, public-vs-owner isolation, and staff-permission tests.
+- [ ] Customer post-delivery feedback automation (two days after delivery) and customer receipt delivery still require end-to-end verification/implementation.
+- [ ] Do not activate or publish any real product until verified product data is entered and the owner explicitly approves it.
+
