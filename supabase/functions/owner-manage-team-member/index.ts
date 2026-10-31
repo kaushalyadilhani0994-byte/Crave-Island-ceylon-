@@ -60,7 +60,7 @@ Deno.serve(async (req: Request) => {
     });
     if (error) {
       const status = error.code==="42501" ? 403 : error.code==="P0002" ? 404 : 400;
-      return respond({error:"team_update_rejected",detail:error.message},status,headers);
+      return respond({error:"team_update_rejected"},status,headers);
     }
     return respond(data as Record<string,unknown>,200,headers);
   } catch (_) {
