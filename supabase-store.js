@@ -258,7 +258,7 @@
   document.body.appendChild(ownerProductsScript);
   const secureCheckoutScript = document.createElement("script");
   secureCheckoutScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  secureCheckoutScript.src = "supabase-checkout.js?v=20261028-admin-nav-target-fix";
+  secureCheckoutScript.src = "supabase-checkout.js?v=20261031-password-hardening";
   secureCheckoutScript.defer = true;
   document.body.appendChild(secureCheckoutScript);
 
