@@ -25,9 +25,9 @@ $("#cicPassportForm").addEventListener("submit",save);
 function message(t){const e=$("#cicPassportMsg");if(e)e.textContent=t}
 async function loadProducts(){
 if(!await owner()){message("Sign in with the approved owner account to manage product passports.");return}
-const {data,error}=await db.from("products").select("id,name,batch_number,ingredients,manufacturing_date").order("name");
+const {data,error}=await db.from("products").select("id,name,batch_number,ingredients,manufacturing_date,expiry_date,is_active").order("name");
 if(error){message("Could not load products. Check the owner access policy and try again.");return}
-const sel=$("#cicPassProduct");sel.innerHTML='<option value="">Choose a product</option>'+(data||[]).map(p=>'<option value="'+esc(p.id)+'" data-batch="'+esc(p.batch_number||"")+'" data-ingredients="'+esc(p.ingredients||"")+'">'+esc(p.name)+'</option>').join("");
+const sel=$("#cicPassProduct");sel.innerHTML='<option value="">Choose a product</option>'+(data||[]).map(p=>'<option value="'+esc(p.id)+'" data-batch="'+esc(p.batch_number||"")+'" data-ingredients="'+esc(p.ingredients||"")+'" data-mfg="'+esc(p.manufacturing_date||"")+'" data-expiry="'+esc(p.expiry_date||"")+'">'+esc(p.name)+'</option>').join("");
 sel.onchange=async()=>{
 $("#cicPassResult").innerHTML="";
 const id=sel.value;if(!id)return;
@@ -36,7 +36,7 @@ const opt=sel.options[sel.selectedIndex];
 $("#cicPassBatch").value=p?.batch_code||opt.dataset.batch||"";
 $("#cicPassIngredients").value=(p?.ingredients||[]).join(", ")||opt.dataset.ingredients||"";
 $("#cicPassOrigin").value=p?.origin||"";
-$("#cicPassMfg").value=p?.manufacturing_date||""; $("#cicPassBest").value=p?.best_before||"";
+$("#cicPassMfg").value=p?.manufacturing_date||opt.dataset.mfg||""; $("#cicPassBest").value=p?.best_before||opt.dataset.expiry||"";
 $("#cicPassStorage").value=p?.storage_instructions||"";
 $("#cicPassAllergens").value=(p?.allergen_information||[]).join(", ")||"";
 $("#cicPassStory").value=p?.public_story||"";
@@ -48,6 +48,11 @@ async function save(e){
 e.preventDefault();if(!await owner()){message("Owner session expired. Please sign in again.");return}
 const id=$("#cicPassProduct").value,ingredients=$("#cicPassIngredients").value.trim();
 if(!id||!ingredients){message("Choose a product and enter its verified ingredients.");return}
+const {data:product,error:productError}=await db.from("products").select("name,is_active").eq("id",id).maybeSingle();
+if(productError||!product){message("Could not verify the selected product. Refresh and try again.");return}
+if($("#cicPassPublished").checked&&product.is_active!==true){message("This product is hidden from the shop. Activate it in Owner Products before publishing its QR passport.");return}
+const mfg=$("#cicPassMfg").value,best=$("#cicPassBest").value;
+if(mfg&&best&&mfg>best){message("Manufacturing date cannot be later than the expiry / best-before date.");return}
 const btn=$("#cicPassSave");btn.disabled=true;btn.textContent="Saving…";
 const {data:existing,error:readError}=await db.from("product_passports").select("public_slug").eq("product_id",id).maybeSingle();
 if(readError){btn.disabled=false;btn.textContent="Save product passport";message("Could not check the existing passport. Please try again.");return}
@@ -64,11 +69,13 @@ const printButton=$("#cicPassPrint");
 if(printButton)printButton.onclick=()=>{
 const productName=$("#cicPassProduct").selectedOptions[0]?.textContent||"Product";
 const batch=$("#cicPassBatch").value.trim();
+const mfg=$("#cicPassMfg").value;
+const best=$("#cicPassBest").value;
 const qr="https://api.qrserver.com/v1/create-qr-code/?size=360x360&data="+encodeURIComponent(url);
 const win=window.open("","_blank","width=480,height=640");
 if(!win){message("Allow pop-ups to print the QR label.");return}
 const safe=v=>String(v||"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-win.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CRAVE ISLAND CEYLON QR Label</title><style>@page{size:50mm 70mm;margin:3mm}*{box-sizing:border-box}body{margin:0;width:44mm;min-height:64mm;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;color:#2C1A14;font-family:Arial,sans-serif;padding:2mm}.brand{font:700 12pt Georgia,serif;letter-spacing:.4px;border-bottom:1px solid #D4AF37;padding-bottom:2mm;width:100%}.tag{font-size:6.5pt;letter-spacing:1px;margin-top:1.5mm}.name{font-size:9pt;font-weight:700;margin:3mm 0 1mm;overflow-wrap:anywhere}.qr{width:34mm;height:34mm;object-fit:contain;margin:1mm auto}.batch{font-size:7pt;margin-top:1mm}.note{font-size:6pt;margin-top:2mm;color:#65554b}@media screen{body{margin:15px auto;border:1px dashed #bbb;padding:10px;width:44mm}}</style></head><body><div class="brand">CRAVE ISLAND CEYLON</div><div class="tag">PRODUCT PASSPORT</div><div class="name">'+safe(productName)+'</div><img class="qr" alt="Product passport QR code" src="'+safe(qr)+'"><div class="batch">'+(batch?"Batch / Lot: "+safe(batch):"Scan to verify product details")+'</div><div class="note">Scan for verified ingredients and product information</div><script>const q=document.querySelector(".qr");q.onload=()=>setTimeout(()=>window.print(),250);q.onerror=()=>document.body.insertAdjacentHTML("beforeend","<p>QR image could not load. Close and try again.</p>");<\/script></body></html>');
+win.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CRAVE ISLAND CEYLON QR Label</title><style>@page{size:50mm 70mm;margin:3mm}*{box-sizing:border-box}body{margin:0;width:44mm;min-height:64mm;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;color:#2C1A14;font-family:Arial,sans-serif;padding:2mm}.brand{font:700 12pt Georgia,serif;letter-spacing:.4px;border-bottom:1px solid #D4AF37;padding-bottom:2mm;width:100%}.tag{font-size:6.5pt;letter-spacing:1px;margin-top:1.5mm}.name{font-size:9pt;font-weight:700;margin:3mm 0 1mm;overflow-wrap:anywhere}.qr{width:34mm;height:34mm;object-fit:contain;margin:1mm auto}.batch{font-size:7pt;margin-top:1mm}.note{font-size:6pt;margin-top:2mm;color:#65554b}@media screen{body{margin:15px auto;border:1px dashed #bbb;padding:10px;width:44mm}}</style></head><body><div class="brand">CRAVE ISLAND CEYLON</div><div class="tag">PRODUCT PASSPORT</div><div class="name">'+safe(productName)+'</div><img class="qr" alt="Product passport QR code" src="'+safe(qr)+'"><div class="batch">'+(batch?"Batch / Lot: "+safe(batch):"Scan to verify product details")+'</div><div class="batch">'+(mfg?"MFG: "+safe(mfg):"")+(best?" · Best before: "+safe(best):"")+'</div><div class="note">Scan for verified ingredients and product information</div><script>const q=document.querySelector(".qr");q.onload=()=>setTimeout(()=>window.print(),250);q.onerror=()=>document.body.insertAdjacentHTML("beforeend","<p>QR image could not load. Close and try again.</p>");<\/script></body></html>');
 win.document.close();
 };
 
