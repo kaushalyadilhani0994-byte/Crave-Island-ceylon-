@@ -64,7 +64,7 @@
             <div class="cic-tp-field"><label for="cicTpInviteName">Name</label><input id="cicTpInviteName" maxlength="100" placeholder="Team member name"></div>
             <div class="cic-tp-field" style="margin-top:8px"><label for="cicTpInviteEmail">Email address</label><input id="cicTpInviteEmail" type="email" autocomplete="email" placeholder="name@example.com"></div>
             <div class="cic-tp-field" style="margin-top:8px"><label for="cicTpInviteRole">Workspace role</label><select id="cicTpInviteRole">${roles.map(r=>`<option value="${r[0]}">${r[1]}</option>`).join("")}</select></div>
-            <button class="primary" id="cicTpInviteBtn" type="button" style="width:100%;margin-top:10px">Send secure invitation</button>
+            <button class="primary" id="cicTpInviteBtn" type="button" disabled style="width:100%;margin-top:10px">Team sign-in setup in progress</button><p style="font-size:11px;line-height:1.45;opacity:.75">Invitations will be enabled after individual team sign-in and role workspaces are connected. No team account will be invited prematurely.</p>
           </div>
         </aside>
         <main class="cic-tp-box"><div id="cicTpEditor"><p>Select a team member to manage their access.</p></div></main>
