@@ -327,20 +327,38 @@
         if(currentlyVisible!==ownerNavVerified)setOwnerNavVisible(ownerNavVerified);
       },1200);
     }
-    const original=window.openAdminAccess;
-    window.openAdminAccess=function(){
-      // Let the original entry point check Supabase's persisted session first.
-      // It opens the existing Control Room only for an approved owner; everyone
-      // else is shown the secure OTP panel. sessionStorage must not be the gate,
-      // because it can reset while Supabase's authenticated session remains valid.
-      if(typeof original==="function"){
+    // A customer must never see owner tools, but the owner still needs a
+    // reliable way to reach the sign-in form before an authenticated session
+    // exists. Do not depend on a legacy inline openAdminAccess implementation.
+    window.openAdminAccess=async function(){
+      const client=db();
+      if(client){
         try{
-          const result=original.apply(this,arguments);
-          if(result&&typeof result.catch==="function")result.catch(()=>{});
+          const {data,error}=await client.auth.getSession();
+          const session=!error&&data&&data.session?data.session:null;
+          if(session&&session.user&&await isApprovedOwner(session.user)){
+            setOwnerNavVisible(true);
+            await openOwnerDashboard();
+            return;
+          }
         }catch(_){}
-      }else if(typeof window.openModal==="function")window.openModal("adminAccessModal");
-      else {const m=$("#adminAccessModal");if(m)m.style.display="";}
-      const s=$("#cicOwnerAuthStatus");if(s)s.hidden=true;
+      }
+      let modal=$("#adminAccessModal");
+      if(!modal){
+        modal=document.createElement("div");
+        modal.id="adminAccessModal";
+        modal.className="modal";
+        modal.innerHTML='<div class="sheet cic-owner-login-sheet"><div class="sheet-head"><h3>Owner Sign In</h3><button class="close" type="button" aria-label="Close owner sign in">×</button></div><p class="muted-note">Sign in with an approved owner email to open the original CRAVE Control Room. Customers cannot access owner tools.</p><div class="form-grid cic-owner-login-fields"><div class="field full"><label for="adminEmail">Owner email</label><input id="adminEmail" type="email" autocomplete="email" placeholder="Approved owner email"></div><div class="field full"><label for="adminOtp">6-digit one-time code</label><input id="adminOtp" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="Enter code from your email"></div></div><div class="login-actions"><button class="goldbtn" type="button">Send secure sign-in email</button><button class="gold-outline" type="button">Verify code &amp; open Admin</button></div><div class="access-note">Only an approved owner account can open the Control Room.</div></div>';
+        document.body.appendChild(modal);
+        modal.querySelector(".close")?.addEventListener("click",()=>modal.classList.remove("open"));
+        modal.addEventListener("click",event=>{if(event.target===modal)modal.classList.remove("open");});
+      }
+      install();
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden","false");
+      const statusEl=$("#cicOwnerAuthStatus",modal);
+      if(statusEl)statusEl.hidden=true;
+      window.setTimeout(()=>$("#adminEmail",modal)?.focus(),80);
     };
     const ownerEntryTargets=[document.querySelector(".hero-copy h2"),document.querySelector(".hero-copy"),document.querySelector("header .logo"),document.querySelector(".brand-logo"),document.querySelector("[data-brand-logo]")].filter((el,index,all)=>el&&all.indexOf(el)===index);
     ownerEntryTargets.forEach(target=>{
