@@ -1,0 +1,16 @@
+/* CRAVE ISLAND CEYLON — approved team workspace */
+(function(){
+"use strict";
+window.openApprovedTeamWorkspace=function(profile){
+  const labels={catalogue:"Catalogue & Products",inventory:"Stock & Inventory",orders:"Orders & Customers",dispatch:"Dispatch & Delivery",media:"Media & Social",accounts:"Accounts & Payments",star_club:"Star Club & Rewards",certificates:"QR & Certificates",reports:"Reports",tasks:"Team Tasks",settings:"Store Settings"};
+  const actions={read:"View",create:"Add",update:"Edit",delete:"Delete",approve:"Approve",export:"Export"};
+  let root=document.getElementById("cicStaffWorkspace");
+  if(!root){root=document.createElement("div");root.id="cicStaffWorkspace";root.style.cssText="position:fixed;inset:0;z-index:100060;background:#f6f0e5;color:#2b2118;overflow:auto;padding:clamp(14px,4vw,30px);box-sizing:border-box";document.body.appendChild(root);}
+  const safe=s=>String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const entries=Object.entries(profile.permissions||{}).filter(([k,v])=>labels[k]&&Array.isArray(v)&&v.length);
+  root.innerHTML='<div style="max-width:900px;margin:auto"><header style="display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid #b99a5b;padding-bottom:14px"><div><small style="letter-spacing:2px;color:#9b7537">CRAVE ISLAND CEYLON</small><h1 style="font:400 clamp(25px,5vw,36px) Georgia,serif;margin:5px 0">My Work Space</h1><div>'+safe(profile.display_name||profile.email)+' · '+safe(profile.role).replace(/_/g," ")+'</div></div><button id="cicStaffSignOut" style="border:1px solid #b99a5b;border-radius:9px;padding:10px 13px;background:#fff8e7;color:#2b2118;font-weight:700">Sign out</button></header><h2 style="font:400 22px Georgia,serif;margin-top:24px">Your assigned areas</h2><p style="font-size:13px;line-height:1.5">Only the modules and actions assigned by Main Admin are shown here. Database policies independently enforce access.</p><div id="cicStaffModules" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px"></div><p style="font-size:12px;opacity:.7;margin-top:20px">If you need another area or action, contact Main Admin.</p></div>';
+  const grid=root.querySelector("#cicStaffModules");
+  grid.innerHTML=entries.length?entries.map(([k,v])=>'<article style="padding:16px;border:1px solid #b99a5b;border-radius:14px;background:white"><h3 style="margin:0 0 9px;font:400 19px Georgia,serif">'+labels[k]+'</h3><div style="display:flex;flex-wrap:wrap;gap:6px">'+v.filter(x=>actions[x]).map(x=>'<span style="font-size:11px;border-radius:20px;padding:5px 9px;background:#eee2c9;color:#4c3518">'+actions[x]+'</span>').join("")+'</div></article>').join(""):'<article style="padding:18px;border:1px solid #b99a5b;border-radius:12px;background:white">No modules have been assigned yet. Please contact Main Admin.</article>';
+  root.querySelector("#cicStaffSignOut").onclick=async()=>{const client=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;if(client)await client.auth.signOut();root.remove();};
+};
+})();
