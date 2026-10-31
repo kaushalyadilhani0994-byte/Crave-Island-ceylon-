@@ -127,23 +127,41 @@
     } catch (e) { message("Sign-in failed. Check your email and password, then try again.", true); }
     finally { btn.disabled = false; }
   }
+  // Free-tier safeguard: check password strength and HIBP using k-anonymity.
+  // The full password and full hash are never sent to the breach-check service.
+  async function passwordIsBreached(password) {
+    if (!crypto || !crypto.subtle || typeof AbortController === "undefined") throw new Error("Secure password check unavailable.");
+    const digest = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(password));
+    const hash = Array.from(new Uint8Array(digest), x => x.toString(16).padStart(2, "0")).join("").toUpperCase();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetch("https://api.pwnedpasswords.com/range/" + hash.slice(0, 5), {headers: {"Add-Padding":"true"}, cache:"no-store", signal:controller.signal});
+      if (!response.ok) throw new Error("Breach-check service unavailable.");
+      const rows = (await response.text()).split(/\r?\n/);
+      return rows.some(row => row.split(":")[0].trim().toUpperCase() === hash.slice(5));
+    } finally { clearTimeout(timer); }
+  }
   async function signUp() {
     const db = client(); if (!db) return message("Account service is not ready. Refresh the page and try again.", true);
     const email = document.getElementById("cicCheckoutEmail").value.trim();
     const password = document.getElementById("cicCheckoutPassword").value;
-    if (!email || password.length < 6) return message("Enter a valid email and a password with at least 6 characters.", true);
+    if (!email) return message("Enter a valid email address.", true);
+    if (password.length < 12 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) return message("Use at least 12 characters with uppercase and lowercase letters, a number, and a symbol.", true);
     const btn = document.getElementById("cicCheckoutSignUp"); btn.disabled = true;
     try {
+      message("Checking password safety…");
+      if (await passwordIsBreached(password)) return message("This password appears in known data breaches. Please choose another.", true);
       const {data, error} = await db.auth.signUp({email, password});
       if (error) throw error;
       if (data.session) {
-        document.getElementById("cicCheckoutAccountState").textContent = "Account created and signed in. Complete delivery details to place your order.";
+        document.getElementById("cicCheckoutAccountState").textContent = "Account created and signed in. Complete your delivery details to place an order."; 
         message("Account created successfully. Complete delivery details to continue.");
-      } else {
-        message("Account created. Check your email for the verification link, then return and sign in before placing the order.");
-      }
-    } catch (e) { message("Could not create the account. Check the email and try another password if necessary.", true); }
-    finally { btn.disabled = false; }
+      } else message("Account created. Check your email for the verification link, then return and sign in before placing the order.");
+    } catch (e) {
+      const unavailable = /Secure password|Breach-check|Failed to fetch|AbortError/i.test(String(e && (e.message || e)));
+      message(unavailable ? "Password safety check is temporarily unavailable. Please try again shortly." : "Could not create the account. Check your email and try again.", true);
+    } finally { btn.disabled = false; }
   }
   async function placeOrder(event) {
     event.preventDefault();
