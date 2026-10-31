@@ -102,3 +102,38 @@ The site may be online while launch preparation continues. Do not announce that 
 - [ ] The latest source commit must deploy to the V18 production alias and then be tested in a real mobile browser. A READY build alone is not proof that the sign-in interaction works.
 - [ ] Only the primary owner currently has an Auth user linked to an approved `staff_profiles` owner row. The second intended owner email is allowlisted in the front end but has no Auth user/profile approval yet; it must not be treated as active until provisioned and approved.
 - [ ] Supabase Auth leaked-password protection remains a dashboard-only security action. Do not mark the security review complete until it is enabled and the advisor warning clears.
+
+## Security and release verification — 2026-10-31
+
+### Verified against the connected V18 source and Supabase database
+
+- [x] Confirmed the public passport route is a standalone `passport.html` page. It loads only the Supabase browser client and publishable project config; it does not load owner-auth, owner catalogue, team-permissions, or admin workspace scripts.
+- [x] Confirmed passport lookup requires a non-empty slug, `published = true`, and a matching `products.is_active = true` row. Unknown, unpublished, inactive, or failed lookups return a generic verification message. Product text is HTML-escaped before rendering.
+- [x] Re-read the live RLS policies for products, categories, product passports, staff profiles, store orders, order items, and admin alerts. Public product/category reads are limited to active rows; public passport reads are limited to published passports for active products. Owner write/read policies use the approved-owner database check; team policies use the permission-check function; customer order reads are scoped to `auth.uid()`.
+- [x] Removed the team read/update policies from `admin_alerts`; the remaining read/update policies are restricted to `private.is_approved_owner()`. A synthetic non-owner permission check previously returned no visible alerts. No real staff account was created or invited.
+- [x] Confirmed the browser config contains a Supabase publishable key only; no service-role key was found in the config file.
+- [x] Rechecked current data counts: 60 categories, 14 active categories, 1 inactive prototype product, 0 active products, 0 published passports, 0 staff profiles, and 0 orders. No real product was activated and no order was created.
+- [x] Confirmed the current QR label workflow marks newly saved passports as private drafts until the owner explicitly completes verified details and publishes them. The QR destination is the public `/passport.html?slug=...` route, not an admin route.
+
+### Source/deployment alignment
+
+- [x] Confirmed the latest READY Vercel deployment inspected is a **Preview** deployment for commit `95ae4a932b38db9575d6328621e98431b206e6b6` (team workspace source). It is not a Production-target deployment.
+- [ ] The current release branch has commits newer than that READY preview, including mobile navigation/QR fixes. Deploy the exact latest branch head to Preview, verify the deployment SHA, and test it before any production promotion.
+- [ ] Do not claim the latest navigation or security source changes are live on the production alias until the exact production deployment SHA is checked.
+- [ ] Real browser testing is still outstanding. Source inspection and database policy inspection do not prove that mobile owner sign-in, customer sign-in, or the actual QR scan flow works on-device.
+
+### Remaining security and functional blockers
+
+- [ ] **Enable Supabase Auth leaked-password protection** in the Auth dashboard and rerun the security advisor. The current advisor still reports it disabled.
+- [ ] Review the advisor's anonymous-sign-in warnings. Several are related to policies granted to `public` on the extension-owned `cron` schema, and some findings concern authenticated-role policies. Do not remove public active-catalogue or published-passport reads, and do not alter pg_cron extension policies without confirming the extension's required access model.
+- [ ] Review multiple permissive RLS policies for performance only after preserving all distinct owner, team, customer, and public access cases. Do not drop indexes based only on low-traffic usage statistics.
+- [ ] Confirm the storage/image delivery design. Current `product-images` and `category-images` storage access is owner-only; do not make private buckets public as a quick fix. Product images currently need a customer-safe HTTPS URL or a deliberately designed signed/public asset strategy.
+- [ ] Test on a real mobile browser: owner magic-link/OTP login, original Control Room, Owner Orders, catalogue, QR Passport, team-permission editor, sign-out, and confirmation that a customer account never sees owner controls.
+- [ ] Team workspace currently lists assigned module/action permissions but does not yet provide working operational screens for every listed module. Do not represent staff workflows as complete until each assigned module has its real permitted actions and is tested.
+- [ ] Test customer checkout, server-side order totals, COD receipt, order status updates, customer order history, and a public QR scan against a real approved test product before launch.
+- [ ] Confirm delivery fees/policies, customer support, refund/cancellation terms, and any future payment-provider integration. Do not show card/online payment as available until it is actually integrated and verified.
+
+### Release rule
+
+No real products are to be activated and no public launch/production promotion is approved by this audit. Keep V18 available for controlled preparation, but wait for the Auth security setting, exact deployment alignment, mobile browser checks, and end-to-end order/QR tests before accepting customer orders.
+
