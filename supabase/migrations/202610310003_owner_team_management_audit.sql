@@ -3,8 +3,8 @@
 
 create table if not exists public.admin_team_audit (
   id uuid primary key default gen_random_uuid(),
-  actor_id uuid not null references auth.users(id) on delete restrict,
-  target_user_id uuid not null references auth.users(id) on delete restrict,
+  actor_id uuid not null,
+  target_user_id uuid not null,
   action text not null check (action in ('approve','suspend','set_permissions')),
   before_state jsonb not null default '{}'::jsonb,
   after_state jsonb not null default '{}'::jsonb,
