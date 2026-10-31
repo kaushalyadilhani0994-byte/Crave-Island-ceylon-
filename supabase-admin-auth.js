@@ -29,25 +29,43 @@
   }
   function setOwnerNavVisible(visible) {
     const bottom = document.querySelector(".bottom");
-    // Find the real Admin entry by its action, not by :last-child:
-    // owner modules can append their own buttons to the bottom bar.
-    const adminButton = bottom && (
+    // The current storefront can lack an Admin nav item entirely. Create it
+    // only after the server-side approved-owner check succeeds.
+    let adminButton = bottom && (
+      bottom.querySelector("#cicOwnerAdminNavEntry") ||
       bottom.querySelector('[onclick*="openAdminAccess"]') ||
       Array.from(bottom.querySelectorAll(".nav")).find(el =>
-        /(^|\s)Admin(\s|$)/i.test((el.innerText || el.textContent || "").replace(/\s+/g, " ").trim())
+        /(^|\\s)Admin(\\s|$)/i.test((el.innerText || el.textContent || "").replace(/\\s+/g, " ").trim())
       )
     );
     if (visible) {
       document.body.classList.add("cic-owner-shortcuts-unified");
-      if (bottom) bottom.style.setProperty("grid-template-columns", "repeat(7,minmax(0,1fr))", "important");
+      if (bottom && !adminButton) {
+        adminButton = document.createElement("button");
+        adminButton.type = "button";
+        adminButton.id = "cicOwnerAdminNavEntry";
+        adminButton.className = "nav cic-owner-admin-nav";
+        adminButton.setAttribute("aria-label", "Open secure owner Admin");
+        adminButton.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 19 6v5c0 4.7-2.8 8-7 10-4.2-2-7-5.3-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span class="nav-label">Admin</span>';
+        adminButton.addEventListener("click", function () {
+          if (typeof window.openAdminAccess === "function") window.openAdminAccess();
+        });
+        bottom.appendChild(adminButton);
+      }
+      if (bottom) {
+        const count = Math.max(1, bottom.querySelectorAll(".nav").length);
+        bottom.style.setProperty("grid-template-columns", "repeat(" + count + ",minmax(0,1fr))", "important");
+      }
       if (adminButton) adminButton.style.setProperty("display", "flex", "important");
       syncOwnerAdminShortcut(true);
     } else {
       document.body.classList.remove("cic-owner-shortcuts-unified");
       if (bottom) bottom.style.removeProperty("grid-template-columns");
-      // Keep the Admin entry completely out of the customer storefront.
-      // Owners can still open sign-in through the existing hidden owner trigger.
-      if (adminButton) adminButton.style.setProperty("display", "none", "important");
+      // Dynamically created Admin entry is removed at sign-out. Customers
+      // therefore never see an Admin shortcut or owner workspace.
+      const privateEntry = document.getElementById("cicOwnerAdminNavEntry");
+      if (privateEntry) privateEntry.remove();
+      if (adminButton && adminButton.id !== "cicOwnerAdminNavEntry") adminButton.style.setProperty("display", "none", "important");
       syncOwnerAdminShortcut(false);
     }
   }
