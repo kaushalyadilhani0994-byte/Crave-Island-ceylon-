@@ -41,10 +41,10 @@
     m.innerHTML=`<section class="cic-panel">
       <div style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between"><div><h2>CRAVE ISLAND CEYLON</h2><div class="cic-muted">Live catalogue management · changes save to Supabase</div></div><button type="button" id="cicOwnerCatalogueClose" aria-label="Close">Close ✕</button></div>
       <div id="cicOwnerCatalogueMessage" class="cic-message" role="status">Checking owner access…</div>
-      <div class="cic-section"><h3>1. Add a collection</h3><form id="cicCategoryForm">
+      <div class="cic-section"><h3 id="cicCategoryHeading">1. Add a collection</h3><p class="cic-muted">Existing collection names and parent links are kept fixed when editing, so current products remain connected correctly.</p><form id="cicCategoryForm">
         <div class="cic-grid"><div><label for="cicCatName">Category / subcategory name *</label><input id="cicCatName" maxlength="80" required></div><div><label for="cicCatParent">Parent category (leave blank for a main category)</label><select id="cicCatParent"><option value="">Main category</option></select></div><div><label for="cicCatImage">Collection image URL (optional)</label><input id="cicCatImage" type="url" maxlength="1500"></div></div>
         <label for="cicCatDesc">Description</label><textarea id="cicCatDesc" maxlength="500"></textarea>
-        <button type="submit">Save collection</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="cicCategorySave" type="submit">Save collection</button><button id="cicCategoryCancel" type="button" hidden>Cancel edit</button></div>
       </form></div>
       <div class="cic-section"><h3>2. Add a real product</h3><p class="cic-muted">Only enter products that are actually ready to sell. Price is in LKR. Product image URL must be a publicly accessible HTTPS image URL.</p>
       <form id="cicProductForm">
@@ -62,6 +62,7 @@
     $("#cicOwnerCatalogueClose",m).addEventListener("click",()=>m.style.display="none");
     $("#cicOwnerCatalogueRefresh",m).addEventListener("click",loadAll);
     $("#cicCategoryForm",m).addEventListener("submit",saveCategory);
+    $("#cicCategoryCancel",m).addEventListener("click",resetCategoryEditor);
     $("#cicProductForm",m).addEventListener("submit",saveProduct);
     document.body.appendChild(m); root=m;
   }
@@ -90,12 +91,14 @@
     ]);
     if(cats.error||products.error){say("Catalogue could not be loaded. Check the categories/products table access and try Refresh.",true);return;}
     productRows=products.data||[];
+    window.__cicOwnerCategoryRows=cats.data||[];
     const select=$("#cicProdCategory");
     select.innerHTML='<option value="">Choose a category or subcategory</option>'+(cats.data||[]).filter(c=>c.is_active).map(c=>{const parent=(cats.data||[]).find(p=>p.id===c.parent_id);return '<option value="'+esc(c.name)+'">'+(parent?esc(parent.name)+' › ':'')+esc(c.name)+'</option>';}).join("");
      const parentSelect=$("#cicCatParent"); if(parentSelect)parentSelect.innerHTML='<option value="">Main category</option>'+(cats.data||[]).filter(c=>!c.parent_id).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join("");
-    const catList=(cats.data||[]).map(c=>{const parent=(cats.data||[]).find(p=>p.id===c.parent_id);return '<div class="cic-card"><div><b>'+(parent?esc(parent.name)+' › ':'')+esc(c.name)+'</b><div class="cic-muted">'+(c.parent_id?"Subcategory · ":"Main category · ")+(c.is_active?"Active":"Hidden")+'</div></div><button type="button" data-cic-category-toggle="'+esc(c.id)+'" data-active="'+String(!!c.is_active)+'">'+(c.is_active?"Hide":"Activate")+'</button></div>';}).join("");
+    const catList=(cats.data||[]).map(c=>{const parent=(cats.data||[]).find(p=>p.id===c.parent_id);return '<div class="cic-card"><div><b>'+(parent?esc(parent.name)+' › ':'')+esc(c.name)+'</b><div class="cic-muted">'+(c.parent_id?"Subcategory · ":"Main category · ")+(c.is_active?"Active":"Hidden")+'</div></div><div><button type="button" data-cic-category-edit="'+esc(c.id)+'">Edit details</button> <button type="button" data-cic-category-toggle="'+esc(c.id)+'" data-active="'+String(!!c.is_active)+'">'+(c.is_active?"Hide":"Activate")+'</button></div></div>';}).join("");
     const prodList=productRows.map(p=>'<div class="cic-card"><div><b>'+esc(p.name)+'</b><div class="cic-muted">'+esc(p.category||"Uncategorised")+' · '+money(p.price)+' · '+(p.is_active?"Active":"Hidden")+'</div><div class="cic-muted">'+(p.track_inventory?"Stock: "+Number(p.stock_quantity||0)+" · Low-stock threshold: "+Number(p.low_stock_threshold||5):"Stock tracking off")+(p.manufacturing_date?" · MFG: "+esc(p.manufacturing_date):" · MFG not set")+(p.expiry_date?" · Expiry: "+esc(p.expiry_date):" · No expiry date recorded")+(p.batch_number?" · Batch: "+esc(p.batch_number):"")+(p.storage_location?" · Stored: "+esc(p.storage_location):"")+(p.created_at?" · Added: "+esc(new Date(p.created_at).toLocaleDateString()):"")+(p.sku?" · SKU: "+esc(p.sku):"") +'</div></div><div><button type="button" data-cic-product-edit="'+esc(p.id)+'">Edit details</button> <button type="button" data-cic-product-toggle="'+esc(p.id)+'" data-active="'+String(!!p.is_active)+'">'+(p.is_active?"Hide product":"Activate product")+'</button></div></div>').join("");
     $("#cicOwnerCatalogueList").innerHTML='<h3 style="margin-top:14px">Collections ('+(cats.data||[]).length+')</h3>'+(catList||'<p class="cic-muted">No collections yet. Create one above.</p>')+'<h3 style="margin-top:18px">Products ('+(products.data||[]).length+')</h3>'+(prodList||'<p class="cic-muted">No products yet. Add verified product details above.</p>');
+    $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-category-edit]").forEach(btn=>btn.addEventListener("click",()=>editCategory(btn.getAttribute("data-cic-category-edit"))));
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-category-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("categories",btn.getAttribute("data-cic-category-toggle"),btn.getAttribute("data-active")==="true")));
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-product-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("products",btn.getAttribute("data-cic-product-toggle"),btn.getAttribute("data-active")==="true")));
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-product-edit]").forEach(btn=>btn.addEventListener("click",()=>editProduct(btn.getAttribute("data-cic-product-edit"))));
@@ -152,29 +155,66 @@
     if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function") await window.CIC_SUPABASE.refreshCatalogue();
   }
 
+  function resetCategoryEditor() {
+    const form=$("#cicCategoryForm");
+    if(!form)return;
+    form.reset();delete form.dataset.editId;
+    $("#cicCatName").readOnly=false;$("#cicCatParent").disabled=false;
+    $("#cicCategoryHeading").textContent="1. Add a collection";
+    $("#cicCategorySave").textContent="Save collection";
+    $("#cicCategoryCancel").hidden=true;
+  }
+
+  function editCategory(id) {
+    const form=$("#cicCategoryForm");
+    const categoryRows=window.__cicOwnerCategoryRows||[];
+    const row=categoryRows.find(item=>String(item.id)===String(id));
+    if(!row||!form)return;
+    form.dataset.editId=String(row.id);
+    $("#cicCatName").value=row.name||"";
+    $("#cicCatParent").value=row.parent_id||"";
+    $("#cicCatDesc").value=row.description||"";
+    $("#cicCatImage").value=row.image_url||"";
+    $("#cicCatName").readOnly=true;$("#cicCatParent").disabled=true;
+    $("#cicCategoryHeading").textContent="Edit collection details";
+    $("#cicCategorySave").textContent="Update details";
+    $("#cicCategoryCancel").hidden=false;
+    say("Editing "+row.name+". Name and parent are locked to protect existing product-to-collection links.");
+    form.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+
   async function saveCategory(event) {
     event.preventDefault();
     if(!await checkAccess()){say("Owner access required. Sign in with the approved owner account.",true);return;}
     const name=$("#cicCatName").value.trim(), parentId=$("#cicCatParent").value||null;
     if(!name){say("Enter a category or subcategory name.",true);return;}
-    const btn=event.submitter, idleText=btn?btn.textContent:"Save category";
+    const form=event.target,editId=form.dataset.editId||"";
+    const btn=$("#cicCategorySave"),idleText=btn?btn.textContent:"Save category";
     if(btn){btn.disabled=true;btn.textContent="Saving…";}
     try {
-      let query=client.from("categories").select("sort_order");
-      query=parentId?query.eq("parent_id",parentId):query.is("parent_id",null);
-      const {data:existingCategories,error:sortError}=await query;
-      if(sortError)throw sortError;
-      const sortOrder=Math.max(0,...(existingCategories||[]).map(x=>Number(x.sort_order)||0))+1;
-      const {error}=await client.from("categories").insert({name,parent_id:parentId,sort_order:sortOrder,description:$("#cicCatDesc").value.trim()||null,image_url:$("#cicCatImage").value.trim()||null,is_active:true});
-      if(error)throw error;
-      event.target.reset(); say(parentId?"Subcategory saved.":"Main category saved.");
+      if(editId){
+        const {error}=await client.from("categories").update({
+          description:$("#cicCatDesc").value.trim()||null,
+          image_url:$("#cicCatImage").value.trim()||null
+        }).eq("id",editId);
+        if(error)throw error;
+      }else{
+        let query=client.from("categories").select("sort_order");
+        query=parentId?query.eq("parent_id",parentId):query.is("parent_id",null);
+        const {data:existingCategories,error:sortError}=await query;
+        if(sortError)throw sortError;
+        const sortOrder=Math.max(0,...(existingCategories||[]).map(x=>Number(x.sort_order)||0))+1;
+        const {error}=await client.from("categories").insert({name,parent_id:parentId,sort_order:sortOrder,description:$("#cicCatDesc").value.trim()||null,image_url:$("#cicCatImage").value.trim()||null,is_active:true});
+        if(error)throw error;
+      }
+      resetCategoryEditor();say(editId?"Collection details updated.":"Collection saved.");
       await loadAll();
       if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function") await window.CIC_SUPABASE.refreshCatalogue();
     } catch(error) {
       const code=error&&error.code?String(error.code)+" · ":"";
       const detail=String(error&&error.message||"Network or permission error").slice(0,180);
       say("Category save failed: "+code+detail,true);
-    } finally {if(btn){btn.disabled=false;btn.textContent=idleText;}}
+    } finally {if(btn){btn.disabled=false;btn.textContent=form.dataset.editId?"Update details":"Save collection";}}
   }
 
   async function saveProduct(event) {
