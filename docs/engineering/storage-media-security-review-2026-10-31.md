@@ -54,3 +54,19 @@ The current Owner Catalogue form asks for a publicly accessible HTTPS image URL.
 - Public image delivery from Supabase Storage: not configured.
 - Existing external HTTPS image URL workflow: retained.
 - No deployment or database mutation performed.
+
+## 2026-11-01 catalogue URL validation follow-up
+
+The review branch now validates external category and product image URLs through the browser's native `URL` parser before saving:
+
+- URL must parse successfully and use the `https:` protocol.
+- A hostname is required.
+- Embedded username/password credentials are rejected.
+- The same check applies when adding or editing a collection and when adding or editing a product.
+- Existing image URL fields, storage buckets, Admin layout, and save destinations are unchanged.
+
+Static verification on the review branch:
+
+- JavaScript source parses successfully using `new Function(source)`.
+- The latest Vercel preview serves the updated `supabase-admin-products.js` source with the new validation messages (HTTP 200).
+- This is not a live form/browser interaction test; no image URL was saved and no production code was changed.
