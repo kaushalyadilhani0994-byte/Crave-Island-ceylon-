@@ -439,10 +439,16 @@
               if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
               openOwnerDashboard();
             }else if(session&&session.user){
-              await recordDeniedOwnerAttempt();
-              await client.auth.signOut();
-              setOwnerNavVisible(false);
-              try{sessionStorage.removeItem("cicOwnerOtpVerified");localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+              const teamProfile=await getApprovedTeamProfile(session.user);
+              if(teamProfile&&typeof window.openApprovedTeamWorkspace==="function"){
+                try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+                window.openApprovedTeamWorkspace(teamProfile);
+              }else{
+                await recordDeniedOwnerAttempt();
+                await client.auth.signOut();
+                setOwnerNavVisible(false);
+                try{sessionStorage.removeItem("cicOwnerOtpVerified");localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+              }
             }
           }catch(_){}
           // Remove one-time callback parameters only after Supabase has had
