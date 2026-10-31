@@ -54,6 +54,35 @@ window.openApprovedTeamWorkspace=function(profile){
     section.querySelector("#cicTeamOrdersRefresh").onclick=refreshTeamOrders;
     refreshTeamOrders();
   }
+
+  const canInventoryRead=(profile.permissions?.inventory||[]).includes("read");
+  const canInventoryUpdate=(profile.permissions?.inventory||[]).includes("update");
+  if(db&&canInventoryRead){
+    const section=document.createElement("section");
+    section.style.cssText="margin-top:18px;padding:16px;border:1px solid #b99a5b;border-radius:14px;background:#fff";
+    section.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><h2 style="font:400 22px Georgia,serif;margin:0">Stock & Inventory</h2><p style="font-size:12px;color:#6b5a4e;margin:5px 0 0">Inventory changes are saved through a server-verified, stock-only endpoint.</p></div><button id="cicTeamInventoryRefresh" style="border:1px solid #b99a5b;border-radius:8px;padding:9px 12px;background:#fff8e7;color:#2b2118;font-weight:700">Refresh</button></div><div id="cicTeamInventoryList" style="margin-top:12px" aria-live="polite">Loading inventory…</div>';
+    root.querySelector("#cicStaffModules").insertAdjacentElement("afterend",section);
+    const list=section.querySelector("#cicTeamInventoryList");
+    const refreshInventory=async()=>{
+      list.textContent="Loading inventory…";
+      const {data,error}=await db.from("products").select("id,name,sku,is_active,stock_quantity,low_stock_threshold,track_inventory,expiry_date").order("name").limit(200);
+      if(error){list.textContent="Inventory could not be loaded. Check your assigned inventory read permission.";return;}
+      if(!data?.length){list.textContent="No products are available in the inventory yet.";return;}
+      list.innerHTML=data.map(p=>'<article style="padding:12px;margin:9px 0;border:1px solid #e5dac8;border-radius:11px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>'+safe(p.name)+'</b><span style="font-size:11px;color:#6b5a4e">'+(p.is_active?"Active":"Draft / inactive")+'</span></div><div style="font-size:11px;color:#78685b;margin:4px 0 9px">'+safe(p.sku||"No SKU")+'</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px"><label style="font-size:11px">Stock quantity<input data-stock="'+safe(p.id)+'" type="number" min="0" max="1000000" step="1" value="'+Number(p.stock_quantity||0)+'" '+(!canInventoryUpdate?"disabled":"")+' style="display:block;box-sizing:border-box;width:100%;padding:8px;border:1px solid #c9b99f;border-radius:7px"></label><label style="font-size:11px">Low-stock alert<input data-low="'+safe(p.id)+'" type="number" min="0" max="1000000" step="1" value="'+Number(p.low_stock_threshold||0)+'" '+(!canInventoryUpdate?"disabled":"")+' style="display:block;box-sizing:border-box;width:100%;padding:8px;border:1px solid #c9b99f;border-radius:7px"></label><label style="font-size:11px">Expiry date<input data-expiry="'+safe(p.id)+'" type="date" value="'+safe(p.expiry_date||"")+'" '+(!canInventoryUpdate?"disabled":"")+' style="display:block;box-sizing:border-box;width:100%;padding:8px;border:1px solid #c9b99f;border-radius:7px"></label></div><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px"><label style="font-size:12px"><input data-track="'+safe(p.id)+'" type="checkbox" '+(p.track_inventory?"checked":"")+' '+(!canInventoryUpdate?"disabled":"")+' style="width:auto"> Track stock</label>'+(canInventoryUpdate?'<button data-inventory-save="'+safe(p.id)+'" style="border:1px solid #b99a5b;border-radius:8px;padding:8px 11px;background:#2b2118;color:white;font-weight:700">Save inventory</button>':"")+'</div></article>').join("");
+      list.querySelectorAll("[data-inventory-save]").forEach(button=>button.addEventListener("click",async()=>{
+        const id=button.getAttribute("data-inventory-save");
+        const stock=list.querySelector('[data-stock="'+id+'"]'),low=list.querySelector('[data-low="'+id+'"]'),expiry=list.querySelector('[data-expiry="'+id+'"]'),track=list.querySelector('[data-track="'+id+'"]');
+        const payload={product_id:id,stock_quantity:Number(stock.value),low_stock_threshold:Number(low.value),expiry_date:expiry.value||null,track_inventory:track.checked};
+        if(!Number.isInteger(payload.stock_quantity)||payload.stock_quantity<0||!Number.isInteger(payload.low_stock_threshold)||payload.low_stock_threshold<0){window.alert("Stock values must be whole numbers of zero or more.");return;}
+        button.disabled=true;button.textContent="Saving…";
+        const {data,error}=await db.functions.invoke("update-product-inventory",{body:payload});
+        if(error||!data||data.error){window.alert(data?.error||"Inventory update failed. Refresh and try again.");button.disabled=false;button.textContent="Save inventory";return;}
+        button.textContent="Saved";await refreshInventory();
+      }));
+    };
+    section.querySelector("#cicTeamInventoryRefresh").onclick=refreshInventory;
+    refreshInventory();
+  }
   root.querySelector("#cicStaffSignOut").onclick=async()=>{const client=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;if(client)await client.auth.signOut();root.remove();};
 };
 })();
