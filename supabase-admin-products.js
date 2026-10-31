@@ -177,7 +177,7 @@
     } finally {if(btn){btn.disabled=false;btn.textContent=idleText;}}
   }
 
-  async async function saveProduct(event) {
+  async function saveProduct(event) {
     event.preventDefault();
     if(!await checkAccess()){say("Owner access required.",true);return;}
     const name=$("#cicProdName").value.trim(), category=$("#cicProdCategory").value, price=Number($("#cicProdPrice").value);
