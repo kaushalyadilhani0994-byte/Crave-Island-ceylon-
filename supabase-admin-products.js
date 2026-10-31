@@ -203,7 +203,7 @@
       const productId=String(saved.id),slug="cic-"+productId.toLowerCase(),passportUrl=location.origin+"/passport.html?slug="+encodeURIComponent(slug);
       const {data:oldPassport,error:oldError}=await client.from("product_passports").select("published,origin,public_story").eq("product_id",productId).maybeSingle();
       if(oldError)throw oldError;
-      const passport={product_id:productId,public_slug:slug,ingredients:ingredients.split(/[,;\n]/).map(x=>x.trim()).filter(Boolean),allergen_information:allergens.split(/[,;\n]/).map(x=>x.trim()).filter(Boolean),batch_code:batch||null,best_before:expiryDate,storage_instructions:storage||null,origin:oldPassport?.origin||null,public_story:oldPassport?.public_story||null,published:oldPassport?.published===true,updated_at:new Date().toISOString()};
+      const passport={product_id:productId,public_slug:slug,manufacturing_date:mfgDate,ingredients:ingredients.split(/[,;\n]/).map(x=>x.trim()).filter(Boolean),allergen_information:allergens.split(/[,;\n]/).map(x=>x.trim()).filter(Boolean),batch_code:batch||null,best_before:expiryDate,storage_instructions:storage||null,origin:oldPassport?.origin||null,public_story:oldPassport?.public_story||null,published:oldPassport?.published===true,updated_at:new Date().toISOString()};
       const {error:passportError}=await client.from("product_passports").upsert(passport,{onConflict:"product_id"});
       if(passportError)throw new Error("Product saved, but its QR passport could not be created: "+passportError.message);
       const {error:qrError}=await client.from("products").update({qr_code:passportUrl}).eq("id",productId);
