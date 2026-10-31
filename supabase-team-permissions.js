@@ -12,7 +12,7 @@
   const roles = [["supervisor","Supervisor"],["staff","Staff"],["media","Media"],["accounts","Accounts"],["star_club","Star Club"]];
   const presets = {
     supervisor:{orders:["read","update"],inventory:["read","update"],dispatch:["read","update"],tasks:["read","create","update"],reports:["read"]},
-    staff:{tasks:["read","update"],inventory:["read"],orders:["read"]},
+    staff:{tasks:["read","update"]},
     media:{media:["read","create","update","delete","approve","export"]},
     accounts:{accounts:["read","create","update","approve","export"],orders:["read"]},
     star_club:{star_club:["read","create","update","approve"],reports:["read"]}
@@ -116,6 +116,8 @@
     document.querySelectorAll("#cicTpEditor input[type=checkbox]").forEach(cb=>cb.addEventListener("change",()=>{
       const mod=cb.dataset.module,act=cb.dataset.action;permissions[mod]=permissions[mod]||[];
       permissions[mod]=permissions[mod].filter(x=>x!==act);if(cb.checked)permissions[mod].push(act);
+      if(permissions[mod].some(x=>x!=="read")&&!permissions[mod].includes("read"))permissions[mod].push("read");
+      if(act==="read"&&!cb.checked&&permissions[mod].length){permissions[mod]=[];document.querySelectorAll(`#cicTpEditor input[data-module="${mod}"]`).forEach(x=>{if(x.dataset.action!=="read")x.checked=false;});}
       if(!permissions[mod].length)delete permissions[mod];
     }));
   }
