@@ -17,12 +17,12 @@
       #cicOwnerCatalogue .cic-panel{background:#FFF8E7;color:#2C1A14;border:1px solid #D4AF37;border-radius:16px;width:min(900px,100%);margin:auto;padding:20px;box-shadow:0 15px 50px #0005;font:14px system-ui}
       #cicOwnerCatalogue h2,#cicOwnerCatalogue h3{margin:0 0 12px;color:#2C1A14}
       #cicOwnerCatalogue .cic-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-      #cicOwnerCatalogue label{display:block;font-size:12px;font-weight:650;margin:8px 0 4px}
-      #cicOwnerCatalogue input,#cicOwnerCatalogue textarea,#cicOwnerCatalogue select{box-sizing:border-box;width:100%;padding:10px;border:1px solid #d6c7b5;border-radius:8px;background:white;color:#2C1A14;font:14px system-ui}
+      #cicOwnerCatalogue label{display:block;color:#24150f;font-size:12px;font-weight:750;margin:8px 0 4px}
+      #cicOwnerCatalogue input,#cicOwnerCatalogue textarea,#cicOwnerCatalogue select{box-sizing:border-box;width:100%;min-height:42px;padding:10px;border:1px solid #9b806b;border-radius:8px;background:#fff;color:#24150f;font:14px system-ui}#cicOwnerCatalogue input::placeholder,#cicOwnerCatalogue textarea::placeholder{color:#6b5a50;opacity:1}#cicOwnerCatalogue input:focus,#cicOwnerCatalogue textarea:focus,#cicOwnerCatalogue select:focus{outline:3px solid #D4AF37;outline-offset:1px;border-color:#2C1A14}
       #cicOwnerCatalogue textarea{min-height:64px;resize:vertical}
       #cicOwnerCatalogue button{border:1px solid #D4AF37;border-radius:8px;padding:10px 13px;background:#2C1A14;color:#FFF8E7;font-weight:650;cursor:pointer}
       #cicOwnerCatalogue button[disabled]{opacity:.55;cursor:wait}
-      #cicOwnerCatalogue .cic-muted{color:#77665b;font-size:12px;line-height:1.5}
+      #cicOwnerCatalogue .cic-muted{color:#59463b;font-size:12px;line-height:1.55}
       #cicOwnerCatalogue .cic-card{border:1px solid #e2d5c4;border-radius:10px;padding:12px;margin:8px 0;display:flex;gap:12px;align-items:center;justify-content:space-between}
       #cicOwnerCatalogue .cic-message{padding:10px;border-radius:8px;background:#f0e5d4;margin:10px 0;white-space:pre-wrap}
       #cicOwnerCatalogue .cic-section{border-top:1px solid #e3d5c3;margin-top:18px;padding-top:16px}
@@ -50,9 +50,10 @@
       <form id="cicProductForm">
         <div class="cic-grid"><div><label for="cicProdName">Product name *</label><input id="cicProdName" maxlength="160" required></div><div><label for="cicProdPrice">Price (LKR) *</label><input id="cicProdPrice" type="number" min="0.01" max="2000000" step="0.01" required></div>
         <div><label for="cicProdCategory">Collection *</label><select id="cicProdCategory" required><option value="">Create a collection first</option></select></div><div><label for="cicProdImage">Product image URL (optional)</label><input id="cicProdImage" type="url" maxlength="1500"></div></div>
-        <label for="cicProdDesc">Product description</label><textarea id="cicProdDesc" maxlength="3000"></textarea>
-        <label for="cicProdIngredients">Ingredients / allergen information *</label><textarea id="cicProdIngredients" maxlength="5000" required placeholder="Enter the verified ingredient list and clear allergen information"></textarea>
-        <div class="cic-grid"><div><label for="cicProdBatch">Batch number (optional)</label><input id="cicProdBatch" maxlength="100"></div><div><label for="cicProdQr">QR code / traceability value (optional)</label><input id="cicProdQr" maxlength="500"></div><div><label for="cicProdStock">Stock quantity</label><input id="cicProdStock" type="number" min="0" max="1000000" step="1" value="0"></div><div><label for="cicProdLowStock">Low-stock warning threshold</label><input id="cicProdLowStock" type="number" min="0" max="1000000" step="1" value="5"></div><div><label for="cicProdExpiry">Expiry / best-before date</label><input id="cicProdExpiry" type="date"></div><div><label><input id="cicProdTrackStock" type="checkbox" style="width:auto"> Track stock and alerts for this product</label></div></div>
+        <label for="cicProdDesc">Product description</label><textarea id="cicProdDesc" maxlength="3000" placeholder="Describe the product clearly for customers"></textarea>
+        <label for="cicProdIngredients">Ingredients *</label><textarea id="cicProdIngredients" maxlength="5000" required placeholder="Enter the exact verified ingredient list"></textarea>
+        <label for="cicProdAllergens">Allergen information</label><textarea id="cicProdAllergens" maxlength="2000" placeholder="Declared allergens and cross-contact information (if applicable)"></textarea>
+        <div class="cic-grid"><div><label for="cicProdBatch">Batch / lot number</label><input id="cicProdBatch" maxlength="100" placeholder="e.g. CIC-CHO-001"></div><div><label for="cicProdMfg">Manufacturing date</label><input id="cicProdMfg" type="date"></div><div><label for="cicProdExpiry">Expiry / best-before date</label><input id="cicProdExpiry" type="date"></div><div><label for="cicProdStorage">Storage place / location</label><input id="cicProdStorage" maxlength="180" placeholder="e.g. Dry store · Shelf A2"></div><div><label for="cicProdStock">Stock quantity</label><input id="cicProdStock" type="number" min="0" max="1000000" step="1" value="0"></div><div><label for="cicProdLowStock">Low-stock warning threshold</label><input id="cicProdLowStock" type="number" min="0" max="1000000" step="1" value="5"></div><div><label><input id="cicProdTrackStock" type="checkbox" style="width:auto"> Track stock and alerts for this product</label></div></div><p class="cic-muted">Date added is recorded automatically. A unique product QR passport link will be generated and attached when you save.</p>
         <button type="submit">Save product as draft</button>
       </form></div>
       <div class="cic-section"><div style="display:flex;gap:10px;align-items:center;justify-content:space-between"><h3>3. Live catalogue</h3><button type="button" id="cicOwnerCatalogueRefresh">Refresh</button></div><div id="cicOwnerCatalogueList" aria-live="polite"></div></div>
@@ -85,7 +86,7 @@
     say("Loading collections and products…");
     const [cats,products]=await Promise.all([
       client.from("categories").select("id,name,description,image_url,is_active,sort_order,parent_id").order("sort_order").order("name"),
-      client.from("products").select("id,name,category,price,currency,is_active,ingredients,batch_number,qr_code,description,image_url,stock_quantity,low_stock_threshold,track_inventory,expiry_date,sku").order("created_at",{ascending:false})
+      client.from("products").select("id,name,category,price,currency,is_active,ingredients,allergen_information,batch_number,qr_code,description,image_url,stock_quantity,low_stock_threshold,track_inventory,expiry_date,manufacturing_date,storage_location,created_at,sku").order("created_at",{ascending:false})
     ]);
     if(cats.error||products.error){say("Catalogue could not be loaded. Check the categories/products table access and try Refresh.",true);return;}
     productRows=products.data||[];
@@ -93,7 +94,7 @@
     select.innerHTML='<option value="">Choose a category or subcategory</option>'+(cats.data||[]).filter(c=>c.is_active).map(c=>{const parent=(cats.data||[]).find(p=>p.id===c.parent_id);return '<option value="'+esc(c.name)+'">'+(parent?esc(parent.name)+' › ':'')+esc(c.name)+'</option>';}).join("");
      const parentSelect=$("#cicCatParent"); if(parentSelect)parentSelect.innerHTML='<option value="">Main category</option>'+(cats.data||[]).filter(c=>!c.parent_id).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join("");
     const catList=(cats.data||[]).map(c=>{const parent=(cats.data||[]).find(p=>p.id===c.parent_id);return '<div class="cic-card"><div><b>'+(parent?esc(parent.name)+' › ':'')+esc(c.name)+'</b><div class="cic-muted">'+(c.parent_id?"Subcategory · ":"Main category · ")+(c.is_active?"Active":"Hidden")+'</div></div><button type="button" data-cic-category-toggle="'+esc(c.id)+'" data-active="'+String(!!c.is_active)+'">'+(c.is_active?"Hide":"Activate")+'</button></div>';}).join("");
-    const prodList=productRows.map(p=>'<div class="cic-card"><div><b>'+esc(p.name)+'</b><div class="cic-muted">'+esc(p.category||"Uncategorised")+' · '+money(p.price)+' · '+(p.is_active?"Active":"Hidden")+'</div><div class="cic-muted">'+(p.track_inventory?"Stock: "+Number(p.stock_quantity||0)+" · Low-stock threshold: "+Number(p.low_stock_threshold||5):"Stock tracking off")+(p.expiry_date?" · Best before: "+esc(p.expiry_date):" · No expiry date recorded")+(p.sku?" · SKU: "+esc(p.sku):"") +'</div></div><div><button type="button" data-cic-product-edit="'+esc(p.id)+'">Edit details</button> <button type="button" data-cic-product-toggle="'+esc(p.id)+'" data-active="'+String(!!p.is_active)+'">'+(p.is_active?"Hide product":"Activate product")+'</button></div></div>').join("");
+    const prodList=productRows.map(p=>'<div class="cic-card"><div><b>'+esc(p.name)+'</b><div class="cic-muted">'+esc(p.category||"Uncategorised")+' · '+money(p.price)+' · '+(p.is_active?"Active":"Hidden")+'</div><div class="cic-muted">'+(p.track_inventory?"Stock: "+Number(p.stock_quantity||0)+" · Low-stock threshold: "+Number(p.low_stock_threshold||5):"Stock tracking off")+(p.manufacturing_date?" · MFG: "+esc(p.manufacturing_date):" · MFG not set")+(p.expiry_date?" · Expiry: "+esc(p.expiry_date):" · No expiry date recorded")+(p.batch_number?" · Batch: "+esc(p.batch_number):"")+(p.storage_location?" · Stored: "+esc(p.storage_location):"")+(p.created_at?" · Added: "+esc(new Date(p.created_at).toLocaleDateString()):"")+(p.sku?" · SKU: "+esc(p.sku):"") +'</div></div><div><button type="button" data-cic-product-edit="'+esc(p.id)+'">Edit details</button> <button type="button" data-cic-product-toggle="'+esc(p.id)+'" data-active="'+String(!!p.is_active)+'">'+(p.is_active?"Hide product":"Activate product")+'</button></div></div>').join("");
     $("#cicOwnerCatalogueList").innerHTML='<h3 style="margin-top:14px">Collections ('+(cats.data||[]).length+')</h3>'+(catList||'<p class="cic-muted">No collections yet. Create one above.</p>')+'<h3 style="margin-top:18px">Products ('+(products.data||[]).length+')</h3>'+(prodList||'<p class="cic-muted">No products yet. Add verified product details above.</p>');
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-category-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("categories",btn.getAttribute("data-cic-category-toggle"),btn.getAttribute("data-active")==="true")));
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-product-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("products",btn.getAttribute("data-cic-product-toggle"),btn.getAttribute("data-active")==="true")));
@@ -110,8 +111,8 @@
       const option=document.createElement("option"); option.value=p.category; option.textContent=p.category+" (inactive collection)"; categorySelect.appendChild(option);
     }
     categorySelect.value=p.category||""; $("#cicProdImage").value=p.image_url||"";
-    $("#cicProdDesc").value=p.description||""; $("#cicProdIngredients").value=p.ingredients||"";
-    $("#cicProdBatch").value=p.batch_number||""; $("#cicProdQr").value=p.qr_code||""; $("#cicProdStock").value=Number(p.stock_quantity||0); $("#cicProdLowStock").value=Number(p.low_stock_threshold||5); $("#cicProdExpiry").value=p.expiry_date||""; $("#cicProdTrackStock").checked=Boolean(p.track_inventory);
+    $("#cicProdDesc").value=p.description||""; $("#cicProdIngredients").value=p.ingredients||""; $("#cicProdAllergens").value=p.allergen_information||"";
+    $("#cicProdBatch").value=p.batch_number||""; $("#cicProdStock").value=Number(p.stock_quantity||0); $("#cicProdLowStock").value=Number(p.low_stock_threshold||5); $("#cicProdMfg").value=p.manufacturing_date||""; $("#cicProdExpiry").value=p.expiry_date||""; $("#cicProdStorage").value=p.storage_location||""; $("#cicProdTrackStock").checked=Boolean(p.track_inventory);
     const button=form.querySelector("button[type=submit]"); if(button)button.textContent="Update live product";
     say("Editing "+p.name+". Save changes to update the live catalogue."); form.scrollIntoView({behavior:"smooth",block:"start"});
   }
@@ -177,34 +178,44 @@
   }
 
   async function saveProduct(event) {
-    event.preventDefault(); if(!await checkAccess()){say("Owner access required.",true);return;}
+    event.preventDefault();
+    if(!await checkAccess()){say("Owner access required.",true);return;}
     const name=$("#cicProdName").value.trim(), category=$("#cicProdCategory").value, price=Number($("#cicProdPrice").value);
-    const ingredients=$("#cicProdIngredients").value.trim(), imageUrl=$("#cicProdImage").value.trim();
-    if(!name||!category||!ingredients||!Number.isFinite(price)||price<=0||price>2000000){say("Enter product name, collection, verified ingredients/allergens, and a valid LKR price.",true);return;}
+    const ingredients=$("#cicProdIngredients").value.trim(), allergens=$("#cicProdAllergens").value.trim(), imageUrl=$("#cicProdImage").value.trim();
+    const batch=$("#cicProdBatch").value.trim(), mfgDate=$("#cicProdMfg").value||null, expiryDate=$("#cicProdExpiry").value||null, storage=$("#cicProdStorage").value.trim();
+    if(!name||!category||!ingredients||!Number.isFinite(price)||price<=0||price>2000000){say("Enter product name, collection, verified ingredients, and a valid LKR price.",true);return;}
     if(imageUrl&&!/^https:\/\//i.test(imageUrl)){say("Product image URL must start with https://.",true);return;}
-    const btn=event.submitter; if(btn){btn.disabled=true;btn.textContent="Saving…";}
-    const editId=event.target.dataset.editId||"";
-    const existingProduct=productRows.find(row=>String(row.id)===String(editId));
-    // New products remain hidden drafts until an owner explicitly activates them after review.
-    // Editing an existing product must preserve its current visibility state.
-    const stockQuantity=Number($("#cicProdStock").value||0), lowStockThreshold=Number($("#cicProdLowStock").value||5), expiryDate=$("#cicProdExpiry").value||null;
-     if(!Number.isInteger(stockQuantity)||stockQuantity<0||!Number.isInteger(lowStockThreshold)||lowStockThreshold<0){say("Stock and low-stock threshold must be whole numbers of zero or more.",true);if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}return;}
-     const row={name,category,price,currency:"LKR",description:$("#cicProdDesc").value.trim()||null,image_url:imageUrl||null,ingredients,batch_number:$("#cicProdBatch").value.trim()||null,qr_code:$("#cicProdQr").value.trim()||null,stock_quantity:stockQuantity,low_stock_threshold:lowStockThreshold,expiry_date:expiryDate,track_inventory:$("#cicProdTrackStock").checked,is_active:editId?Boolean(existingProduct&&existingProduct.is_active):false};
-    let result;
+    if(mfgDate&&expiryDate&&mfgDate>expiryDate){say("Manufacturing date cannot be later than the expiry / best-before date.",true);return;}
+    const btn=event.submitter;if(btn){btn.disabled=true;btn.textContent="Saving product…";}
+    const form=event.target, editId=form.dataset.editId||"", existing=productRows.find(row=>String(row.id)===String(editId));
+    const stockQuantity=Number($("#cicProdStock").value||0),lowStockThreshold=Number($("#cicProdLowStock").value||5);
+    if(!Number.isInteger(stockQuantity)||stockQuantity<0||!Number.isInteger(lowStockThreshold)||lowStockThreshold<0){say("Stock and low-stock threshold must be whole numbers of zero or more.",true);if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}return;}
+    const row={name,category,price,currency:"LKR",description:$("#cicProdDesc").value.trim()||null,image_url:imageUrl||null,ingredients,allergen_information:allergens||null,batch_number:batch||null,stock_quantity:stockQuantity,low_stock_threshold:lowStockThreshold,manufacturing_date:mfgDate,expiry_date:expiryDate,storage_location:storage||null,track_inventory:$("#cicProdTrackStock").checked,is_active:editId?Boolean(existing&&existing.is_active):false};
     try {
-      result=editId?await client.from("products").update(row).eq("id",editId):await client.from("products").insert(row);
-    } catch(error) {
-      if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}
-      say("Product save failed: "+String(error&&error.message||"Network error").slice(0,180),true);return;
-    }
-    if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}
-    if(result.error){
-      const code=result.error.code?String(result.error.code)+" · ":"";
-      say("Product save failed: "+code+String(result.error.message||"Check the owner permissions and fields").slice(0,180),true);return;
-    }
-    event.target.reset(); delete event.target.dataset.editId; const saveButton=event.target.querySelector("button[type=submit]"); if(saveButton)saveButton.textContent="Save product as draft";
-    say(editId?"Product details updated; its previous visibility setting was preserved.":"Product saved as a hidden draft. Review the details and activate it only when ready to sell."); await loadAll();
-    if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function") await window.CIC_SUPABASE.refreshCatalogue();
+      let saved;
+      if(editId){
+        const result=await client.from("products").update(row).eq("id",editId).select("id").single();
+        if(result.error)throw result.error;saved=result.data;
+      }else{
+        const result=await client.from("products").insert(row).select("id").single();
+        if(result.error)throw result.error;saved=result.data;
+      }
+      const productId=String(saved.id),slug="cic-"+productId.toLowerCase(),passportUrl=location.origin+"/passport.html?slug="+encodeURIComponent(slug);
+      const {data:oldPassport,error:oldError}=await client.from("product_passports").select("published,origin,public_story").eq("product_id",productId).maybeSingle();
+      if(oldError)throw oldError;
+      const passport={product_id:productId,public_slug:slug,ingredients:ingredients.split(/[,;\n]/).map(x=>x.trim()).filter(Boolean),allergen_information:allergens.split(/[,;\n]/).map(x=>x.trim()).filter(Boolean),batch_code:batch||null,best_before:expiryDate,storage_instructions:storage||null,origin:oldPassport?.origin||null,public_story:oldPassport?.public_story||null,published:oldPassport?.published===true,updated_at:new Date().toISOString()};
+      const {error:passportError}=await client.from("product_passports").upsert(passport,{onConflict:"product_id"});
+      if(passportError)throw new Error("Product saved, but its QR passport could not be created: "+passportError.message);
+      const {error:qrError}=await client.from("products").update({qr_code:passportUrl}).eq("id",productId);
+      if(qrError)throw new Error("Product and passport saved, but QR link could not be attached: "+qrError.message);
+      form.reset();delete form.dataset.editId;const saveButton=form.querySelector("button[type=submit]");if(saveButton)saveButton.textContent="Save product as draft";
+      say((editId?"Product updated. ":"Product saved as a hidden draft. ")+"Unique QR passport created and attached. Date added is automatic. Publish the passport before printing labels for customer scans. QR: "+passportUrl);
+      await loadAll();
+      if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function")await window.CIC_SUPABASE.refreshCatalogue();
+    }catch(error){
+      const detail=String(error&&error.message||"Network or permission error").slice(0,220);
+      say("Product save issue: "+detail,true);
+    }finally{if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}}
   }
 
   function init() {
