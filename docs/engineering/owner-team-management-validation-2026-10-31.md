@@ -1,65 +1,62 @@
-# Team-management draft validation — 2026-10-31
+# Team Management validation status — 2026-10-31
 
-## Validation performed
+## Live read-only checks completed
 
-The isolated owner team-management draft was reviewed and checked without touching production data.
+- Confirmed `staff_profiles` schema and current profile count (one approved owner; no staff test accounts).
+- Inspected live definitions and grants for `owner_list_team_members`, `owner_set_team_member_access`, `private.has_staff_permission`, and `private.is_approved_owner`.
+- Confirmed both public owner RPCs are SECURITY INVOKER and executable by authenticated users; the mutation RPC independently calls the approved-owner check.
+- Confirmed the actual live permission modules/actions and read-scope validation.
+- Confirmed the active `owner-invite-team-member` v1 Edge Function verifies bearer JWT and approved owner, restricts roles, and creates pending profiles.
+- Confirmed there is no team audit table in public/private schemas.
+- Confirmed no Team Management UI or callsite for `owner_list_team_members` exists in the current main source.
+- Confirmed five team-related migrations are present in live Supabase migration history but their SQL files are missing from GitHub main migration directory.
+- Confirmed no staging Supabase branches exist.
+- Reviewed active `update-order-status` v5 and `update-product-inventory` v2 role enforcement.
+- Identified an over-escaped ISO expiry-date regex in live inventory function v2; corrected source remains review-only.
 
-### Passed checks
+## Blocking gaps
 
-- Node.js v22 TypeScript syntax check using `node --experimental-strip-types --check` on the Edge Function source: passed.
-- Edge Function has explicit POST-only handling and OPTIONS preflight.
-- Missing bearer token is rejected with 401.
-- Supabase Auth resolves the bearer token with `auth.getUser()`; invalid sessions are rejected with 401.
-- Actor must have `staff_profiles.role = owner` and `approved = true`; otherwise 403.
-- List action is restricted to the inviteable roles: supervisor, staff, media, accounts, star_club.
-- Mutation action allowlist is exactly approve, suspend, set_permissions.
-- Target must be a UUID.
-- Function does not accept a requested role and cannot promote anyone to owner.
-- Mutations are delegated to a service-role-only SQL RPC; the SQL RPC repeats the approved-owner check and locks the target profile.
-- SQL RPC rejects owner targets and unsupported roles.
-- Permission modules/actions are allowlisted and permission values must be arrays.
-- Before/after state is written to the audit table in the same transaction as the profile change.
-- Audit actor/target IDs are retained as UUID values without restrictive auth-user foreign keys, so deleting a former team auth account will not erase or block retained audit history.
-- Audit table has RLS and an approved-owner SELECT policy; anon/authenticated direct writes are revoked.
-- SQL RPC execute privilege is revoked from public/anon/authenticated and granted only to service_role.
-- Internal database error details are not returned to the browser.
-- Migration version collision was found and corrected: the team migration now uses `202610310003`, after existing `202610310001` and `202610310002`.
+1. Migration history drift must be reconciled before any new migration.
+2. Team permission changes currently have no before/after audit trail.
+3. Invite creation and staff-profile upsert are separate; partial failure can leave an invited Auth user without a profile.
+4. Existing UI is owner-only and does not expose Team Management.
+5. No staff test identities exist; role-based positive/negative integration tests cannot be run without staging identities.
+6. No staging Supabase branch exists; creating one may incur usage charges, so none was created.
 
-## Test matrix for staging
+## Required staging test matrix
 
-| Scenario | Expected result |
+| Test | Expected |
 |---|---|
-| No bearer token | 401 |
-| Invalid/expired session | 401 |
-| Customer account | 403 |
-| Unapproved staff | 403 |
-| Approved non-owner staff | 403 |
-| Approved owner list request | 200; only inviteable roles returned |
-| Owner approves pending staff | approved becomes true; audit row added |
-| Owner suspends staff | approved becomes false; audit row added |
-| Owner assigns valid permissions | JSONB permissions replaced; audit row added |
-| Attempt to modify owner target | rejected; no state change |
-| Attempt to set unsupported role | rejected |
-| Unknown permission module/action | rejected |
-| Permission module value is not array | rejected |
-| Missing target | 404/rejected |
-| Malformed UUID | 400 |
-| Audit insert failure | profile mutation rolls back with transaction |
-| Browser tries direct audit INSERT/UPDATE/DELETE | denied |
-| Anonymous caller tries RPC | denied |
+| Anonymous caller invokes owner list/mutation RPC | denied |
+| Customer invokes owner list/mutation RPC | denied |
+| Unapproved staff invokes owner list/mutation RPC | denied |
+| Approved non-owner staff invokes owner list/mutation RPC | denied |
+| Approved owner lists members | allowed; no owner mutation controls |
+| Owner invites each permitted role | invite created, profile pending, empty permissions |
+| Invite/profile upsert failure | compensating cleanup or recoverable state; no silent orphan |
+| Owner approves member | approved=true and audit before/after row |
+| Owner suspends member | approved=false and audit row |
+| Owner changes permissions | only live allowlist; read required for write actions; audit row |
+| Owner attempts to target owner profile | denied |
+| Unsupported role/module/action | denied |
+| Non-owner writes audit table directly | denied |
+| Audit insert fails | role/permission update rolls back |
+| Customer reads another customer's orders | denied |
+| Dispatch-only staff updates processing→shipped | allowed |
+| Dispatch-only staff confirms/cancels order | denied |
+| Orders-update staff follows allowed transition matrix | allowed |
+| Inventory staff updates valid stock/date | allowed |
+| Invalid/impossible date | rejected |
+| Inventory staff without inventory.update | denied |
 
-## Not yet passed / not executed
+## Not executed
 
-- No isolated Supabase staging project is currently available in this workflow; therefore the migration has not been applied anywhere.
-- No PostgreSQL parser/catalog validation has been run.
-- No Deno runtime execution or live HTTP integration tests have been run.
-- No real owner/staff test identities have been created.
-- No UI integration or role-permission end-to-end test has been run.
-
-## Important compatibility gate
-
-The current database permission helper expects JSON shaped as `{ module: ["action", ...] }`. The proposed module/action allowlist is a draft contract. Before enabling UI controls, verify each permission against the actual owner/staff UI and backend action callsites. Do not assume a permission is enforced just because it is stored.
+- No staging database or branch was available.
+- No live Edge Function request was sent using a test account.
+- No real invitation, approval, suspension, permission mutation, order, or inventory mutation was performed.
+- No Deno runtime integration test was run.
+- No UI was changed or deployed.
 
 ## Deployment status
 
-Review branch only. Not merged, not deployed, no migration applied, no Edge Function replaced, no invitations sent, no staff approvals/permissions changed, and no production Admin layout/auth/navigation changes.
+No live database changes, no Edge Function deployment, no staff invitations, no team permission changes, no product/order/inventory writes, no owner email/OTP changes, no production merge, and no Vercel deployment.
