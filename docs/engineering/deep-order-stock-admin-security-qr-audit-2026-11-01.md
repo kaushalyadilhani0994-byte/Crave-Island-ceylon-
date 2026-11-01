@@ -210,3 +210,11 @@ Read-only production counts at the time of this check: 1 product total, 0 active
 - A final static SQL review caught ambiguous set-returning JSON array aliases in the staged order RPC. The product-row lock query and order-line insert now use explicit `item(value)` / `line(value)` aliases and dereference the JSONB value column, avoiding record-vs-JSONB operator resolution errors.
 - The Edge Function now rejects JSON `null`, arrays, and primitive request bodies with HTTP 400 before accessing checkout fields, rather than allowing malformed request shapes to fall into the generic 500 handler.
 - These are review-branch-only fixes. No PostgreSQL migration execution, production RPC call, Edge Function deployment, branch merge, or Vercel deployment was performed. Isolated PostgreSQL tests remain mandatory before any release.
+
+
+## Database-boundary order item validation — 2026-11-01
+
+- Added a second validation layer inside the service-role-only atomic order RPC. Every item must be a JSON object with a canonical UUID product ID and an integer-form quantity before any UUID cast or product-row lock query runs.
+- This prevents malformed direct RPC payloads from reaching the row-lock query and surfacing as an unhandled UUID-cast error. The Edge Function retains its own matching input validation.
+- Duplicate-line detection now runs only after required item fields have been validated, so missing product IDs cannot be misclassified as duplicate lines.
+- Review-branch only; this SQL has not been executed against production or an isolated PostgreSQL test database.
