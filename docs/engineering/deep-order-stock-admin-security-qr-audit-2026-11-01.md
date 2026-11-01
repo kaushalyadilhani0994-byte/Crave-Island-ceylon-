@@ -225,3 +225,9 @@ Read-only production counts at the time of this check: 1 product total, 0 active
 - Updated the staged `update-order-status` Edge Function to reject anonymous Supabase sessions, malformed JSON shapes (including null, arrays and primitives), and non-canonical UUID order IDs before querying the order table.
 - Existing approved staff-profile and per-module `orders.update` / `dispatch.update` checks and status-transition rules are retained.
 - This is review-branch source only. The production function remains at its previously inspected deployed version until separately tested and explicitly approved for deployment.
+
+
+## Owner alert endpoint request-shape hardening — 2026-11-01
+
+- The staged `owner-alert-notify` Edge Function now rejects JSON null, arrays and primitive payloads with HTTP 400 before reading the requested action. Scheduled-secret validation and approved-owner checks remain unchanged.
+- This avoids malformed client payloads causing unhandled property-access errors. It does not change Telegram secrets, cron configuration, or production function versions.
