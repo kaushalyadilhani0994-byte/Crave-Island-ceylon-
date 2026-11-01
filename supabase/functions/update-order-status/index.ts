@@ -23,7 +23,7 @@ Deno.serve(async (req: Request) => {
   try {
     const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
     const { data: authData, error: authError } = await admin.auth.getUser(token);
-    if (authError || !authData.user) return reply(401, { error: "Session invalid or expired." });
+    if (authError || !authData.user || authData.user.is_anonymous) return reply(401, { error: "A valid registered account is required." });
 
     const { data: staff, error: staffError } = await admin.from("staff_profiles")
       .select("role,approved,permissions").eq("id", authData.user.id).maybeSingle();
@@ -38,11 +38,15 @@ Deno.serve(async (req: Request) => {
       return reply(403, { error: "Your account does not have order-status update permission." });
     }
 
-    let body: Record<string, unknown>;
-    try { body = await req.json(); } catch { return reply(400, { error: "Invalid JSON." }); }
+    let parsedBody: unknown;
+    try { parsedBody = await req.json(); } catch { return reply(400, { error: "Invalid JSON." }); }
+    if (!parsedBody || typeof parsedBody !== "object" || Array.isArray(parsedBody)) {
+      return reply(400, { error: "Request body must be a JSON object." });
+    }
+    const body = parsedBody as Record<string, unknown>;
     const orderId = typeof body.order_id === "string" ? body.order_id.trim() : "";
     const next = typeof body.order_status === "string" ? body.order_status.trim() : "";
-    if (!/^[0-9a-f-]{36}$/i.test(orderId)) return reply(400, { error: "Valid order ID required." });
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(orderId)) return reply(400, { error: "Valid order ID required." });
     if (!["confirmed", "processing", "shipped", "delivered", "cancelled"].includes(next)) {
       return reply(400, { error: "Unsupported order status." });
     }
