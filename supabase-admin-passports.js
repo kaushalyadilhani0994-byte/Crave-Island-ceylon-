@@ -70,7 +70,13 @@ async function save(e){
 e.preventDefault();
 if(passportSaving)return;
 passportSaving=true;
-try{await savePassport(e)}finally{passportSaving=false}
+const form=$("#cicPassportForm");
+const controls=Array.from(form.elements).map(el=>({el,disabled:el.disabled}));
+controls.forEach(({el})=>{el.disabled=true;});
+try{await savePassport(e)}finally{
+controls.forEach(({el,disabled})=>{el.disabled=disabled;});
+passportSaving=false;
+}
 }
 async function savePassport(e){
 e.preventDefault();if(!await owner()){message("Owner session expired. Please sign in again.");return}
