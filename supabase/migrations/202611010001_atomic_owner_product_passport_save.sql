@@ -265,8 +265,10 @@ begin
 
   perform pg_advisory_xact_lock(hashtextextended(v_owner_id::text || ':passport:' || p_product_id::text, 0));
 
+  -- Serialize publication against concurrent product activation/deactivation.
   select name, is_active into v_product_name, v_is_active
-  from public.products where id = p_product_id;
+  from public.products where id = p_product_id
+  for update;
   if not found then
     raise exception 'Product not found' using errcode = 'P0002';
   end if;
