@@ -152,7 +152,7 @@ A first implementation is now present on `review/atomic-order-idempotency` only:
 A second write-path issue was found in the existing Owner · QR Passports panel: it also performed a direct browser upsert to `product_passports` followed by a separate `products.qr_code` update. The live grants reviewed earlier block those direct passport writes, and the two-step flow could leave the QR link and passport out of sync.
 
 The review branch now adds `public.owner_update_product_passport(uuid, jsonb)` to the same review-only migration and routes the existing passport form through that RPC. It:
-- requires the approved owner and authenticated execution;
+- exposes only SECURITY INVOKER wrappers; privileged implementations stay in the non-exposed private schema and require the approved owner;
 - validates the product, ingredient list, dates, field lengths and publish state;
 - refuses public publishing while the product is inactive;
 - writes passport fields and the canonical production QR URL in one transaction;
@@ -160,4 +160,4 @@ The review branch now adds `public.owner_update_product_passport(uuid, jsonb)` t
 
 The QR label and copy UI remain in the existing Owner · QR Passports panel. Both the catalogue-save and passport-publish browser flows no longer write directly to `product_passports`.
 
-Static V8 syntax checks pass for both modified JavaScript files. No SQL has been executed, no QR has been physically scanned, and no production data/schema/deployment has been changed. Staging execution and the owner/staff/customer/anon permission matrix remain mandatory before release.
+Static V8 syntax checks pass for the modified JavaScript files. The function design follows Supabase guidance to keep SECURITY DEFINER functions out of exposed schemas and use an empty search path. No SQL has been executed, no QR has been physically scanned, and no production data/schema/deployment has been changed. Staging execution and the owner/staff/customer/anon permission matrix remain mandatory before release.
