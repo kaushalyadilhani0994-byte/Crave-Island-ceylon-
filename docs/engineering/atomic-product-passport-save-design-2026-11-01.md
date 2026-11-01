@@ -81,3 +81,16 @@ For updates, require a product UUID and update only that product. Preserve its c
 ## Decision
 
 Do not merge or deploy a partial client-side compensation workaround. Implement the single-transaction RPC only after exact policy/grant inspection and isolated staging tests. No production schema or data change is authorized by this design note.
+
+## Critical live privilege finding (read-only verified 2026-11-01)
+
+The live role/table privilege check found a more immediate blocker than the multi-request transaction design:
+
+- `authenticated` has SELECT on `public.product_passports`.
+- `authenticated` does **not** have INSERT, UPDATE, or DELETE table privilege on `public.product_passports`.
+- RLS policies exist for approved-owner INSERT/UPDATE/DELETE and team certificate permissions, but RLS policies do not grant SQL table privileges by themselves.
+- `products` does grant authenticated INSERT/UPDATE/SELECT, with owner/team RLS policies.
+
+The existing browser save sequence first commits the product INSERT/UPDATE, then attempts passport UPSERT. Because UPSERT needs INSERT and UPDATE privileges, the passport write is blocked at the SQL privilege layer before its RLS policy can authorize it. This can leave a hidden product draft (on create) or updated product fields (on edit) without the corresponding passport/QR refresh. This is a source + live privilege diagnosis; no live save was attempted.
+
+Do not fix this by adding broad privileges without reconciling the intended staff permissions and the current RLS policies. The minimum candidate is authenticated INSERT and UPDATE on `product_passports`, with the existing approved-owner and certificate-team RLS policies remaining mandatory. DELETE is not required by the current save flow and should not be granted for this fix. Before any grant, verify whether team certificate-create/update permissions are intended to write these rows and confirm no permissive policy grants unintended access. Apply only in isolated staging, test owner/staff/customer/anon cases, and then obtain explicit production approval.
