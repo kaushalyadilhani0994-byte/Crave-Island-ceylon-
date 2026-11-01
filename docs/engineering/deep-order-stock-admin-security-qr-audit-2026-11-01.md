@@ -168,3 +168,8 @@ No live Edge Function was changed during this comparison.
 - Current store_orders UPDATE RLS policy checks orders.update, dispatch.update or accounts.update, but the missing table UPDATE grant means a direct browser update remains denied. The deployed Edge Function uses its service-role client only after checking the approved profile and allowed transition. Do not add a broad authenticated UPDATE grant as a shortcut.
 - Order-item SELECT policies are separated for approved owners, customers reading their own orders, and staff with orders/dispatch/accounts read permission. There is no authenticated INSERT/DELETE policy for order lines in the inspected policy set.
 - The live stock item trigger function decrements on INSERT and increments on DELETE. The live cancellation alert trigger independently increments stock when an order changes to cancelled. This confirms the duplicate-restock hazard described above.
+
+
+## Deployed function source tracking
+
+The active production source snapshots for owner-invite-team-member (version 1) and owner-alert-notify (version 11) have now been copied into the review branch under their Supabase function directories. This is source-control recovery only; no Edge Function was redeployed. It reduces the risk of future production changes being made without a matching repository source file.
