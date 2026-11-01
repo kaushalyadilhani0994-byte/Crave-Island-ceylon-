@@ -1,0 +1,193 @@
+-- CRAVE ISLAND CEYLON
+-- Atomic owner-only product + passport + QR save.
+-- Review branch migration: do not apply to production until staging tests and explicit approval.
+
+create schema if not exists private;
+revoke all on schema private from public;
+revoke all on schema private from anon;
+grant usage on schema private to authenticated;
+
+create table if not exists private.owner_product_save_requests (
+  owner_id uuid not null,
+  request_id uuid not null,
+  product_id uuid not null,
+  request_payload jsonb not null,
+  result_payload jsonb not null,
+  created_at timestamptz not null default now(),
+  primary key (owner_id, request_id)
+);
+
+revoke all on table private.owner_product_save_requests from public, anon, authenticated;
+
+create or replace function public.owner_save_product_passport(
+  p_product_id uuid,
+  p_request_id uuid,
+  p_payload jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, public, private
+as $function$
+declare
+  v_owner_id uuid;
+  v_existing private.owner_product_save_requests%rowtype;
+  v_product_id uuid;
+  v_slug text;
+  v_qr_url text;
+  v_name text;
+  v_category text;
+  v_price numeric;
+  v_stock integer;
+  v_threshold integer;
+  v_mfg date;
+  v_expiry date;
+  v_result jsonb;
+begin
+  v_owner_id := auth.uid();
+  if v_owner_id is null or not private.is_approved_owner() then
+    raise exception 'Approved owner access required' using errcode = '42501';
+  end if;
+
+  if p_request_id is null or p_payload is null or jsonb_typeof(p_payload) <> 'object' then
+    raise exception 'A valid save request and product payload are required' using errcode = '22023';
+  end if;
+
+  -- Serialize retries with the same owner/request key, including simultaneous requests.
+  perform pg_advisory_xact_lock(hashtextextended(v_owner_id::text || ':' || p_request_id::text, 0));
+
+  select * into v_existing
+  from private.owner_product_save_requests
+  where owner_id = v_owner_id and request_id = p_request_id;
+
+  if found then
+    if v_existing.request_payload <> p_payload
+       or (p_product_id is not null and v_existing.product_id <> p_product_id) then
+      raise exception 'This save request key was already used with different product details' using errcode = '22023';
+    end if;
+    return v_existing.result_payload || jsonb_build_object('replayed', true);
+  end if;
+
+  v_name := nullif(btrim(p_payload->>'name'), '');
+  v_category := nullif(btrim(p_payload->>'category'), '');
+  if v_name is null or length(v_name) > 160 or v_category is null or length(v_category) > 160 then
+    raise exception 'Product name and collection are required' using errcode = '22023';
+  end if;
+
+  begin
+    v_price := (p_payload->>'price')::numeric;
+    v_stock := coalesce((p_payload->>'stock_quantity')::integer, 0);
+    v_threshold := coalesce((p_payload->>'low_stock_threshold')::integer, 5);
+    v_mfg := nullif(p_payload->>'manufacturing_date', '')::date;
+    v_expiry := nullif(p_payload->>'expiry_date', '')::date;
+  exception when others then
+    raise exception 'Price, stock, threshold, or date value is invalid' using errcode = '22023';
+  end;
+
+  if v_price is null or v_price <= 0 or v_price > 2000000 then
+    raise exception 'Price must be a positive LKR amount within the permitted limit' using errcode = '22023';
+  end if;
+  if v_stock < 0 or v_stock > 1000000 or v_threshold < 0 or v_threshold > 1000000 then
+    raise exception 'Stock and low-stock threshold must be whole numbers from 0 to 1000000' using errcode = '22023';
+  end if;
+  if nullif(btrim(p_payload->>'ingredients'), '') is null then
+    raise exception 'Verified ingredients are required' using errcode = '22023';
+  end if;
+  if v_mfg is not null and v_expiry is not null and v_mfg > v_expiry then
+    raise exception 'Manufacturing date cannot be later than best-before date' using errcode = '22023';
+  end if;
+  if coalesce(p_payload->>'currency', 'LKR') <> 'LKR' then
+    raise exception 'Only LKR currency is supported' using errcode = '22023';
+  end if;
+
+  if p_product_id is null then
+    insert into public.products (
+      name, category, price, currency, description, image_url, ingredients,
+      allergen_information, batch_number, stock_quantity, low_stock_threshold,
+      manufacturing_date, expiry_date, storage_location, track_inventory,
+      is_active
+    ) values (
+      v_name, v_category, v_price, 'LKR',
+      nullif(btrim(p_payload->>'description'), ''),
+      nullif(btrim(p_payload->>'image_url'), ''),
+      btrim(p_payload->>'ingredients'),
+      nullif(btrim(p_payload->>'allergen_information'), ''),
+      nullif(btrim(p_payload->>'batch_number'), ''),
+      v_stock, v_threshold, v_mfg, v_expiry,
+      nullif(btrim(p_payload->>'storage_location'), ''),
+      coalesce((p_payload->>'track_inventory')::boolean, false),
+      false
+    ) returning id into v_product_id;
+  else
+    update public.products set
+      name = v_name,
+      category = v_category,
+      price = v_price,
+      currency = 'LKR',
+      description = nullif(btrim(p_payload->>'description'), ''),
+      image_url = nullif(btrim(p_payload->>'image_url'), ''),
+      ingredients = btrim(p_payload->>'ingredients'),
+      allergen_information = nullif(btrim(p_payload->>'allergen_information'), ''),
+      batch_number = nullif(btrim(p_payload->>'batch_number'), ''),
+      stock_quantity = v_stock,
+      low_stock_threshold = v_threshold,
+      manufacturing_date = v_mfg,
+      expiry_date = v_expiry,
+      storage_location = nullif(btrim(p_payload->>'storage_location'), ''),
+      track_inventory = coalesce((p_payload->>'track_inventory')::boolean, false)
+    where id = p_product_id
+    returning id into v_product_id;
+
+    if v_product_id is null then
+      raise exception 'Product not found or not available for owner update' using errcode = 'P0002';
+    end if;
+  end if;
+
+  v_slug := 'cic-' || lower(v_product_id::text);
+  v_qr_url := 'https://craveislandceylonv18supabaseintegra.vercel.app/passport.html?slug=' || v_slug;
+
+  insert into public.product_passports (
+    product_id, public_slug, manufacturing_date, ingredients,
+    allergen_information, batch_code, best_before, storage_instructions,
+    updated_at
+  ) values (
+    v_product_id::text, v_slug, v_mfg,
+    regexp_split_to_array(btrim(p_payload->>'ingredients'), '[,;\n]+'),
+    case when nullif(btrim(p_payload->>'allergen_information'), '') is null then '{}'::text[]
+      else regexp_split_to_array(btrim(p_payload->>'allergen_information'), '[,;\n]+') end,
+    nullif(btrim(p_payload->>'batch_number'), ''),
+    v_expiry,
+    nullif(btrim(p_payload->>'storage_location'), ''),
+    now()
+  )
+  on conflict (product_id) do update set
+    public_slug = excluded.public_slug,
+    manufacturing_date = excluded.manufacturing_date,
+    ingredients = excluded.ingredients,
+    allergen_information = excluded.allergen_information,
+    batch_code = excluded.batch_code,
+    best_before = excluded.best_before,
+    storage_instructions = excluded.storage_instructions,
+    updated_at = now();
+
+  update public.products set qr_code = v_qr_url where id = v_product_id;
+
+  v_result := jsonb_build_object(
+    'product_id', v_product_id,
+    'slug', v_slug,
+    'qr_url', v_qr_url,
+    'created', p_product_id is null,
+    'replayed', false
+  );
+
+  insert into private.owner_product_save_requests (
+    owner_id, request_id, product_id, request_payload, result_payload
+  ) values (v_owner_id, p_request_id, v_product_id, p_payload, v_result);
+
+  return v_result;
+end;
+$function$;
+
+revoke all on function public.owner_save_product_passport(uuid, uuid, jsonb) from public;
+revoke all on function public.owner_save_product_passport(uuid, uuid, jsonb) from anon;
+grant execute on function public.owner_save_product_passport(uuid, uuid, jsonb) to authenticated;
