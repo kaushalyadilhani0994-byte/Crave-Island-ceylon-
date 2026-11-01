@@ -48,3 +48,10 @@ If order items are later deleted after an order has been cancelled, stock could 
 ## Evidence boundary
 
 The trigger definitions and function bodies were read from the active Supabase project. The analysis above is based on those definitions. No actual cancellation, item deletion, stock adjustment, order creation, or provider notification was triggered during this review.
+
+
+## Review-branch input validation hardening (2026-11-01)
+
+The review copy of `supabase/functions/update-product-inventory/index.ts` now rejects JSON null, arrays, and primitive request bodies with HTTP 400 instead of allowing them to fall through to an unexpected server error. Stock quantity and low-stock threshold must be actual JSON numbers and safe integers within the existing 0–1,000,000 bounds; numeric strings, booleans and null are no longer silently coerced to zero or another number. The existing strict real-calendar-date validation for expiry is retained.
+
+This is a review-branch source change only. It has not been deployed to the Supabase Edge Function. The reviewed root frontend modules do not contain a direct invocation of this function; the Owner Product editor currently writes inventory fields through the atomic owner product/passport RPC. Confirm any other consumers before deployment.
