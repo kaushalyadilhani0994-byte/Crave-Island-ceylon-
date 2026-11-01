@@ -145,3 +145,19 @@ A first implementation is now present on `review/atomic-order-idempotency` only:
 - The migration must not be applied to production yet. It introduces a SECURITY DEFINER write path and private idempotency table, so it needs independent SQL review and staging tests for owner, non-owner staff, customer-authenticated, anon, create/edit, concurrent retry, changed-payload retry, forced passport/QR failure rollback, and published-passport preservation.
 - The exact live migration-history drift still needs reconciliation before this migration can be considered deployable.
 - No product, passport, QR record, live schema, or production deployment was changed by this implementation.
+
+
+## QR passport publishing path review
+
+A second write-path issue was found in the existing Owner · QR Passports panel: it also performed a direct browser upsert to `product_passports` followed by a separate `products.qr_code` update. The live grants reviewed earlier block those direct passport writes, and the two-step flow could leave the QR link and passport out of sync.
+
+The review branch now adds `public.owner_update_product_passport(uuid, jsonb)` to the same review-only migration and routes the existing passport form through that RPC. It:
+- requires the approved owner and authenticated execution;
+- validates the product, ingredient list, dates, field lengths and publish state;
+- refuses public publishing while the product is inactive;
+- writes passport fields and the canonical production QR URL in one transaction;
+- preserves the existing public passport route and customer-facing read-only behaviour.
+
+The QR label and copy UI remain in the existing Owner · QR Passports panel. Both the catalogue-save and passport-publish browser flows no longer write directly to `product_passports`.
+
+Static V8 syntax checks pass for both modified JavaScript files. No SQL has been executed, no QR has been physically scanned, and no production data/schema/deployment has been changed. Staging execution and the owner/staff/customer/anon permission matrix remain mandatory before release.
