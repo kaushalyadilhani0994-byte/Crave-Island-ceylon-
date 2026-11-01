@@ -125,3 +125,11 @@ Read-only Supabase Security Advisor results:
 ## No production changes
 
 This audit was read-only. No migration applied, no Edge Function deployed, no staff invite sent, no team profile changed, no product/order/inventory changed, no owner email/auth setting changed, no merge, and no Vercel deployment.
+
+## Additional catalogue passport privilege blocker — 2026-11-01
+
+A separate read-only privilege inspection found that `authenticated` has SELECT but no INSERT, UPDATE, or DELETE table privilege on `public.product_passports`. RLS policies for approved-owner and team certificate actions exist, but policies alone do not grant table privileges. The current Owner Catalogue product-save code writes the product row first and then UPSERTs the passport; that passport UPSERT requires INSERT and UPDATE privileges and can therefore fail after the product row has already committed. This can leave a hidden draft without its passport/QR, or product edits without matching passport updates.
+
+The `products` table does have authenticated SELECT/INSERT/UPDATE/DELETE privileges with RLS policies. The passport table does not have authenticated write grants. No product or passport write was attempted during this inspection.
+
+Candidate minimum repair for staging review: grant only INSERT and UPDATE on `public.product_passports` to authenticated while retaining and validating the existing approved-owner/team RLS policies. Do not grant DELETE for the current save flow. Confirm intended staff certificate permissions, exact policy composition, and customer/anonymous denial before any production change. In parallel, replace the multi-request save sequence with the atomic product+passport+QR transaction design in `atomic-product-passport-save-design-2026-11-01.md`.
