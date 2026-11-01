@@ -237,10 +237,9 @@
     if(!isHttpsUrl(imageUrl)){say("Product image URL must be a valid HTTPS URL without embedded credentials.",true);return;}
     if(mfgDate&&expiryDate&&mfgDate>expiryDate){say("Manufacturing date cannot be later than the expiry / best-before date.",true);return;}
     const btn=event.submitter;if(btn){btn.disabled=true;btn.textContent="Saving product…";}
-    const form=event.target, editId=form.dataset.editId||"", existing=productRows.find(row=>String(row.id)===String(editId));
+    const form=event.target, editId=form.dataset.editId||"";
     const stockQuantity=Number($("#cicProdStock").value||0),lowStockThreshold=Number($("#cicProdLowStock").value||5);
     if(!Number.isInteger(stockQuantity)||stockQuantity<0||!Number.isInteger(lowStockThreshold)||lowStockThreshold<0){say("Stock and low-stock threshold must be whole numbers of zero or more.",true);if(btn){btn.disabled=false;btn.textContent=form.dataset.editId?"Update live product":"Save product as draft";}return;}
-    const row={name,category,price,currency:"LKR",description:$("#cicProdDesc").value.trim()||null,image_url:imageUrl||null,ingredients,allergen_information:allergens||null,batch_number:batch||null,stock_quantity:stockQuantity,low_stock_threshold:lowStockThreshold,manufacturing_date:mfgDate,expiry_date:expiryDate,storage_location:storage||null,track_inventory:$("#cicProdTrackStock").checked,is_active:editId?Boolean(existing&&existing.is_active):false};
     try {
       if(!form.dataset.requestId){
         if(!window.crypto||typeof window.crypto.randomUUID!=="function")throw new Error("This secure browser cannot create a retry-safe save request. Please use the latest browser over HTTPS.");
@@ -271,7 +270,7 @@
     }catch(error){
       const detail=String(error&&error.message||"Network or permission error").slice(0,220);
       say("Product save issue: "+detail+" Your form details are still here. Retry without changing them to safely recover the same save.",true);
-    }finally{if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}}
+    }finally{if(btn){btn.disabled=false;btn.textContent=form.dataset.editId?"Update live product":"Save product as draft";}}
   }
 
   function init() {
