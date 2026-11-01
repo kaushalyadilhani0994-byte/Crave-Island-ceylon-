@@ -51,7 +51,7 @@ begin
     raise exception 'Invalid order request' using errcode='22023';
   end if;
 
-  v_hash := md5(p_payload::text);
+  v_hash := encode(extensions.digest(convert_to(p_payload::text, 'UTF8'), 'sha256'), 'hex');
   perform pg_advisory_xact_lock(hashtextextended(p_customer_id::text || ':' || p_idempotency_key::text, 0));
 
   select * into v_existing
