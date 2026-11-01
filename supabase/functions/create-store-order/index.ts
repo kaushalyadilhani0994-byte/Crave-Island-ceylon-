@@ -86,6 +86,8 @@ Deno.serve(async (req: Request) => {
       if (detail.includes("INSUFFICIENT_STOCK")) return respond(409, { error: "Stock changed while placing your order. Please review your basket and try again." });
       if (detail.includes("PRODUCT_EXPIRED") || detail.includes("PRODUCT_UNAVAILABLE")) return respond(409, { error: "A product or collection is no longer available. Refresh the catalogue and try again." });
       if (detail.includes("IDEMPOTENCY_KEY_REUSED")) return respond(409, { error: "This checkout retry key belongs to a different basket. Refresh checkout and try again." });
+      if (detail.includes("INVALID_PRODUCT_PRICE")) return respond(409, { error: "A product price or currency needs to be corrected before this order can be placed. Please refresh the catalogue." });
+      if (detail.includes("Required customer") || detail.includes("Only cash on delivery") || detail.includes("Invalid product") || detail.includes("Order must contain") || detail.includes("Order total")) return respond(400, { error: "Some checkout details or basket items are invalid. Please review them and try again." });
       return respond(500, { error: "We could not safely save your order. Please try again." });
     }
     const order = result.order as Record<string, unknown>;
