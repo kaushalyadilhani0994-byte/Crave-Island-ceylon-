@@ -120,16 +120,28 @@ begin
     raise exception 'Choose an active product collection' using errcode = '22023';
   end if;
 
-  select array_agg(btrim(part)) into v_ingredients
-  from regexp_split_to_table(replace(btrim(p_payload->>'ingredients'), chr(10), ','), '[,;]+') as parts(part)
-  where btrim(part) <> '';
+  if jsonb_typeof(p_payload->'ingredients') = 'array' then
+    select coalesce(array_agg(btrim(item.value)), '{}'::text[]) into v_ingredients
+    from jsonb_array_elements_text(p_payload->'ingredients') as item(value)
+    where nullif(btrim(item.value), '') is not null;
+  else
+    select coalesce(array_agg(btrim(part)), '{}'::text[]) into v_ingredients
+    from regexp_split_to_table(replace(coalesce(p_payload->>'ingredients', ''), chr(10), ','), '[,;]+') as parts(part)
+    where nullif(btrim(part), '') is not null;
+  end if;
   if coalesce(cardinality(v_ingredients), 0) = 0 then
     raise exception 'At least one ingredient is required' using errcode = '22023';
   end if;
 
-  select coalesce(array_agg(btrim(part)), '{}'::text[]) into v_allergens
-  from regexp_split_to_table(replace(coalesce(p_payload->>'allergen_information', ''), chr(10), ','), '[,;]+') as parts(part)
-  where btrim(part) <> '';
+  if jsonb_typeof(p_payload->'allergen_information') = 'array' then
+    select coalesce(array_agg(btrim(item.value)), '{}'::text[]) into v_allergens
+    from jsonb_array_elements_text(p_payload->'allergen_information') as item(value)
+    where nullif(btrim(item.value), '') is not null;
+  else
+    select coalesce(array_agg(btrim(part)), '{}'::text[]) into v_allergens
+    from regexp_split_to_table(replace(coalesce(p_payload->>'allergen_information', ''), chr(10), ','), '[,;]+') as parts(part)
+    where nullif(btrim(part), '') is not null;
+  end if;
 
   if p_product_id is null then
     insert into public.products (
@@ -304,15 +316,27 @@ begin
     raise exception 'Activate the product before publishing its QR passport' using errcode = '22023';
   end if;
 
-  select array_agg(btrim(part)) into v_ingredients
-  from regexp_split_to_table(replace(btrim(p_payload->>'ingredients'), chr(10), ','), '[,;]+') as parts(part)
-  where btrim(part) <> '';
+  if jsonb_typeof(p_payload->'ingredients') = 'array' then
+    select coalesce(array_agg(btrim(item.value)), '{}'::text[]) into v_ingredients
+    from jsonb_array_elements_text(p_payload->'ingredients') as item(value)
+    where nullif(btrim(item.value), '') is not null;
+  else
+    select coalesce(array_agg(btrim(part)), '{}'::text[]) into v_ingredients
+    from regexp_split_to_table(replace(coalesce(p_payload->>'ingredients', ''), chr(10), ','), '[,;]+') as parts(part)
+    where nullif(btrim(part), '') is not null;
+  end if;
   if coalesce(cardinality(v_ingredients), 0) = 0 then
     raise exception 'At least one ingredient is required' using errcode = '22023';
   end if;
-  select coalesce(array_agg(btrim(part)), '{}'::text[]) into v_allergens
-  from regexp_split_to_table(replace(coalesce(p_payload->>'allergen_information', ''), chr(10), ','), '[,;]+') as parts(part)
-  where btrim(part) <> '';
+  if jsonb_typeof(p_payload->'allergen_information') = 'array' then
+    select coalesce(array_agg(btrim(item.value)), '{}'::text[]) into v_allergens
+    from jsonb_array_elements_text(p_payload->'allergen_information') as item(value)
+    where nullif(btrim(item.value), '') is not null;
+  else
+    select coalesce(array_agg(btrim(part)), '{}'::text[]) into v_allergens
+    from regexp_split_to_table(replace(coalesce(p_payload->>'allergen_information', ''), chr(10), ','), '[,;]+') as parts(part)
+    where nullif(btrim(part), '') is not null;
+  end if;
 
   v_slug := 'cic-' || lower(p_product_id::text);
   v_qr_url := 'https://craveislandceylonv18supabaseintegra.vercel.app/passport.html?slug=' || v_slug;
