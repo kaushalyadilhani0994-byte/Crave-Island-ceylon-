@@ -54,16 +54,26 @@ if($("#cicPassPublished").checked&&product.is_active!==true){message("This produ
 const mfg=$("#cicPassMfg").value,best=$("#cicPassBest").value;
 if(mfg&&best&&mfg>best){message("Manufacturing date cannot be later than the expiry / best-before date.");return}
 const btn=$("#cicPassSave");btn.disabled=true;btn.textContent="Saving…";
-const {data:existing,error:readError}=await db.from("product_passports").select("public_slug").eq("product_id",id).maybeSingle();
-if(readError){btn.disabled=false;btn.textContent="Save product passport";message("Could not check the existing passport. Please try again.");return}
-const slug=existing?.public_slug||("cic-"+id.toLowerCase());
-const row={product_id:id,public_slug:slug,manufacturing_date:$("#cicPassMfg").value||null,ingredients:splitList(ingredients),allergen_information:splitList($("#cicPassAllergens").value),origin:$("#cicPassOrigin").value.trim()||null,batch_code:$("#cicPassBatch").value.trim()||null,best_before:$("#cicPassBest").value||null,storage_instructions:$("#cicPassStorage").value.trim()||null,public_story:$("#cicPassStory").value.trim()||null,published:$("#cicPassPublished").checked,updated_at:new Date().toISOString()};
-const {error}=await db.from("product_passports").upsert(row,{onConflict:"product_id"});
+const row={
+manufacturing_date:mfg||null,
+ingredients:splitList(ingredients),
+allergen_information:splitList($("#cicPassAllergens").value),
+origin:$("#cicPassOrigin").value.trim()||null,
+batch_code:$("#cicPassBatch").value.trim()||null,
+best_before:best||null,
+storage_instructions:$("#cicPassStorage").value.trim()||null,
+public_story:$("#cicPassStory").value.trim()||null,
+published:$("#cicPassPublished").checked
+};
+const {data,error}=await db.rpc("owner_update_product_passport",{
+p_product_id:id,
+p_payload:row
+});
 btn.disabled=false;btn.textContent="Save product passport";
-if(error){message("Could not save passport. Confirm the latest store migration and owner permissions are active.");return}
-const url=location.origin+"/passport.html?slug="+encodeURIComponent(slug);
-const {error:linkError}=await db.from("products").update({qr_code:url}).eq("id",id);
-if(linkError){message("Passport saved, but the QR link could not be attached to the product. Please retry Save before printing.");return}
+if(error){message("Could not save the passport and QR together: "+String(error.message||"Owner permission or server error").slice(0,180));return}
+const saved=Array.isArray(data)?data[0]:data;
+if(!saved||!saved.qr_url){message("The server did not confirm the passport and QR save. Please retry.");return}
+const slug=saved.slug,url=saved.qr_url;
 const result=$("#cicPassResult");
 result.innerHTML='<div class="msg">'+(row.published?"Passport saved and published.":"Passport saved as unpublished; public QR page will not reveal it yet.")+'<br><a href="'+esc(url)+'" target="_blank" rel="noopener">Open product passport</a><br><label>QR destination</label><input readonly value="'+esc(url)+'"><button type="button" id="cicPassCopy">Copy QR destination</button>'+(row.published?'<p><img alt="QR code for this product passport" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='+encodeURIComponent(url)+'"></p><button type="button" id="cicPassPrint">Print product QR label</button><p>Print label includes CRAVE ISLAND CEYLON with the QR code underneath.</p>':"")+'</div>';
 $("#cicPassCopy").onclick=async()=>{try{await navigator.clipboard.writeText(url);message("QR destination copied.")}catch(e){message("Select and copy the QR destination from the field.")}};
