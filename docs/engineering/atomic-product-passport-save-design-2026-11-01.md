@@ -43,6 +43,9 @@ The existing Owner QR Passport panel now calls `public.owner_update_product_pass
 
 `passport.html` remains a public read-only view. It requires a published passport and an active product. It does not expose owner/admin controls. `shop-qr.html` remains the separate shop-promotion QR and is not the product-specific passport QR.
 
+
+The RPC accepts both the product editor's comma/newline-separated ingredient text and the QR Passport editor's JSON string arrays. It normalizes both forms into clean text arrays before writing the passport, including allergen declarations; this keeps the frontend payload shape and database array columns aligned.
+
 ## Function security architecture
 
 - Public Data API wrappers are `SECURITY INVOKER`.
