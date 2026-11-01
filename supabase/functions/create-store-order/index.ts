@@ -38,8 +38,12 @@ Deno.serve(async (req: Request) => {
     // Anonymous Supabase sessions are not eligible to place store orders.
     if (user.is_anonymous) return respond(401, { error: "Please sign in with a registered account before placing an order." });
 
-    let body: Record<string, unknown>;
-    try { body = await req.json(); } catch { return respond(400, { error: "Invalid JSON request." }); }
+    let parsedBody: unknown;
+    try { parsedBody = await req.json(); } catch { return respond(400, { error: "Invalid JSON request." }); }
+    if (!parsedBody || typeof parsedBody !== "object" || Array.isArray(parsedBody)) {
+      return respond(400, { error: "Order request must be a JSON object." });
+    }
+    const body = parsedBody as Record<string, unknown>;
 
     const customerName = cleanText(body.customer_name, 120);
     const phone = cleanText(body.phone, 40);
