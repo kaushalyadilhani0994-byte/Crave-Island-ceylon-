@@ -118,24 +118,6 @@ Deno.serve(async (req: Request) => {
       return respond(400, { error: "A product or its collection is no longer available. Refresh the catalogue and try again." });
     }
 
-    const productById = new Map(products.map((product) => [String(product.id), product]));
-    const orderItems = items.map((item) => {
-      const product = productById.get(item.product_id)!;
-      const price = Number(product.price);
-      if (!Number.isFinite(price) || price < 0 || product.currency !== "LKR") throw new Error("INVALID_PRICE");
-      return {
-        product_id: String(product.id),
-        product_name: product.name,
-        quantity: item.quantity,
-        unit_price: price,
-        line_total: Math.round(price * item.quantity * 100) / 100,
-      };
-    });
-    const subtotal = Math.round(orderItems.reduce((sum, item) => sum + item.line_total, 0) * 100) / 100;
-    if (!Number.isFinite(subtotal) || subtotal <= 0 || subtotal > 2000000) {
-      return respond(400, { error: "The order total is outside the allowed range." });
-    }
-
     // Atomic RPC: order header, order lines, stock reservation and retry record commit together.
     const rawKey = req.headers.get("idempotency-key") || "";
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawKey)) {
