@@ -3,7 +3,7 @@
 "use strict";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let db, passportLoadState="idle";
+let db, passportLoadState="idle", passportSaving=false;
 async function owner(){
 db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
 if(!db)return false;
@@ -67,6 +67,12 @@ message(p?"Existing passport loaded. Check verified details before saving.":"No 
 }
 function splitList(v){return v.split(/[,;\n]/).map(s=>s.trim()).filter(Boolean)}
 async function save(e){
+e.preventDefault();
+if(passportSaving)return;
+passportSaving=true;
+try{await savePassport(e)}finally{passportSaving=false}
+}
+async function savePassport(e){
 e.preventDefault();if(!await owner()){message("Owner session expired. Please sign in again.");return}
 const id=$("#cicPassProduct").value,ingredients=$("#cicPassIngredients").value.trim();
 if(!id||passportLoadState!=="loaded"){message("Wait until the selected product's saved passport details have loaded successfully.");return}
@@ -76,7 +82,11 @@ if(productError||!product){message("Could not verify the selected product. Refre
 if($("#cicPassPublished").checked&&product.is_active!==true){message("This product is hidden from the shop. Activate it in Owner Products before publishing its QR passport.");return}
 const mfg=$("#cicPassMfg").value,best=$("#cicPassBest").value;
 if(mfg&&best&&mfg>best){message("Manufacturing date cannot be later than the expiry / best-before date.");return}
-const btn=$("#cicPassSave");btn.disabled=true;btn.textContent="Saving…";
+const btn=$("#cicPassSave");
+const form=$("#cicPassportForm");
+const controls=Array.from(form.elements).map(el=>({el,disabled:el.disabled}));
+controls.forEach(({el})=>{el.disabled=true;});
+btn.textContent="Saving…";
 const row={
 manufacturing_date:mfg||null,
 ingredients:splitList(ingredients),
@@ -99,6 +109,7 @@ data=response.data;error=response.error;
 message("The passport save response was interrupted. Your details are still here; press Save again to safely retry.");
 return;
 } finally {
+controls.forEach(({el,disabled})=>{el.disabled=disabled;});
 btn.disabled=false;btn.textContent="Save product passport";
 }
 if(error){message("Could not save the passport and QR together: "+String(error.message||"Owner permission or server error").slice(0,180));return}
@@ -110,10 +121,10 @@ result.innerHTML='<div class="msg">'+(row.published?"Passport saved and publishe
 $("#cicPassCopy").onclick=async()=>{try{await navigator.clipboard.writeText(url);message("QR destination copied.")}catch(e){message("Select and copy the QR destination from the field.")}};
 const printButton=$("#cicPassPrint");
 if(printButton)printButton.onclick=()=>{
-const productName=$("#cicPassProduct").selectedOptions[0]?.textContent||"Product";
-const batch=$("#cicPassBatch").value.trim();
-const mfg=$("#cicPassMfg").value;
-const best=$("#cicPassBest").value;
+const productName=product.name||"Product";
+const batch=row.batch_code||"";
+const mfg=row.manufacturing_date||"";
+const best=row.best_before||"";
 const qr="https://api.qrserver.com/v1/create-qr-code/?size=360x360&data="+encodeURIComponent(url);
 const win=window.open("","_blank","width=480,height=640");
 if(!win){message("Allow pop-ups to print the QR label.");return}
