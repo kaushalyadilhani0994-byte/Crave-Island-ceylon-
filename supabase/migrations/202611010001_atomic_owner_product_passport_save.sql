@@ -268,6 +268,15 @@ begin
     raise exception 'Passport dates or publication setting are invalid' using errcode = '22023';
   end;
 
+  if length(coalesce(p_payload->>'origin', '')) > 180
+     or length(coalesce(p_payload->>'batch_code', '')) > 100
+     or length(coalesce(p_payload->>'storage_instructions', '')) > 500
+     or length(coalesce(p_payload->>'public_story', '')) > 2000
+     or length(coalesce(p_payload->>'ingredients', '')) > 5000
+     or length(coalesce(p_payload->>'allergen_information', '')) > 2000 then
+    raise exception 'One or more passport fields exceed the permitted length' using errcode = '22023';
+  end if;
+
   if v_mfg is not null and v_best_before is not null and v_mfg > v_best_before then
     raise exception 'Manufacturing date cannot be later than best-before date' using errcode = '22023';
   end if;
