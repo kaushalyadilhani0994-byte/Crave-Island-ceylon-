@@ -1,11 +1,8 @@
 -- CRAVE ISLAND CEYLON
 -- Atomic owner-only product + passport + QR save.
--- Review branch migration: do not apply to production until staging tests and explicit approval.
+-- Review branch only. Do not apply to production until staging tests and explicit approval.
 
 create schema if not exists private;
-revoke all on schema private from public;
-revoke all on schema private from anon;
-grant usage on schema private to authenticated;
 
 create table if not exists private.owner_product_save_requests (
   owner_id uuid not null,
@@ -42,6 +39,9 @@ declare
   v_threshold integer;
   v_mfg date;
   v_expiry date;
+  v_track_inventory boolean;
+  v_ingredients text[];
+  v_allergens text[];
   v_result jsonb;
 begin
   v_owner_id := auth.uid();
@@ -53,7 +53,7 @@ begin
     raise exception 'A valid save request and product payload are required' using errcode = '22023';
   end if;
 
-  -- Serialize retries with the same owner/request key, including simultaneous requests.
+  -- Serialize simultaneous retries that carry the same owner/request key.
   perform pg_advisory_xact_lock(hashtextextended(v_owner_id::text || ':' || p_request_id::text, 0));
 
   select * into v_existing
@@ -71,28 +71,32 @@ begin
   v_name := nullif(btrim(p_payload->>'name'), '');
   v_category := nullif(btrim(p_payload->>'category'), '');
   if v_name is null or length(v_name) > 160 or v_category is null or length(v_category) > 160 then
-    raise exception 'Product name and collection are required' using errcode = '22023';
+    raise exception 'Product name and active collection are required' using errcode = '22023';
   end if;
 
   begin
     v_price := (p_payload->>'price')::numeric;
-    if coalesce(p_payload->>'stock_quantity', '0') !~ '^[0-9]+$'
-       or coalesce(p_payload->>'low_stock_threshold', '5') !~ '^[0-9]+$' then
-      raise exception 'Stock and threshold must be whole non-negative numbers' using errcode = '22023';
+    if coalesce(p_payload->>'stock_quantity', '0') !~ '^[0-9]{1,7}$'
+       or coalesce(p_payload->>'low_stock_threshold', '5') !~ '^[0-9]{1,7}$' then
+      raise exception 'Stock and threshold must be whole non-negative numbers';
     end if;
     v_stock := coalesce((p_payload->>'stock_quantity')::integer, 0);
     v_threshold := coalesce((p_payload->>'low_stock_threshold')::integer, 5);
     v_mfg := nullif(p_payload->>'manufacturing_date', '')::date;
     v_expiry := nullif(p_payload->>'expiry_date', '')::date;
+    if coalesce(p_payload->>'track_inventory', 'false') not in ('true', 'false') then
+      raise exception 'Inventory tracking must be true or false';
+    end if;
+    v_track_inventory := coalesce((p_payload->>'track_inventory')::boolean, false);
   exception when others then
-    raise exception 'Price, stock, threshold, or date value is invalid' using errcode = '22023';
+    raise exception 'Price, stock, threshold, tracking, or date value is invalid' using errcode = '22023';
   end;
 
   if v_price is null or v_price <= 0 or v_price > 2000000 then
     raise exception 'Price must be a positive LKR amount within the permitted limit' using errcode = '22023';
   end if;
-  if v_stock < 0 or v_stock > 1000000 or v_threshold < 0 or v_threshold > 1000000 then
-    raise exception 'Stock and low-stock threshold must be whole numbers from 0 to 1000000' using errcode = '22023';
+  if v_stock > 1000000 or v_threshold > 1000000 then
+    raise exception 'Stock and low-stock threshold must not exceed 1000000' using errcode = '22023';
   end if;
   if nullif(btrim(p_payload->>'ingredients'), '') is null then
     raise exception 'Verified ingredients are required' using errcode = '22023';
@@ -105,18 +109,27 @@ begin
   end if;
   if nullif(btrim(p_payload->>'image_url'), '') is not null
      and (p_payload->>'image_url') !~ '^https://[A-Za-z0-9.-]+(:[0-9]+)?(/|$|[?#])' then
-    raise exception 'Product image must use a valid HTTPS URL' using errcode = '22023';
+    raise exception 'Product image must use an HTTPS URL' using errcode = '22023';
   end if;
-  if not exists (select 1 from public.categories c where c.name = v_category and c.is_active is true) then
+  if not exists (
+    select 1 from public.categories c
+    where c.name = v_category and c.is_active is true
+  ) then
     raise exception 'Choose an active product collection' using errcode = '22023';
   end if;
 
+  select array_agg(btrim(part)) into v_ingredients
+  from regexp_split_to_table(replace(btrim(p_payload->>'ingredients'), chr(10), ','), '[,;]+') as part
+  where btrim(part) <> '';
+  select coalesce(array_agg(btrim(part)), '{}'::text[]) into v_allergens
+  from regexp_split_to_table(replace(coalesce(p_payload->>'allergen_information', ''), chr(10), ','), '[,;]+') as part
+  where btrim(part) <> '';
+
   if p_product_id is null then
     insert into public.products (
       name, category, price, currency, description, image_url, ingredients,
       allergen_information, batch_number, stock_quantity, low_stock_threshold,
-      manufacturing_date, expiry_date, storage_location, track_inventory,
-      is_active
+      manufacturing_date, expiry_date, storage_location, track_inventory, is_active
     ) values (
       v_name, v_category, v_price, 'LKR',
       nullif(btrim(p_payload->>'description'), ''),
@@ -126,8 +139,7 @@ begin
       nullif(btrim(p_payload->>'batch_number'), ''),
       v_stock, v_threshold, v_mfg, v_expiry,
       nullif(btrim(p_payload->>'storage_location'), ''),
-      coalesce((p_payload->>'track_inventory')::boolean, false),
-      false
+      v_track_inventory, false
     ) returning id into v_product_id;
   else
     update public.products set
@@ -145,7 +157,7 @@ begin
       manufacturing_date = v_mfg,
       expiry_date = v_expiry,
       storage_location = nullif(btrim(p_payload->>'storage_location'), ''),
-      track_inventory = coalesce((p_payload->>'track_inventory')::boolean, false)
+      track_inventory = v_track_inventory
     where id = p_product_id
     returning id into v_product_id;
 
@@ -157,252 +169,14 @@ begin
   v_slug := 'cic-' || lower(v_product_id::text);
   v_qr_url := 'https://craveislandceylonv18supabaseintegra.vercel.app/passport.html?slug=' || v_slug;
 
+  -- Preserve any existing origin, public story and publication state on edit.
   insert into public.product_passports (
     product_id, public_slug, manufacturing_date, ingredients,
-    allergen_information, batch_code, best_before, storage_instructions,
-    updated_at
+    allergen_information, batch_code, best_before, storage_instructions, updated_at
   ) values (
-    v_product_id::text, v_slug, v_mfg,
-    regexp_split_to_array(btrim(p_payload->>'ingredients'), '[,;\n]+'),
-    case when nullif(btrim(p_payload->>'allergen_information'), '') is null then '{}'::text[]
-      else regexp_split_to_array(btrim(p_payload->>'allergen_information'), '[,;\n]+') end,
+    v_product_id::text, v_slug, v_mfg, v_ingredients, v_allergens,
     nullif(btrim(p_payload->>'batch_number'), ''),
-    v_expiry,
-    nullif(btrim(p_payload->>'storage_location'), ''),
-    now()
-  )
-  on conflict (product_id) do update set
-    public_slug = excluded.public_slug,
-    manufacturing_date = excluded.manufacturing_date,
-    ingredients = excluded.ingredients,
-    allergen_information = excluded.allergen_information,
-    batch_code = excluded.batch_code,
-    best_before = excluded.best_before,
-    storage_instructions = excluded.storage_instructions,
-    updated_at = now();
-
-  update public.products set qr_code = v_qr_url where id = v_product_id;
-
-  v_result := jsonb_build_object(
-    'product_id', v_product_id,
-    'slug', v_slug,
-    'qr_url', v_qr_url,
-    'created', p_product_id is null,
-    'replayed', false
-  );
-
-  insert into private.owner_product_save_requests (
-    owner_id, request_id, product_id, request_payload, result_payload
-  ) values (v_owner_id, p_request_id, v_product_id, p_payload, v_result);
-
-  return v_result;
-end;
-$function$;
-
-revoke all on function public.owner_save_product_passport(uuid, uuid, jsonb) from public;
-revoke all on function public.owner_save_product_passport(uuid, uuid, jsonb) from anon;
-grant execute on function public.owner_save_product_passport(uuid, uuid, jsonb) to authenticated;
-
-       or coalesce(p_payload->>'low_stock_threshold', '5') !~ '^\\d+
-    v_mfg := nullif(p_payload->>'manufacturing_date', '')::date;
-    v_expiry := nullif(p_payload->>'expiry_date', '')::date;
-  exception when others then
-    raise exception 'Price, stock, threshold, or date value is invalid' using errcode = '22023';
-  end;
-
-  if v_price is null or v_price <= 0 or v_price > 2000000 then
-    raise exception 'Price must be a positive LKR amount within the permitted limit' using errcode = '22023';
-  end if;
-  if v_stock < 0 or v_stock > 1000000 or v_threshold < 0 or v_threshold > 1000000 then
-    raise exception 'Stock and low-stock threshold must be whole numbers from 0 to 1000000' using errcode = '22023';
-  end if;
-  if nullif(btrim(p_payload->>'ingredients'), '') is null then
-    raise exception 'Verified ingredients are required' using errcode = '22023';
-  end if;
-  if v_mfg is not null and v_expiry is not null and v_mfg > v_expiry then
-    raise exception 'Manufacturing date cannot be later than best-before date' using errcode = '22023';
-  end if;
-  if coalesce(p_payload->>'currency', 'LKR') <> 'LKR' then
-    raise exception 'Only LKR currency is supported' using errcode = '22023';
-  end if;
-
-  if p_product_id is null then
-    insert into public.products (
-      name, category, price, currency, description, image_url, ingredients,
-      allergen_information, batch_number, stock_quantity, low_stock_threshold,
-      manufacturing_date, expiry_date, storage_location, track_inventory,
-      is_active
-    ) values (
-      v_name, v_category, v_price, 'LKR',
-      nullif(btrim(p_payload->>'description'), ''),
-      nullif(btrim(p_payload->>'image_url'), ''),
-      btrim(p_payload->>'ingredients'),
-      nullif(btrim(p_payload->>'allergen_information'), ''),
-      nullif(btrim(p_payload->>'batch_number'), ''),
-      v_stock, v_threshold, v_mfg, v_expiry,
-      nullif(btrim(p_payload->>'storage_location'), ''),
-      coalesce((p_payload->>'track_inventory')::boolean, false),
-      false
-    ) returning id into v_product_id;
-  else
-    update public.products set
-      name = v_name,
-      category = v_category,
-      price = v_price,
-      currency = 'LKR',
-      description = nullif(btrim(p_payload->>'description'), ''),
-      image_url = nullif(btrim(p_payload->>'image_url'), ''),
-      ingredients = btrim(p_payload->>'ingredients'),
-      allergen_information = nullif(btrim(p_payload->>'allergen_information'), ''),
-      batch_number = nullif(btrim(p_payload->>'batch_number'), ''),
-      stock_quantity = v_stock,
-      low_stock_threshold = v_threshold,
-      manufacturing_date = v_mfg,
-      expiry_date = v_expiry,
-      storage_location = nullif(btrim(p_payload->>'storage_location'), ''),
-      track_inventory = coalesce((p_payload->>'track_inventory')::boolean, false)
-    where id = p_product_id
-    returning id into v_product_id;
-
-    if v_product_id is null then
-      raise exception 'Product not found or not available for owner update' using errcode = 'P0002';
-    end if;
-  end if;
-
-  v_slug := 'cic-' || lower(v_product_id::text);
-  v_qr_url := 'https://craveislandceylonv18supabaseintegra.vercel.app/passport.html?slug=' || v_slug;
-
-  insert into public.product_passports (
-    product_id, public_slug, manufacturing_date, ingredients,
-    allergen_information, batch_code, best_before, storage_instructions,
-    updated_at
-  ) values (
-    v_product_id::text, v_slug, v_mfg,
-    regexp_split_to_array(btrim(p_payload->>'ingredients'), '[,;\n]+'),
-    case when nullif(btrim(p_payload->>'allergen_information'), '') is null then '{}'::text[]
-      else regexp_split_to_array(btrim(p_payload->>'allergen_information'), '[,;\n]+') end,
-    nullif(btrim(p_payload->>'batch_number'), ''),
-    v_expiry,
-    nullif(btrim(p_payload->>'storage_location'), ''),
-    now()
-  )
-  on conflict (product_id) do update set
-    public_slug = excluded.public_slug,
-    manufacturing_date = excluded.manufacturing_date,
-    ingredients = excluded.ingredients,
-    allergen_information = excluded.allergen_information,
-    batch_code = excluded.batch_code,
-    best_before = excluded.best_before,
-    storage_instructions = excluded.storage_instructions,
-    updated_at = now();
-
-  update public.products set qr_code = v_qr_url where id = v_product_id;
-
-  v_result := jsonb_build_object(
-    'product_id', v_product_id,
-    'slug', v_slug,
-    'qr_url', v_qr_url,
-    'created', p_product_id is null,
-    'replayed', false
-  );
-
-  insert into private.owner_product_save_requests (
-    owner_id, request_id, product_id, request_payload, result_payload
-  ) values (v_owner_id, p_request_id, v_product_id, p_payload, v_result);
-
-  return v_result;
-end;
-$function$;
-
-revoke all on function public.owner_save_product_passport(uuid, uuid, jsonb) from public;
-revoke all on function public.owner_save_product_passport(uuid, uuid, jsonb) from anon;
-grant execute on function public.owner_save_product_passport(uuid, uuid, jsonb) to authenticated;
- then
-      raise exception 'Stock and threshold must be whole non-negative numbers' using errcode = '22023';
-    end if;
-    v_stock := coalesce((p_payload->>'stock_quantity')::integer, 0);
-    v_threshold := coalesce((p_payload->>'low_stock_threshold')::integer, 5);
-    v_mfg := nullif(p_payload->>'manufacturing_date', '')::date;
-    v_expiry := nullif(p_payload->>'expiry_date', '')::date;
-  exception when others then
-    raise exception 'Price, stock, threshold, or date value is invalid' using errcode = '22023';
-  end;
-
-  if v_price is null or v_price <= 0 or v_price > 2000000 then
-    raise exception 'Price must be a positive LKR amount within the permitted limit' using errcode = '22023';
-  end if;
-  if v_stock < 0 or v_stock > 1000000 or v_threshold < 0 or v_threshold > 1000000 then
-    raise exception 'Stock and low-stock threshold must be whole numbers from 0 to 1000000' using errcode = '22023';
-  end if;
-  if nullif(btrim(p_payload->>'ingredients'), '') is null then
-    raise exception 'Verified ingredients are required' using errcode = '22023';
-  end if;
-  if v_mfg is not null and v_expiry is not null and v_mfg > v_expiry then
-    raise exception 'Manufacturing date cannot be later than best-before date' using errcode = '22023';
-  end if;
-  if coalesce(p_payload->>'currency', 'LKR') <> 'LKR' then
-    raise exception 'Only LKR currency is supported' using errcode = '22023';
-  end if;
-
-  if p_product_id is null then
-    insert into public.products (
-      name, category, price, currency, description, image_url, ingredients,
-      allergen_information, batch_number, stock_quantity, low_stock_threshold,
-      manufacturing_date, expiry_date, storage_location, track_inventory,
-      is_active
-    ) values (
-      v_name, v_category, v_price, 'LKR',
-      nullif(btrim(p_payload->>'description'), ''),
-      nullif(btrim(p_payload->>'image_url'), ''),
-      btrim(p_payload->>'ingredients'),
-      nullif(btrim(p_payload->>'allergen_information'), ''),
-      nullif(btrim(p_payload->>'batch_number'), ''),
-      v_stock, v_threshold, v_mfg, v_expiry,
-      nullif(btrim(p_payload->>'storage_location'), ''),
-      coalesce((p_payload->>'track_inventory')::boolean, false),
-      false
-    ) returning id into v_product_id;
-  else
-    update public.products set
-      name = v_name,
-      category = v_category,
-      price = v_price,
-      currency = 'LKR',
-      description = nullif(btrim(p_payload->>'description'), ''),
-      image_url = nullif(btrim(p_payload->>'image_url'), ''),
-      ingredients = btrim(p_payload->>'ingredients'),
-      allergen_information = nullif(btrim(p_payload->>'allergen_information'), ''),
-      batch_number = nullif(btrim(p_payload->>'batch_number'), ''),
-      stock_quantity = v_stock,
-      low_stock_threshold = v_threshold,
-      manufacturing_date = v_mfg,
-      expiry_date = v_expiry,
-      storage_location = nullif(btrim(p_payload->>'storage_location'), ''),
-      track_inventory = coalesce((p_payload->>'track_inventory')::boolean, false)
-    where id = p_product_id
-    returning id into v_product_id;
-
-    if v_product_id is null then
-      raise exception 'Product not found or not available for owner update' using errcode = 'P0002';
-    end if;
-  end if;
-
-  v_slug := 'cic-' || lower(v_product_id::text);
-  v_qr_url := 'https://craveislandceylonv18supabaseintegra.vercel.app/passport.html?slug=' || v_slug;
-
-  insert into public.product_passports (
-    product_id, public_slug, manufacturing_date, ingredients,
-    allergen_information, batch_code, best_before, storage_instructions,
-    updated_at
-  ) values (
-    v_product_id::text, v_slug, v_mfg,
-    regexp_split_to_array(btrim(p_payload->>'ingredients'), '[,;\n]+'),
-    case when nullif(btrim(p_payload->>'allergen_information'), '') is null then '{}'::text[]
-      else regexp_split_to_array(btrim(p_payload->>'allergen_information'), '[,;\n]+') end,
-    nullif(btrim(p_payload->>'batch_number'), ''),
-    v_expiry,
-    nullif(btrim(p_payload->>'storage_location'), ''),
-    now()
+    v_expiry, nullif(btrim(p_payload->>'storage_location'), ''), now()
   )
   on conflict (product_id) do update set
     public_slug = excluded.public_slug,
