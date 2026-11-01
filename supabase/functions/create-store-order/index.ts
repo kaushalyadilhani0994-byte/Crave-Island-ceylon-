@@ -136,36 +136,27 @@ Deno.serve(async (req: Request) => {
       return respond(400, { error: "The order total is outside the allowed range." });
     }
 
-    // Delivery is deliberately fixed at zero until the store's delivery rates are configured.
-    const deliveryFee = 0;
-    const orderNumber = "CIC-" + new Date().toISOString().slice(0, 10).replaceAll("-", "") + "-" + crypto.randomUUID().slice(0, 8).toUpperCase();
-    const { data: order, error: orderError } = await admin.from("store_orders").insert({
-      order_number: orderNumber,
-      customer_id: user.id,
-      customer_name: customerName,
-      email: user.email || null,
-      phone,
-      shipping_address: { line1: addressLine, line2: cleanText(address?.line2, 180), city, district, postal_code: cleanText(address?.postal_code, 20), country: "Sri Lanka" },
-      currency: "LKR",
-      subtotal,
-      delivery_fee: deliveryFee,
-      total: subtotal + deliveryFee,
-      payment_method: paymentMethod,
-      payment_status: "pending",
-      order_status: "pending",
-      customer_note: note || null,
-    }).select("id,order_number,subtotal,delivery_fee,total,payment_method,payment_status,order_status,created_at").single();
-    if (orderError || !order) {
-      console.error("Order insert failed", orderError?.message);
-      return respond(500, { error: "We could not save your order. Please try again." });
+    // Atomic RPC: order header, order lines, stock reservation and retry record commit together.
+    const rawKey = req.headers.get("idempotency-key") || "";
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawKey)) {
+      return respond(400, { error: "A valid checkout retry key is required. Refresh checkout and try again." });
     }
-
-    const { error: itemsError } = await admin.from("store_order_items").insert(orderItems.map((item) => ({ ...item, order_id: order.id })));
-    if (itemsError) {
-      console.error("Order item insert failed", itemsError.message);
-      await admin.from("store_orders").delete().eq("id", order.id);
-      return respond(500, { error: "We could not save all order items. No order was kept; please try again." });
+    const normalizedAddress = { line1: addressLine, line2: cleanText(address?.line2, 180), city, district, postal_code: cleanText(address?.postal_code, 20), country: "Sri Lanka" };
+    const atomicPayload = { customer_name: customerName, email: user.email || null, phone, shipping_address: normalizedAddress, payment_method: paymentMethod, customer_note: note || null, items };
+    const { data: result, error: atomicError } = await admin.rpc("create_store_order_atomic", { p_customer_id: user.id, p_idempotency_key: rawKey, p_payload: atomicPayload });
+    if (atomicError || !result || !result.order) {
+      const detail = String(atomicError?.message || "");
+      console.error("Atomic order creation failed", detail);
+      if (detail.includes("INSUFFICIENT_STOCK")) return respond(409, { error: "Stock changed while placing your order. Please review your basket and try again." });
+      if (detail.includes("PRODUCT_EXPIRED") || detail.includes("PRODUCT_UNAVAILABLE")) return respond(409, { error: "A product or collection is no longer available. Refresh the catalogue and try again." });
+      if (detail.includes("IDEMPOTENCY_KEY_REUSED")) return respond(409, { error: "This checkout retry key belongs to a different basket. Refresh checkout and try again." });
+      return respond(500, { error: "We could not safely save your order. Please try again." });
     }
+    const order = result.order as Record<string, unknown>;
+    const orderItems = Array.isArray(result.items) ? result.items as Array<Record<string, unknown>> : [];
+    const subtotal = Number(order.subtotal || 0);
+    const deliveryFee = Number(order.delivery_fee || 0);
+    const customerAddress = normalizedAddress;
 
     // Optional external notifications. Order creation must succeed even if an external provider is not configured or is temporarily unavailable.
     const notificationPayload = {
@@ -176,14 +167,14 @@ Deno.serve(async (req: Request) => {
         customer_name: customerName,
         email: user.email || null,
         phone,
-        shipping_address: { line1: addressLine, line2: cleanText(address?.line2, 180), city, district, postal_code: cleanText(address?.postal_code, 20), country: "Sri Lanka" },
+        shipping_address: customerAddress,
         currency: "LKR",
         subtotal,
         delivery_fee: deliveryFee,
-        total: subtotal + deliveryFee,
-        payment_method: paymentMethod,
-        payment_status: "pending",
-        order_status: "pending",
+        total: Number(order.total || 0),
+        payment_method: order.payment_method,
+        payment_status: order.payment_status,
+        order_status: order.order_status,
         customer_note: note || null,
       },
       items: orderItems,
@@ -192,7 +183,7 @@ Deno.serve(async (req: Request) => {
     const notificationTasks: Promise<void>[] = [];
     const sheetsUrl = Deno.env.get("GOOGLE_SHEETS_WEBHOOK_URL") || "";
     const sheetsSecret = Deno.env.get("GOOGLE_SHEETS_WEBHOOK_SECRET") || "";
-    if (sheetsUrl && sheetsSecret) {
+    if (!result.replayed && sheetsUrl && sheetsSecret) {
       notificationTasks.push((async () => {
         try {
           const target = new URL(sheetsUrl);
@@ -218,7 +209,7 @@ Deno.serve(async (req: Request) => {
     const waAdmin = Deno.env.get("WHATSAPP_ADMIN_NUMBER") || "";
     const waTemplate = Deno.env.get("WHATSAPP_ORDER_TEMPLATE") || "";
     const waLanguage = Deno.env.get("WHATSAPP_TEMPLATE_LANGUAGE") || "en";
-    if (waToken && waPhoneId && waAdmin && waTemplate) {
+    if (!result.replayed && waToken && waPhoneId && waAdmin && waTemplate) {
       notificationTasks.push((async () => {
         try {
           const response = await fetch("https://graph.facebook.com/v21.0/" + encodeURIComponent(waPhoneId) + "/messages", {
@@ -255,7 +246,7 @@ Deno.serve(async (req: Request) => {
     // These integrations are deliberately best-effort; never lose a saved order because a notification provider is down.
     await Promise.all(notificationTasks);
 
-    return respond(201, { order, items: orderItems, notifications: {
+    return respond(result.replayed ? 200 : 201, { order, items: orderItems, replayed: Boolean(result.replayed), notifications: {
       google_sheets_configured: Boolean(sheetsUrl && sheetsSecret),
       whatsapp_owner_configured: Boolean(waToken && waPhoneId && waAdmin && waTemplate),
     } });
