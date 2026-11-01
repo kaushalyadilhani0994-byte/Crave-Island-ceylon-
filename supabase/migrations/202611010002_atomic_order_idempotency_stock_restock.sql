@@ -185,7 +185,7 @@ begin
          (x->>'line_total')::numeric
   from jsonb_array_elements(v_lines) x;
 
-  select to_jsonb(o) into v_order from public.store_orders o where o.id=v_order_id;
+  select jsonb_build_object('id',o.id,'order_number',o.order_number,'subtotal',o.subtotal,'delivery_fee',o.delivery_fee,'total',o.total,'payment_method',o.payment_method,'payment_status',o.payment_status,'order_status',o.order_status,'created_at',o.created_at) into v_order from public.store_orders o where o.id=v_order_id;
   select coalesce(jsonb_agg(jsonb_build_object(
     'product_id',i.product_id,'product_name',i.product_name,'quantity',i.quantity,
     'unit_price',i.unit_price,'line_total',i.line_total
