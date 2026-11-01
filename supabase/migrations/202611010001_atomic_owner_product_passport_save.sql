@@ -26,7 +26,7 @@ create or replace function private.owner_save_product_passport_impl(
 returns jsonb
 language plpgsql
 security definer
-set search_path = pg_catalog
+set search_path = ''
 as $function$
 declare
   v_owner_id uuid;
@@ -224,7 +224,7 @@ create or replace function public.owner_save_product_passport(
 returns jsonb
 language sql
 security invoker
-set search_path = pg_catalog
+set search_path = ''
 as $wrapper$
   select private.owner_save_product_passport_impl(p_product_id, p_request_id, p_payload);
 $wrapper$;
@@ -241,7 +241,7 @@ create or replace function private.owner_update_product_passport_impl(
 returns jsonb
 language plpgsql
 security definer
-set search_path = pg_catalog
+set search_path = ''
 as $function$
 declare
   v_owner_id uuid;
@@ -362,7 +362,7 @@ create or replace function public.owner_update_product_passport(
 returns jsonb
 language sql
 security invoker
-set search_path = pg_catalog
+set search_path = ''
 as $wrapper$
   select private.owner_update_product_passport_impl(p_product_id, p_payload);
 $wrapper$;
