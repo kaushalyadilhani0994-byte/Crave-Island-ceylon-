@@ -24,7 +24,7 @@ create or replace function public.owner_save_product_passport(
 returns jsonb
 language plpgsql
 security definer
-set search_path = pg_catalog, public, private
+set search_path = pg_catalog
 as $function$
 declare
   v_owner_id uuid;
