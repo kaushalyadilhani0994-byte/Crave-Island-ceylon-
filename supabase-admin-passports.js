@@ -65,11 +65,19 @@ storage_instructions:$("#cicPassStorage").value.trim()||null,
 public_story:$("#cicPassStory").value.trim()||null,
 published:$("#cicPassPublished").checked
 };
-const {data,error}=await db.rpc("owner_update_product_passport",{
+let data,error;
+try {
+const response=await db.rpc("owner_update_product_passport",{
 p_product_id:id,
 p_payload:row
 });
+data=response.data;error=response.error;
+} catch (requestError) {
+message("The passport save response was interrupted. Your details are still here; press Save again to safely retry.");
+return;
+} finally {
 btn.disabled=false;btn.textContent="Save product passport";
+}
 if(error){message("Could not save the passport and QR together: "+String(error.message||"Owner permission or server error").slice(0,180));return}
 const saved=Array.isArray(data)?data[0]:data;
 if(!saved||!saved.qr_url){message("The server did not confirm the passport and QR save. Please retry.");return}
