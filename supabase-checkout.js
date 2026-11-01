@@ -189,16 +189,26 @@
       customer_note: document.getElementById("cicCheckoutNote").value.trim(),
       items
     };
+    // Reuse the same key after a network timeout so the server can replay the saved order.
+    const fingerprint = JSON.stringify(payload);
+    const storageKey = "cic_order_retry_" + user.id;
+    let retry = null;
+    try { retry = JSON.parse(sessionStorage.getItem(storageKey) || "null"); } catch (_) {}
+    if (!retry || retry.fingerprint !== fingerprint || !/^[0-9a-f-]{36}$/i.test(retry.key || "")) {
+      retry = { fingerprint, key: crypto.randomUUID() };
+      try { sessionStorage.setItem(storageKey, JSON.stringify(retry)); } catch (_) {}
+    }
     busy = true;
     const btn = document.getElementById("cicCheckoutPlace"); btn.disabled = true; btn.textContent = "Saving order securely…";
     message("Checking live product prices and saving your order…");
     try {
-      const {data, error} = await db.functions.invoke("create-store-order", {body:payload});
+      const {data, error} = await db.functions.invoke("create-store-order", {body:payload, headers: {"Idempotency-Key": retry.key}});
       if (error || !data || data.error || !data.order) {
         const reason = data && data.error ? data.error : (error && error.message ? error.message : "Please try again.");
         throw new Error(reason);
       }
       const order = data.order;
+      try { sessionStorage.removeItem(storageKey); } catch (_) {}
       // Keep a convenience invoice snapshot only after the server confirms the order.
       // The database remains the source of truth; a local-storage failure must not undo an order.
       // Do not persist customer names, contact details, addresses, or order lines in browser localStorage.
