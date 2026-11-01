@@ -122,3 +122,30 @@ The following source changes are now staged on `review/atomic-order-idempotency`
 - Verify the Supabase Edge Function forwards the custom `Idempotency-Key` header end-to-end.
 - Add durable notification retry/outbox handling; current WhatsApp/Sheets notifications remain best-effort.
 - Do not apply this migration to production until the isolated tests pass and the owner explicitly approves.
+
+
+## Follow-up live verification — 2026-11-01
+
+Read-only checks against the live Supabase project confirmed:
+
+- The production order-item trigger is currently **AFTER INSERT OR DELETE** and calls `apply_order_item_inventory_delta()`. Its DELETE branch adds quantity back to tracked stock. The existing cancellation trigger also adds stock back on transition to cancelled. Therefore, deleting order lines and cancelling orders are two independent restock paths in the current live schema. The staged migration changes the item trigger to INSERT-only and adds a delete guard; this must be regression-tested with existing order history before release.
+- The existing live `alert_order_issues()` definition currently handles payment-failed and cancellation alerts and restocks tracked items on cancellation. The staged replacement retains both alert cases and adds a `stock_restocked_at` guard. No other branches were present in the inspected live function definition.
+- Live table columns confirm `store_order_items.product_id` is text while `products.id` is UUID; the existing inventory function casts the item product ID to UUID. The staged RPC inserts the product UUID as text and uses a UUID cast when restocking.
+- Production migration history does not contain the new atomic-order migration. The live database has not been altered by the review-branch SQL.
+- The live project currently lists active Edge Functions `create-store-order`, `update-order-status`, `owner-alert-notify`, `owner-invite-team-member`, and `update-product-inventory`. The review-branch source must be compared with deployed function versions before any deployment.
+
+### Current Supabase advisor observations (read-only)
+
+- Security advisor reports `public.owner_report_cron_config` has RLS enabled with no policies. This may be intentional for service-role/cron-only access; verify that no authenticated client needs it and retain deny-by-default access.
+- Security advisor flags policies on `admin_alerts`, `categories`, `customer_profiles`, `product_passports`, `products`, `staff_profiles`, `store_order_items`, and `store_orders` because they target the PostgreSQL `authenticated` role, which can also include Supabase anonymous-auth sessions. These warnings do not by themselves prove data exposure: each policy predicate must be checked for ownership, approval and permission constraints. Explicitly reject `auth.jwt()->>'is_anonymous' = 'true'` on sensitive customer/team/order operations where anonymous sessions are not intended.
+- Performance advisor reports multiple permissive authenticated policies on several tables (15 findings), increasing policy evaluation work and making effective access harder to audit. Consolidate only after recording the exact intended role/action matrix; do not simply drop team policies.
+- Six indexes were reported unused at the advisor snapshot. Do not remove them based on a single low-traffic observation; reassess after real usage.
+
+### Additional release blockers discovered
+
+1. The currently deployed live order-item DELETE trigger plus cancellation restock path can double-credit stock if order lines are deleted after cancellation. The staged migration addresses the path, but needs transaction tests and an explicit order-retention policy.
+2. The owner auth UI currently hides the legacy role grid. It implements owner OTP/profile approval and owner-only tools, but does not yet restore Main Admin / Supervisor / Staff / Media / Accounts. Role UI must not be re-enabled until matching server-side permissions are complete.
+3. The staged inventory function enforces approved staff profile and `permissions.inventory` update permission, and rejects anonymous users. Verify the deployed version and all direct table grants/RLS policies before enabling team inventory access.
+4. Production order creation remains the currently deployed Edge Function version until the review branch is separately tested and deployed. No claim of atomic order creation is made for the live storefront.
+
+No live database writes, Edge Function deployments, branch merges, or Vercel deployments were performed during this follow-up.
