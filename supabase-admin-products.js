@@ -71,7 +71,7 @@
     $("#cicCategoryForm",m).addEventListener("submit",saveCategory);
     $("#cicCategoryCancel",m).addEventListener("click",resetCategoryEditor);
     $("#cicProductForm",m).addEventListener("submit",saveProduct);
-    $("#cicProductForm",m).addEventListener("input",()=>{delete $("#cicProductForm",m).dataset.requestId;});
+    $("#cicProductForm",m).addEventListener("input",()=>{const form=$("#cicProductForm",m);if(form.dataset.saving!=="true")delete form.dataset.requestId;});
     document.body.appendChild(m); root=m;
   }
 
@@ -229,17 +229,22 @@
 
   async function saveProduct(event) {
     event.preventDefault();
-    if(!await checkAccess()){say("Owner access required.",true);return;}
+    const form=event.target;
+    if(form.dataset.saving==="true")return;
+    form.dataset.saving="true";
+    if(!await checkAccess()){delete form.dataset.saving;say("Owner access required.",true);return;}
     const name=$("#cicProdName").value.trim(), category=$("#cicProdCategory").value, price=Number($("#cicProdPrice").value);
     const ingredients=$("#cicProdIngredients").value.trim(), allergens=$("#cicProdAllergens").value.trim(), imageUrl=$("#cicProdImage").value.trim();
     const batch=$("#cicProdBatch").value.trim(), mfgDate=$("#cicProdMfg").value||null, expiryDate=$("#cicProdExpiry").value||null, storage=$("#cicProdStorage").value.trim();
-    if(!name||!category||!ingredients||!Number.isFinite(price)||price<=0||price>2000000){say("Enter product name, collection, verified ingredients, and a valid LKR price.",true);return;}
-    if(!isHttpsUrl(imageUrl)){say("Product image URL must be a valid HTTPS URL without embedded credentials.",true);return;}
-    if(mfgDate&&expiryDate&&mfgDate>expiryDate){say("Manufacturing date cannot be later than the expiry / best-before date.",true);return;}
-    const btn=event.submitter;if(btn){btn.disabled=true;btn.textContent="Saving product…";}
-    const form=event.target, editId=form.dataset.editId||"";
+    if(!name||!category||!ingredients||!Number.isFinite(price)||price<=0||price>2000000){delete form.dataset.saving;say("Enter product name, collection, verified ingredients, and a valid LKR price.",true);return;}
+    if(!isHttpsUrl(imageUrl)){delete form.dataset.saving;say("Product image URL must be a valid HTTPS URL without embedded credentials.",true);return;}
+    if(mfgDate&&expiryDate&&mfgDate>expiryDate){delete form.dataset.saving;say("Manufacturing date cannot be later than the expiry / best-before date.",true);return;}
+    const btn=event.submitter, editId=form.dataset.editId||"";
     const stockQuantity=Number($("#cicProdStock").value||0),lowStockThreshold=Number($("#cicProdLowStock").value||5);
-    if(!Number.isInteger(stockQuantity)||stockQuantity<0||!Number.isInteger(lowStockThreshold)||lowStockThreshold<0){say("Stock and low-stock threshold must be whole numbers of zero or more.",true);if(btn){btn.disabled=false;btn.textContent=form.dataset.editId?"Update live product":"Save product as draft";}return;}
+    if(!Number.isInteger(stockQuantity)||stockQuantity<0||!Number.isInteger(lowStockThreshold)||lowStockThreshold<0){delete form.dataset.saving;say("Stock and low-stock threshold must be whole numbers of zero or more.",true);return;}
+    const controls=Array.from(form.elements).map(el=>({el,disabled:el.disabled}));
+    controls.forEach(({el})=>{el.disabled=true;});
+    if(btn)btn.textContent="Saving product…";
     try {
       if(!form.dataset.requestId){
         if(!window.crypto||typeof window.crypto.randomUUID!=="function")throw new Error("This secure browser cannot create a retry-safe save request. Please use the latest browser over HTTPS.");
@@ -270,7 +275,11 @@
     }catch(error){
       const detail=String(error&&error.message||"Network or permission error").slice(0,220);
       say("Product save issue: "+detail+" Your form details are still here. Retry without changing them to safely recover the same save.",true);
-    }finally{if(btn){btn.disabled=false;btn.textContent=form.dataset.editId?"Update live product":"Save product as draft";}}
+    }finally{
+      controls.forEach(({el,disabled})=>{el.disabled=disabled;});
+      delete form.dataset.saving;
+      if(btn){btn.disabled=false;btn.textContent=form.dataset.editId?"Update live product":"Save product as draft";}
+    }
   }
 
   function init() {
