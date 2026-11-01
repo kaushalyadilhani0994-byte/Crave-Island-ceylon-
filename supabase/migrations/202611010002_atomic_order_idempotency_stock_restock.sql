@@ -91,14 +91,15 @@ begin
   if v_payment <> 'cod' then
     raise exception 'Only cash on delivery is currently available' using errcode='22023';
   end if;
-  if coalesce(jsonb_typeof(p_payload->'items'),'')<>'array'
-     or jsonb_array_length(p_payload->'items')<1
-     or jsonb_array_length(p_payload->'items')>50 then
+  if coalesce(jsonb_typeof(p_payload->'items'),'') <> 'array' then
+    raise exception 'Order items must be an array' using errcode='22023';
+  end if;
+  if jsonb_array_length(p_payload->'items') < 1 or jsonb_array_length(p_payload->'items') > 50 then
     raise exception 'Order must contain 1 to 50 product lines' using errcode='22023';
   end if;
 
-  if (select count(*) from jsonb_array_elements(p_payload->'items')) <>
-     (select count(distinct (x->>'product_id')) from jsonb_array_elements(p_payload->'items') x) then
+  if (select count(*) from jsonb_array_elements(p_payload->'items') as item(value)) <>
+     (select count(distinct value->>'product_id') from jsonb_array_elements(p_payload->'items') as item(value)) then
     raise exception 'Duplicate product lines are not allowed' using errcode='22023';
   end if;
 
