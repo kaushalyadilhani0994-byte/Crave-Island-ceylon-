@@ -239,7 +239,7 @@
     const btn=event.submitter;if(btn){btn.disabled=true;btn.textContent="Saving product…";}
     const form=event.target, editId=form.dataset.editId||"", existing=productRows.find(row=>String(row.id)===String(editId));
     const stockQuantity=Number($("#cicProdStock").value||0),lowStockThreshold=Number($("#cicProdLowStock").value||5);
-    if(!Number.isInteger(stockQuantity)||stockQuantity<0||!Number.isInteger(lowStockThreshold)||lowStockThreshold<0){say("Stock and low-stock threshold must be whole numbers of zero or more.",true);if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}return;}
+    if(!Number.isInteger(stockQuantity)||stockQuantity<0||!Number.isInteger(lowStockThreshold)||lowStockThreshold<0){say("Stock and low-stock threshold must be whole numbers of zero or more.",true);if(btn){btn.disabled=false;btn.textContent=form.dataset.editId?"Update live product":"Save product as draft";}return;}
     const row={name,category,price,currency:"LKR",description:$("#cicProdDesc").value.trim()||null,image_url:imageUrl||null,ingredients,allergen_information:allergens||null,batch_number:batch||null,stock_quantity:stockQuantity,low_stock_threshold:lowStockThreshold,manufacturing_date:mfgDate,expiry_date:expiryDate,storage_location:storage||null,track_inventory:$("#cicProdTrackStock").checked,is_active:editId?Boolean(existing&&existing.is_active):false};
     try {
       if(!form.dataset.requestId){
