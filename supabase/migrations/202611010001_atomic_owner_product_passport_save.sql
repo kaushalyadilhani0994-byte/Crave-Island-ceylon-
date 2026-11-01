@@ -3,6 +3,8 @@
 -- Review branch only. Do not apply to production until staging tests and explicit approval.
 
 create schema if not exists private;
+revoke all on schema private from public, anon;
+grant usage on schema private to authenticated;
 
 create table if not exists private.owner_product_save_requests (
   owner_id uuid not null,
@@ -16,7 +18,7 @@ create table if not exists private.owner_product_save_requests (
 
 revoke all on table private.owner_product_save_requests from public, anon, authenticated;
 
-create or replace function public.owner_save_product_passport(
+create or replace function private.owner_save_product_passport_impl(
   p_product_id uuid,
   p_request_id uuid,
   p_payload jsonb
@@ -210,13 +212,29 @@ begin
 end;
 $function$;
 
-revoke all on function public.owner_save_product_passport(uuid, uuid, jsonb) from public;
-revoke all on function public.owner_save_product_passport(uuid, uuid, jsonb) from anon;
+revoke all on function private.owner_save_product_passport_impl(uuid, uuid, jsonb) from public, anon;
+grant execute on function private.owner_save_product_passport_impl(uuid, uuid, jsonb) to authenticated;
+
+-- Exposed RPC wrapper is SECURITY INVOKER; privileged logic stays in private.
+create or replace function public.owner_save_product_passport(
+  p_product_id uuid,
+  p_request_id uuid,
+  p_payload jsonb
+)
+returns jsonb
+language sql
+security invoker
+set search_path = pg_catalog
+as $wrapper$
+  select private.owner_save_product_passport_impl(p_product_id, p_request_id, p_payload);
+$wrapper$;
+
+revoke all on function public.owner_save_product_passport(uuid, uuid, jsonb) from public, anon;
 grant execute on function public.owner_save_product_passport(uuid, uuid, jsonb) to authenticated;
 
 
 -- Atomically save/publish an existing product passport and keep its QR URL aligned.
-create or replace function public.owner_update_product_passport(
+create or replace function private.owner_update_product_passport_impl(
   p_product_id uuid,
   p_payload jsonb
 )
@@ -334,6 +352,20 @@ begin
 end;
 $function$;
 
-revoke all on function public.owner_update_product_passport(uuid, jsonb) from public;
-revoke all on function public.owner_update_product_passport(uuid, jsonb) from anon;
+revoke all on function private.owner_update_product_passport_impl(uuid, jsonb) from public, anon;
+grant execute on function private.owner_update_product_passport_impl(uuid, jsonb) to authenticated;
+
+create or replace function public.owner_update_product_passport(
+  p_product_id uuid,
+  p_payload jsonb
+)
+returns jsonb
+language sql
+security invoker
+set search_path = pg_catalog
+as $wrapper$
+  select private.owner_update_product_passport_impl(p_product_id, p_payload);
+$wrapper$;
+
+revoke all on function public.owner_update_product_passport(uuid, jsonb) from public, anon;
 grant execute on function public.owner_update_product_passport(uuid, jsonb) to authenticated;
