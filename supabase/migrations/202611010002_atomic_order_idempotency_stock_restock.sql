@@ -240,6 +240,9 @@ $function$;
 -- Item deletion is not a supported order-management action. Retain immutable order lines
 -- so later maintenance/cascade deletion cannot credit already-restocked stock a second time.
 drop trigger if exists store_order_items_inventory_delta on public.store_order_items;
+create trigger store_order_items_inventory_decrement
+  after insert on public.store_order_items
+  for each row execute function public.apply_order_item_inventory_delta();
 create or replace function public.prevent_store_order_item_delete()
 returns trigger
 language plpgsql
