@@ -106,3 +106,16 @@ A fresh read-only Supabase schema inspection confirmed that the existing live co
 The existing `private.is_approved_owner()` helper was inspected read-only. It checks `auth.uid()` against an approved `staff_profiles` owner row and is SECURITY DEFINER with a pinned `pg_catalog, public` search path. The proposed migration calls this established helper from its own private owner-only transaction helpers. The new public RPC wrappers are not present in live production because the migration has not been applied.
 
 The Supabase Security Advisor was also run read-only. It reported existing findings unrelated to this proposed migration (including the owner report cron config table with RLS but no policy and several existing anonymous-policy warnings). No live policy or permission changes were made as part of this review.
+
+
+## Final save-interaction review
+
+- The Owner Catalogue now prevents duplicate submits while the owner check and atomic save are in progress. Product form controls are temporarily disabled for the transaction, the retry key is not accidentally cleared by in-flight edits, and the owner cannot switch the editor to a different product while a save is running.
+- The Owner QR Passport form is frozen from the start of its save flow through owner verification, product-state preflight, and RPC completion. This prevents changing the selected product or label fields while the save is targeting the previously selected product.
+- The printed label callback now uses the product name and batch/date values captured in the confirmed save payload, rather than reading potentially changed form controls later.
+- A read-only inspection of live `products` triggers found the existing AFTER INSERT/UPDATE inventory-alert refresh trigger. The atomic product transaction continues to fire this trigger normally; no trigger or inventory-alert configuration was changed.
+- Latest V8 syntax checks pass for both owner JavaScript modules and the public passport page inline script.
+
+## Remaining validation boundary
+
+The migration has still not been parsed or executed by PostgreSQL, and the RPCs are not installed in the live project. Static checks cannot prove transaction behavior, function ownership, PostgREST schema exposure, or real browser/mobile behavior. Staging integration tests and owner approval remain mandatory before any live migration or deployment.
