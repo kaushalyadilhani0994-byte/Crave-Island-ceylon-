@@ -91,3 +91,7 @@ These are static checks, not PostgreSQL execution or end-to-end integration test
 ## Decision
 
 Keep the implementation on the review branch. Preserve production unchanged while completing static review and preparing a controlled staging/release checklist.
+
+## Additional QR editor safety check
+
+The Owner QR Passport selector now waits for the selected product's existing passport row to load successfully before enabling Save. If the lookup fails, Save stays disabled and the current saved passport is not replaced with blank/default values. A stale response from a previously selected product is ignored. This prevents a transient read/network error from accidentally clearing origin, story, allergens, or publication state.
