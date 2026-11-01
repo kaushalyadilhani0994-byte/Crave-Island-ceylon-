@@ -95,3 +95,11 @@ Keep the implementation on the review branch. Preserve production unchanged whil
 ## Additional QR editor safety check
 
 The Owner QR Passport selector now waits for the selected product's existing passport row to load successfully before enabling Save. If the lookup fails, Save stays disabled and the current saved passport is not replaced with blank/default values. A stale response from a previously selected product is ignored. This prevents a transient read/network error from accidentally clearing origin, story, allergens, or publication state.
+
+## Read-only production schema recheck (2026-11-01)
+
+A fresh read-only Supabase schema inspection confirmed that the existing live columns used by this implementation match the expected types: product primary key UUID; product QR URL text/unique; product price numeric; inventory integer/boolean fields; manufacturing/expiry dates; category name unique and active flag; passport product_id/public_slug unique text; passport ingredients/allergens text arrays; passport publication boolean and story/origin/storage fields. RLS is enabled on products, categories, and product_passports.
+
+The existing `private.is_approved_owner()` helper was inspected read-only. It checks `auth.uid()` against an approved `staff_profiles` owner row and is SECURITY DEFINER with a pinned `pg_catalog, public` search path. The proposed migration calls this established helper from its own private owner-only transaction helpers. The new public RPC wrappers are not present in live production because the migration has not been applied.
+
+The Supabase Security Advisor was also run read-only. It reported existing findings unrelated to this proposed migration (including the owner report cron config table with RLS but no policy and several existing anonymous-policy warnings). No live policy or permission changes were made as part of this review.
