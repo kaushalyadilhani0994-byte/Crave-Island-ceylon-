@@ -178,3 +178,16 @@ The active production source snapshots for owner-invite-team-member (version 1) 
 ## Live catalogue/order baseline snapshot — 2026-11-01
 
 Read-only production counts at the time of this check: 1 product total, 0 active products, 1 passport total, 0 published passports, and 0 orders. No product or passport was activated or published and no test order was created. This means QR end-to-end verification and real customer checkout cannot yet be fully exercised against a published sellable item; use isolated test fixtures/staging before production activation.
+
+
+## Follow-up verification (2026-11-01)
+
+- Read-only production schema inspection confirmed `store_order_items_inventory_delta` is the exact existing trigger name and currently fires AFTER INSERT OR DELETE. Its existing trigger function decrements stock on INSERT and credits stock on DELETE. The proposed migration drops that combined trigger, installs an INSERT-only decrement trigger, and blocks order-line DELETE to prevent a second stock credit after cancellation.
+- Confirmed production `store_order_items.created_at` exists, `product_id` is text, and `products.id` is UUID; the new order RPC's item aggregation ordering and ID casts match the current schema.
+- Confirmed the production order issue trigger fires only on UPDATE OF `payment_status, order_status`. The new `stock_restocked_at` marker update therefore does not recursively invoke the cancellation trigger.
+- Confirmed pgcrypto is installed in the `extensions` schema, matching the migration's SHA-256 call.
+- Synced the review-branch `update-order-status` source to the active production version 5. This avoids carrying an older owner-only source file that would otherwise remove the live approved-team `orders.update` / `dispatch.update` permission behavior if deployed.
+- JavaScript syntax checks pass for `supabase-checkout.js`, `supabase-admin-passports.js`, and `supabase-admin-products.js`.
+- Hardened checkout retry behavior: it now refuses to submit if session storage cannot persist the idempotency key, and deterministic invalid-price responses clear the retry key. The Edge Function now maps invalid product price and malformed order input to actionable client errors.
+- QR public page review confirms it reads only `published=true` passports and requires the linked product to remain active; unpublished passports and inactive products are not disclosed through the public QR page.
+- Still not production-ready for release: the atomic-order migration has not been executed or tested against an isolated PostgreSQL database; Edge Function/client integration tests, concurrency/rollback/restock tests, durable notification outbox, delivery-fee configuration, and final owner/admin role UI checks remain outstanding. No production schema, data, Edge Function, or Vercel deployment was changed during this verification.
