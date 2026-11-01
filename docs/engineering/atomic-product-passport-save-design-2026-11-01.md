@@ -119,3 +119,29 @@ The current browser save sequence is confirmed to commit the product INSERT/UPDA
 ## Current implementation gate
 
 No product/passport mutation, SQL grant, migration, function deployment, merge, or production deployment was performed during this follow-up. The live policy evidence above narrows the permission repair, but the absent staging project and absent recovered migration history remain release gates.
+
+
+## Review-branch implementation update (2026-11-01)
+
+A first implementation is now present on `review/atomic-order-idempotency` only:
+
+- New migration: `supabase/migrations/202611010001_atomic_owner_product_passport_save.sql`.
+- Existing Owner Catalogue form now calls `public.owner_save_product_passport` once instead of issuing separate browser writes to products, passports and QR.
+- The RPC is SECURITY DEFINER with a `pg_catalog`-only search path, checks `auth.uid()` against `private.is_approved_owner()`, and is executable only by `authenticated`; no anon execute grant is added.
+- The private request ledger plus transaction-scoped advisory lock makes retries with the same owner/request key return the original saved product. Reusing a key with different payload is rejected.
+- Product creation is forced inactive. Editing preserves the current active flag. Passport upsert preserves existing `origin`, `public_story`, and `published`; QR URL is generated from the canonical production origin and written in the same transaction.
+- The browser retains the request key after a failed/uncertain response and clears it when the form is edited or a different product is selected. Form values remain on error.
+- The original Admin layout, owner authentication code, fields, and button placement are not changed.
+
+### Checks completed
+
+- JavaScript syntax compilation with V8 `new Function`: passed.
+- Static checks confirm one RPC call replaces direct browser passport upsert; owner check, locked search path, authenticated-only execute grant, request-key handling, passport upsert and QR update are present.
+- These are source/static checks only. No PostgreSQL execution or database integration test has been performed.
+
+### Release blockers still open
+
+- No disposable Supabase staging project or dedicated test accounts are available in this workflow.
+- The migration must not be applied to production yet. It introduces a SECURITY DEFINER write path and private idempotency table, so it needs independent SQL review and staging tests for owner, non-owner staff, customer-authenticated, anon, create/edit, concurrent retry, changed-payload retry, forced passport/QR failure rollback, and published-passport preservation.
+- The exact live migration-history drift still needs reconciliation before this migration can be considered deployable.
+- No product, passport, QR record, live schema, or production deployment was changed by this implementation.
