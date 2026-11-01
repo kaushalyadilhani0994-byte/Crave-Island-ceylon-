@@ -107,8 +107,8 @@ begin
   perform p.id
   from public.products p
   join (
-    select (x->>'product_id')::uuid as id
-    from jsonb_array_elements(p_payload->'items') x
+    select (item.value->>'product_id')::uuid as id
+    from jsonb_array_elements(p_payload->'items') as item(value)
   ) requested on requested.id=p.id
   order by p.id
   for update of p;
@@ -179,12 +179,12 @@ begin
 
   insert into public.store_order_items(order_id,product_id,product_name,quantity,unit_price,line_total)
   select v_order_id,
-         x->>'product_id',
-         x->>'product_name',
-         (x->>'quantity')::integer,
-         (x->>'unit_price')::numeric,
-         (x->>'line_total')::numeric
-  from jsonb_array_elements(v_lines) x;
+         line.value->>'product_id',
+         line.value->>'product_name',
+         (line.value->>'quantity')::integer,
+         (line.value->>'unit_price')::numeric,
+         (line.value->>'line_total')::numeric
+  from jsonb_array_elements(v_lines) as line(value);
 
   select jsonb_build_object('id',o.id,'order_number',o.order_number,'subtotal',o.subtotal,'delivery_fee',o.delivery_fee,'total',o.total,'payment_method',o.payment_method,'payment_status',o.payment_status,'order_status',o.order_status,'created_at',o.created_at) into v_order from public.store_orders o where o.id=v_order_id;
   select coalesce(jsonb_agg(jsonb_build_object(
