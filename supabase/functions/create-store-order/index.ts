@@ -63,7 +63,7 @@ Deno.serve(async (req: Request) => {
     }
     const items = body.items.map((item: unknown) => {
       const value = item && typeof item === "object" ? item as Record<string, unknown> : {};
-      return { product_id: cleanText(value.product_id, 64), quantity: Number(value.quantity) };
+      return { product_id: cleanText(value.product_id, 64).toLowerCase(), quantity: Number(value.quantity) };
     });
     if (items.some((item) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(item.product_id) || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 50)) {
       return respond(400, { error: "One or more product IDs or quantities are invalid." });
