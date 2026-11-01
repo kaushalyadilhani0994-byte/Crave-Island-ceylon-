@@ -190,7 +190,8 @@
       items
     };
     // Reuse the same key after a network timeout so the server can replay the saved order.
-    const fingerprint = JSON.stringify(payload);
+    const fingerprintBytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(payload)));
+    const fingerprint = Array.from(new Uint8Array(fingerprintBytes), b => b.toString(16).padStart(2, "0")).join("");
     const storageKey = "cic_order_retry_" + user.id;
     let retry = null;
     try { retry = JSON.parse(sessionStorage.getItem(storageKey) || "null"); } catch (_) {}
