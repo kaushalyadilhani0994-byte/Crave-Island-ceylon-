@@ -55,3 +55,11 @@ The 2026-10-31 Security Advisor run reported:
 ## Preservation rules
 
 Keep the production URL, current storefront, Owner Admin layout, existing navigation, QR/login behaviour, products, categories, and all production records unchanged. No merge or production deployment is authorized by this audit note.
+
+## Additional critical Owner Catalogue finding — 2026-11-01
+
+A read-only live privilege inspection found that authenticated users have SELECT but no INSERT or UPDATE table privilege on `public.product_passports`, even though approved-owner and team certificate RLS policies exist. RLS policies do not replace SQL table grants. The current Owner Catalogue writes a product first and then UPSERTs its passport; the passport write therefore fails at the table-privilege layer, potentially leaving a hidden draft without a passport/QR or product edits without matching passport updates. No live write was attempted. See `atomic-product-passport-save-design-2026-11-01.md` for the proposed atomic repair and staging tests. This is a P0 product-creation blocker until corrected and verified.
+
+## Security Advisor refresh — 2026-11-01
+
+The latest read-only Security Advisor run continues to report leaked-password protection disabled, RLS enabled without a policy on `public.owner_report_cron_config`, and generic anonymous-access warnings for policies targeting authenticated users (including owner/customer/team predicates). Performance Advisor reports multiple permissive policies and several unused indexes. Do not silence these findings by deleting policies or indexes blindly; verify actual role grants, RLS predicates, schema exposure, and query plans first. No advisor finding was changed during this review.
