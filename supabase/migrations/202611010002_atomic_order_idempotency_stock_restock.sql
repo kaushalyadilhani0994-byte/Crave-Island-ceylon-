@@ -104,8 +104,14 @@ begin
     select 1
     from jsonb_array_elements(p_payload->'items') as item(value)
     where jsonb_typeof(item.value) <> 'object'
-       or coalesce(item.value->>'product_id','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}
-     (select count(distinct lower(value->>'product_id')) from jsonb_array_elements(p_payload->'items') as item(value)) then
+       or coalesce(item.value->>'product_id','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+       or coalesce(item.value->>'quantity','') !~ '^[0-9]+$'
+  ) then
+    raise exception 'Invalid product or quantity' using errcode='22023';
+  end if;
+
+  if (select count(*) from jsonb_array_elements(p_payload->'items') as item(value)) <>
+     (select count(distinct lower(item.value->>'product_id')) from jsonb_array_elements(p_payload->'items') as item(value)) then
     raise exception 'Duplicate product lines are not allowed' using errcode='22023';
   end if;
 
