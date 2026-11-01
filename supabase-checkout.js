@@ -190,8 +190,16 @@
       items
     };
     // Reuse the same key after a network timeout so the server can replay the saved order.
-    const fingerprintBytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(payload)));
-    const fingerprint = Array.from(new Uint8Array(fingerprintBytes), b => b.toString(16).padStart(2, "0")).join("");
+    if (!window.crypto || !window.crypto.subtle || typeof window.crypto.randomUUID !== "function") {
+      return message("Secure checkout is unavailable in this browser. Please open the store in an updated browser over HTTPS.", true);
+    }
+    let fingerprint;
+    try {
+      const fingerprintBytes = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(payload)));
+      fingerprint = Array.from(new Uint8Array(fingerprintBytes), b => b.toString(16).padStart(2, "0")).join("");
+    } catch (_) {
+      return message("Secure checkout could not prepare a safe retry token. Please refresh and try again.", true);
+    }
     const storageKey = "cic_order_retry_" + user.id;
     let retry = null;
     try { retry = JSON.parse(sessionStorage.getItem(storageKey) || "null"); } catch (_) {}
@@ -199,7 +207,7 @@
       return message("A previous checkout attempt may still have been saved. Retry with the same details first, or check My Orders before starting another order.", true);
     }
     if (!retry || !/^[0-9a-f-]{36}$/i.test(retry.key || "")) {
-      retry = { fingerprint, key: crypto.randomUUID() };
+      retry = { fingerprint, key: window.crypto.randomUUID() };
       try { sessionStorage.setItem(storageKey, JSON.stringify(retry)); } catch (_) {}
     }
     busy = true;
