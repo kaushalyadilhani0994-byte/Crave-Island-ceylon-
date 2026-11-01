@@ -76,7 +76,12 @@ begin
 
   begin
     v_price := (p_payload->>'price')::numeric;
-    if coalesce(p_payload->>'stock_quantity', '0') !~ '^\\d+
+    if coalesce(p_payload->>'stock_quantity', '0') !~ '^[0-9]+$'
+       or coalesce(p_payload->>'low_stock_threshold', '5') !~ '^[0-9]+$' then
+      raise exception 'Stock and threshold must be whole non-negative numbers' using errcode = '22023';
+    end if;
+    v_stock := coalesce((p_payload->>'stock_quantity')::integer, 0);
+    v_threshold := coalesce((p_payload->>'low_stock_threshold')::integer, 5);
     v_mfg := nullif(p_payload->>'manufacturing_date', '')::date;
     v_expiry := nullif(p_payload->>'expiry_date', '')::date;
   exception when others then
