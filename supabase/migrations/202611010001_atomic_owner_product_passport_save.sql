@@ -213,3 +213,118 @@ $function$;
 revoke all on function public.owner_save_product_passport(uuid, uuid, jsonb) from public;
 revoke all on function public.owner_save_product_passport(uuid, uuid, jsonb) from anon;
 grant execute on function public.owner_save_product_passport(uuid, uuid, jsonb) to authenticated;
+
+
+-- Atomically save/publish an existing product passport and keep its QR URL aligned.
+create or replace function public.owner_update_product_passport(
+  p_product_id uuid,
+  p_payload jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog
+as $function$
+declare
+  v_owner_id uuid;
+  v_product_name text;
+  v_is_active boolean;
+  v_published boolean;
+  v_mfg date;
+  v_best_before date;
+  v_slug text;
+  v_qr_url text;
+  v_ingredients text[];
+  v_allergens text[];
+begin
+  v_owner_id := auth.uid();
+  if v_owner_id is null or not private.is_approved_owner() then
+    raise exception 'Approved owner access required' using errcode = '42501';
+  end if;
+  if p_product_id is null or p_payload is null or jsonb_typeof(p_payload) <> 'object' then
+    raise exception 'A valid product and passport payload are required' using errcode = '22023';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(v_owner_id::text || ':passport:' || p_product_id::text, 0));
+
+  select name, is_active into v_product_name, v_is_active
+  from public.products where id = p_product_id;
+  if not found then
+    raise exception 'Product not found' using errcode = 'P0002';
+  end if;
+
+  if nullif(btrim(p_payload->>'ingredients'), '') is null then
+    raise exception 'Verified ingredients are required' using errcode = '22023';
+  end if;
+
+  begin
+    v_mfg := nullif(p_payload->>'manufacturing_date', '')::date;
+    v_best_before := nullif(p_payload->>'best_before', '')::date;
+    if coalesce(p_payload->>'published', 'false') not in ('true', 'false') then
+      raise exception 'Published must be true or false';
+    end if;
+    v_published := coalesce((p_payload->>'published')::boolean, false);
+  exception when others then
+    raise exception 'Passport dates or publication setting are invalid' using errcode = '22023';
+  end;
+
+  if v_mfg is not null and v_best_before is not null and v_mfg > v_best_before then
+    raise exception 'Manufacturing date cannot be later than best-before date' using errcode = '22023';
+  end if;
+  if v_published and not v_is_active then
+    raise exception 'Activate the product before publishing its QR passport' using errcode = '22023';
+  end if;
+
+  select array_agg(btrim(part)) into v_ingredients
+  from regexp_split_to_table(replace(btrim(p_payload->>'ingredients'), chr(10), ','), '[,;]+') as parts(part)
+  where btrim(part) <> '';
+  if coalesce(cardinality(v_ingredients), 0) = 0 then
+    raise exception 'At least one ingredient is required' using errcode = '22023';
+  end if;
+  select coalesce(array_agg(btrim(part)), '{}'::text[]) into v_allergens
+  from regexp_split_to_table(replace(coalesce(p_payload->>'allergen_information', ''), chr(10), ','), '[,;]+') as parts(part)
+  where btrim(part) <> '';
+
+  v_slug := 'cic-' || lower(p_product_id::text);
+  v_qr_url := 'https://craveislandceylonv18supabaseintegra.vercel.app/passport.html?slug=' || v_slug;
+
+  insert into public.product_passports (
+    product_id, public_slug, manufacturing_date, ingredients, allergen_information,
+    origin, batch_code, best_before, storage_instructions, public_story, published, updated_at
+  ) values (
+    p_product_id::text, v_slug, v_mfg, v_ingredients, v_allergens,
+    nullif(btrim(p_payload->>'origin'), ''),
+    nullif(btrim(p_payload->>'batch_code'), ''),
+    v_best_before,
+    nullif(btrim(p_payload->>'storage_instructions'), ''),
+    nullif(btrim(p_payload->>'public_story'), ''),
+    v_published, now()
+  )
+  on conflict (product_id) do update set
+    public_slug = excluded.public_slug,
+    manufacturing_date = excluded.manufacturing_date,
+    ingredients = excluded.ingredients,
+    allergen_information = excluded.allergen_information,
+    origin = excluded.origin,
+    batch_code = excluded.batch_code,
+    best_before = excluded.best_before,
+    storage_instructions = excluded.storage_instructions,
+    public_story = excluded.public_story,
+    published = excluded.published,
+    updated_at = now();
+
+  update public.products set qr_code = v_qr_url where id = p_product_id;
+
+  return jsonb_build_object(
+    'product_id', p_product_id,
+    'product_name', v_product_name,
+    'slug', v_slug,
+    'qr_url', v_qr_url,
+    'published', v_published
+  );
+end;
+$function$;
+
+revoke all on function public.owner_update_product_passport(uuid, jsonb) from public;
+revoke all on function public.owner_update_product_passport(uuid, jsonb) from anon;
+grant execute on function public.owner_update_product_passport(uuid, jsonb) to authenticated;
