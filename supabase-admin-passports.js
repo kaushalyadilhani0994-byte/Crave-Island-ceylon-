@@ -3,7 +3,7 @@
 "use strict";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let db;
+let db, passportLoadState="idle";
 async function owner(){
 db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
 if(!db)return false;
@@ -29,7 +29,7 @@ const {data,error}=await db.from("products").select("id,name,batch_number,ingred
 if(error){message("Could not load products. Check the owner access policy and try again.");return}
 const sel=$("#cicPassProduct");
 const saveButton=$("#cicPassSave");
-let passportLoadState="idle";
+passportLoadState="idle";
 if(saveButton)saveButton.disabled=true;
 sel.innerHTML='<option value="">Choose a product</option>'+(data||[]).map(p=>'<option value="'+esc(p.id)+'" data-batch="'+esc(p.batch_number||"")+'" data-ingredients="'+esc(p.ingredients||"")+'" data-mfg="'+esc(p.manufacturing_date||"")+'" data-expiry="'+esc(p.expiry_date||"")+'">'+esc(p.name)+'</option>').join("");
 sel.onchange=async()=>{
