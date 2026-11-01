@@ -149,3 +149,14 @@ Read-only checks against the live Supabase project confirmed:
 4. Production order creation remains the currently deployed Edge Function version until the review branch is separately tested and deployed. No claim of atomic order creation is made for the live storefront.
 
 No live database writes, Edge Function deployments, branch merges, or Vercel deployments were performed during this follow-up.
+
+
+## Live Edge Function comparison — 2026-11-01
+
+- Production create-store-order remains deployed at version 12 and still uses separate catalogue/stock reads and order writes. The new atomic RPC and idempotency work is review-branch only; live checkout is not yet protected by it.
+- Production update-order-status is version 5 and already supports approved team members with orders.update and dispatch.update permissions, with narrower dispatch transitions. This corrects the earlier source-only note that described it as owner-only.
+- Production update-product-inventory is version 2. It checks registered-user status, approved staff profile and inventory.update permission. Its deployed expiry-date regular expression is double-escaped, so ordinary YYYY-MM-DD values fail validation. The review-branch source replaces this with a strict ISO-date helper and canonical UUID validation. This fix is not live.
+- Production owner-invite-team-member allows supervisor, staff, media, accounts and star_club roles, but new invitations are unapproved with empty permissions. Invitation is not equivalent to access approval.
+- Production owner-alert-notify has JWT verification disabled for scheduled cron calls; scheduled actions are guarded by a stored cron secret and owner actions perform their own user/profile checks. Keep the cron secret private and preserve those checks.
+
+No live Edge Function was changed during this comparison.
