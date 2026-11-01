@@ -75,6 +75,14 @@ begin
   if v_name is null or length(v_name) > 160 or v_category is null or length(v_category) > 160 then
     raise exception 'Product name and active collection are required' using errcode = '22023';
   end if;
+  if length(coalesce(p_payload->>'description', '')) > 3000
+     or length(coalesce(p_payload->>'image_url', '')) > 1500
+     or length(coalesce(p_payload->>'ingredients', '')) > 5000
+     or length(coalesce(p_payload->>'allergen_information', '')) > 2000
+     or length(coalesce(p_payload->>'batch_number', '')) > 100
+     or length(coalesce(p_payload->>'storage_location', '')) > 180 then
+    raise exception 'One or more product fields exceed the permitted length' using errcode = '22023';
+  end if;
 
   begin
     v_price := (p_payload->>'price')::numeric;
