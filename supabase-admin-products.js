@@ -114,8 +114,10 @@
   }
 
   function editProduct(id) {
+    const form=$("#cicProductForm");
+    if(form.dataset.saving==="true"){say("Please wait until the current product save finishes before switching products.",true);return;}
     const p=productRows.find(row=>String(row.id)===String(id)); if(!p)return;
-    const form=$("#cicProductForm"); delete form.dataset.requestId; form.dataset.editId=p.id;
+    delete form.dataset.requestId; form.dataset.editId=p.id;
     $("#cicProdName").value=p.name||""; $("#cicProdPrice").value=p.price==null?"":p.price;
     const categorySelect=$("#cicProdCategory");
     if(p.category&&!Array.from(categorySelect.options).some(option=>option.value===p.category)){
