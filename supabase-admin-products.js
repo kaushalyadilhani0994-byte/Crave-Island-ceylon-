@@ -234,7 +234,11 @@
     const form=event.target;
     if(form.dataset.saving==="true")return;
     form.dataset.saving="true";
-    if(!await checkAccess()){delete form.dataset.saving;say("Owner access required.",true);return;}
+    try {
+      if(!await checkAccess()){delete form.dataset.saving;say("Owner access required.",true);return;}
+    } catch (accessError) {
+      delete form.dataset.saving;say("Could not verify owner access. Check your connection and try again.",true);return;
+    }
     const name=$("#cicProdName").value.trim(), category=$("#cicProdCategory").value, price=Number($("#cicProdPrice").value);
     const ingredients=$("#cicProdIngredients").value.trim(), allergens=$("#cicProdAllergens").value.trim(), imageUrl=$("#cicProdImage").value.trim();
     const batch=$("#cicProdBatch").value.trim(), mfgDate=$("#cicProdMfg").value||null, expiryDate=$("#cicProdExpiry").value||null, storage=$("#cicProdStorage").value.trim();
