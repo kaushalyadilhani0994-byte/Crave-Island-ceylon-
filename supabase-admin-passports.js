@@ -27,27 +27,47 @@ async function loadProducts(){
 if(!await owner()){message("Sign in with the approved owner account to manage product passports.");return}
 const {data,error}=await db.from("products").select("id,name,batch_number,ingredients,manufacturing_date,expiry_date,is_active").order("name");
 if(error){message("Could not load products. Check the owner access policy and try again.");return}
-const sel=$("#cicPassProduct");sel.innerHTML='<option value="">Choose a product</option>'+(data||[]).map(p=>'<option value="'+esc(p.id)+'" data-batch="'+esc(p.batch_number||"")+'" data-ingredients="'+esc(p.ingredients||"")+'" data-mfg="'+esc(p.manufacturing_date||"")+'" data-expiry="'+esc(p.expiry_date||"")+'">'+esc(p.name)+'</option>').join("");
+const sel=$("#cicPassProduct");
+const saveButton=$("#cicPassSave");
+let passportLoadState="idle";
+if(saveButton)saveButton.disabled=true;
+sel.innerHTML='<option value="">Choose a product</option>'+(data||[]).map(p=>'<option value="'+esc(p.id)+'" data-batch="'+esc(p.batch_number||"")+'" data-ingredients="'+esc(p.ingredients||"")+'" data-mfg="'+esc(p.manufacturing_date||"")+'" data-expiry="'+esc(p.expiry_date||"")+'">'+esc(p.name)+'</option>').join("");
 sel.onchange=async()=>{
 $("#cicPassResult").innerHTML="";
-const id=sel.value;if(!id)return;
-const {data:p}=await db.from("product_passports").select("*").eq("product_id",id).maybeSingle();
+const id=sel.value;
+passportLoadState=id?"loading":"idle";
+if(saveButton)saveButton.disabled=!!id;
+if(!id){message("Choose a product and enter verified pack information.");return}
+message("Loading the saved passport details before editing…");
 const opt=sel.options[sel.selectedIndex];
+const {data:p,error:passportError}=await db.from("product_passports").select("*").eq("product_id",id).maybeSingle();
+if(sel.value!==id)return;
+if(passportError){
+passportLoadState="error";
+if(saveButton)saveButton.disabled=true;
+message("Could not load the existing passport safely. Your saved details are protected; refresh and try again.");
+return;
+}
 $("#cicPassBatch").value=p?.batch_code||opt.dataset.batch||"";
 $("#cicPassIngredients").value=(p?.ingredients||[]).join(", ")||opt.dataset.ingredients||"";
 $("#cicPassOrigin").value=p?.origin||"";
-$("#cicPassMfg").value=p?.manufacturing_date||opt.dataset.mfg||""; $("#cicPassBest").value=p?.best_before||opt.dataset.expiry||"";
+$("#cicPassMfg").value=p?.manufacturing_date||opt.dataset.mfg||"";
+$("#cicPassBest").value=p?.best_before||opt.dataset.expiry||"";
 $("#cicPassStorage").value=p?.storage_instructions||"";
 $("#cicPassAllergens").value=(p?.allergen_information||[]).join(", ")||"";
 $("#cicPassStory").value=p?.public_story||"";
 $("#cicPassPublished").checked=!!p?.published;
+passportLoadState="loaded";
+if(saveButton)saveButton.disabled=false;
+message(p?"Existing passport loaded. Check verified details before saving.":"No passport exists yet. Enter verified details to create one.");
 };
 }
 function splitList(v){return v.split(/[,;\n]/).map(s=>s.trim()).filter(Boolean)}
 async function save(e){
 e.preventDefault();if(!await owner()){message("Owner session expired. Please sign in again.");return}
 const id=$("#cicPassProduct").value,ingredients=$("#cicPassIngredients").value.trim();
-if(!id||!ingredients){message("Choose a product and enter its verified ingredients.");return}
+if(!id||passportLoadState!=="loaded"){message("Wait until the selected product's saved passport details have loaded successfully.");return}
+if(!ingredients){message("Enter the verified ingredient list.");return}
 const {data:product,error:productError}=await db.from("products").select("name,is_active").eq("id",id).maybeSingle();
 if(productError||!product){message("Could not verify the selected product. Refresh and try again.");return}
 if($("#cicPassPublished").checked&&product.is_active!==true){message("This product is hidden from the shop. Activate it in Owner Products before publishing its QR passport.");return}
