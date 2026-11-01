@@ -37,8 +37,12 @@ Deno.serve(async (req: Request) => {
   if (!url || !anonKey || !serviceKey) return response({ error: "Server configuration is incomplete." }, 500);
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
-  let payload: { action?: string; alert_id?: string };
-  try { payload = await req.json(); } catch { return response({ error: "Invalid request body." }, 400); }
+  let parsedPayload: unknown;
+  try { parsedPayload = await req.json(); } catch { return response({ error: "Invalid request body." }, 400); }
+  if (!parsedPayload || typeof parsedPayload !== "object" || Array.isArray(parsedPayload)) {
+    return response({ error: "Request body must be a JSON object." }, 400);
+  }
+  const payload = parsedPayload as { action?: string; alert_id?: string };
 
   const cronHeader = req.headers.get("x-cron-secret") || "";
   const { data: cronConfig } = await admin.from("owner_report_cron_config").select("cron_secret").eq("id", true).maybeSingle();
