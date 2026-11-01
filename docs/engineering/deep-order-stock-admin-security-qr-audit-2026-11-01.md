@@ -173,3 +173,8 @@ No live Edge Function was changed during this comparison.
 ## Deployed function source tracking
 
 The active production source snapshots for owner-invite-team-member (version 1) and owner-alert-notify (version 11) have now been copied into the review branch under their Supabase function directories. This is source-control recovery only; no Edge Function was redeployed. It reduces the risk of future production changes being made without a matching repository source file.
+
+
+## Live catalogue/order baseline snapshot — 2026-11-01
+
+Read-only production counts at the time of this check: 1 product total, 0 active products, 1 passport total, 0 published passports, and 0 orders. No product or passport was activated or published and no test order was created. This means QR end-to-end verification and real customer checkout cannot yet be fully exercised against a published sellable item; use isolated test fixtures/staging before production activation.
