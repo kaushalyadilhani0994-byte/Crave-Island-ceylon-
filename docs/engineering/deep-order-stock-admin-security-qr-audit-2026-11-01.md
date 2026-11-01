@@ -102,3 +102,23 @@ The currently inspected owner-auth module hides the legacy role selector and exp
 
 ## Safety boundary
 This audit performed read-only production SQL queries only. No production order, product, passport, staff, alert or inventory row was changed. No production SQL migration or Edge Function was deployed. No Vercel deployment, merge, PR, customer notification, or paid staging branch was created.
+
+
+## Follow-up implementation staged on review branch — 2026-11-01
+
+The following source changes are now staged on `review/atomic-order-idempotency`; they have **not** been applied to production Supabase or deployed:
+
+- Added migration `202611010002_atomic_order_idempotency_stock_restock.sql`.
+- Added a service-role-only transactional RPC for COD order creation. It rechecks active product/category, expiry, current prices and stock while holding product row locks, then inserts the order header and all order lines in the same transaction.
+- Added customer-scoped idempotency keys and payload matching. A retry with the same key and same payload returns the existing order; reusing the key with different details is rejected.
+- Updated the checkout client to retain a retry key for an uncertain request, storing only a SHA-256 payload fingerprint plus the key in session storage.
+- Updated the Edge Function to call the atomic RPC before mutable stock checks, so a successful request whose HTTP response was lost can still replay even if its stock has since been reserved.
+- Updated cancellation restock to use an order-level `stock_restocked_at` marker. The inventory trigger remains on line INSERT only; order-line DELETE is blocked so a later cascade/maintenance delete cannot double-credit stock.
+
+### Verification still required before release
+
+- Run the migration on an isolated PostgreSQL/Supabase test project and verify function syntax, grants and trigger ordering.
+- Test simultaneous purchases for the last unit, same-key duplicate requests, same-key/different-payload rejection, rollback after line insert failure, cancellation restock once, and blocked line deletion.
+- Verify the Supabase Edge Function forwards the custom `Idempotency-Key` header end-to-end.
+- Add durable notification retry/outbox handling; current WhatsApp/Sheets notifications remain best-effort.
+- Do not apply this migration to production until the isolated tests pass and the owner explicitly approves.
