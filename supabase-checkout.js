@@ -208,7 +208,13 @@
     }
     if (!retry || !/^[0-9a-f-]{36}$/i.test(retry.key || "")) {
       retry = { fingerprint, key: window.crypto.randomUUID() };
-      try { sessionStorage.setItem(storageKey, JSON.stringify(retry)); } catch (_) {}
+      try {
+        sessionStorage.setItem(storageKey, JSON.stringify(retry));
+        const savedRetry = JSON.parse(sessionStorage.getItem(storageKey) || "null");
+        if (!savedRetry || savedRetry.key !== retry.key || savedRetry.fingerprint !== fingerprint) throw new Error("storage_unavailable");
+      } catch (_) {
+        return message("Secure retry protection is unavailable in this browser session. Please enable session storage and try again; no order was submitted.", true);
+      }
     }
     busy = true;
     const btn = document.getElementById("cicCheckoutPlace"); btn.disabled = true; btn.textContent = "Saving order securely…";
