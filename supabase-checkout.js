@@ -224,7 +224,12 @@
       try { if (typeof window.clearCart === "function") window.clearCart(); else { localStorage.removeItem("crave_cart_v4"); localStorage.removeItem("crave_cart"); } } catch (_) {}
       try { if (typeof window.renderCart === "function") window.renderCart(); } catch (_) {}
     } catch (e) {
-      message(e && e.message ? e.message : "Order could not be saved. Please retry.", true);
+      const failureMessage = e && e.message ? e.message : "Order could not be saved. Please retry.";
+      // Deterministic validation/stock rejections mean no order was committed; allow a corrected basket.
+      if (/not enough stock|stock changed|passed its recorded expiry|no longer available/i.test(failureMessage)) {
+        try { sessionStorage.removeItem(storageKey); } catch (_) {}
+      }
+      message(failureMessage, true);
     } finally {
       busy = false; btn.disabled = false; btn.textContent = "Place order securely";
     }
