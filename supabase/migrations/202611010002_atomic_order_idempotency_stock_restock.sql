@@ -99,7 +99,7 @@ begin
   end if;
 
   if (select count(*) from jsonb_array_elements(p_payload->'items') as item(value)) <>
-     (select count(distinct value->>'product_id') from jsonb_array_elements(p_payload->'items') as item(value)) then
+     (select count(distinct lower(value->>'product_id')) from jsonb_array_elements(p_payload->'items') as item(value)) then
     raise exception 'Duplicate product lines are not allowed' using errcode='22023';
   end if;
 
