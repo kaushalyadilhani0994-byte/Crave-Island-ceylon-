@@ -24,6 +24,9 @@ $("#cicPassportForm").addEventListener("submit",save);
 }
 function message(t){const e=$("#cicPassportMsg");if(e)e.textContent=t}
 async function loadProducts(){
+passportLoadState="idle";
+const initialSaveButton=$("#cicPassSave");
+if(initialSaveButton)initialSaveButton.disabled=true;
 if(!await owner()){message("Sign in with the approved owner account to manage product passports.");return}
 const {data,error}=await db.from("products").select("id,name,batch_number,ingredients,manufacturing_date,expiry_date,is_active").order("name");
 if(error){message("Could not load products. Check the owner access policy and try again.");return}
