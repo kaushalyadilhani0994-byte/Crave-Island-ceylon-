@@ -71,6 +71,7 @@
     $("#cicCategoryForm",m).addEventListener("submit",saveCategory);
     $("#cicCategoryCancel",m).addEventListener("click",resetCategoryEditor);
     $("#cicProductForm",m).addEventListener("submit",saveProduct);
+    $("#cicProductForm",m).addEventListener("input",()=>{delete $("#cicProductForm",m).dataset.requestId;});
     document.body.appendChild(m); root=m;
   }
 
@@ -241,29 +242,35 @@
     if(!Number.isInteger(stockQuantity)||stockQuantity<0||!Number.isInteger(lowStockThreshold)||lowStockThreshold<0){say("Stock and low-stock threshold must be whole numbers of zero or more.",true);if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}return;}
     const row={name,category,price,currency:"LKR",description:$("#cicProdDesc").value.trim()||null,image_url:imageUrl||null,ingredients,allergen_information:allergens||null,batch_number:batch||null,stock_quantity:stockQuantity,low_stock_threshold:lowStockThreshold,manufacturing_date:mfgDate,expiry_date:expiryDate,storage_location:storage||null,track_inventory:$("#cicProdTrackStock").checked,is_active:editId?Boolean(existing&&existing.is_active):false};
     try {
-      let saved;
-      if(editId){
-        const result=await client.from("products").update(row).eq("id",editId).select("id").single();
-        if(result.error)throw result.error;saved=result.data;
-      }else{
-        const result=await client.from("products").insert(row).select("id").single();
-        if(result.error)throw result.error;saved=result.data;
+      if(!form.dataset.requestId){
+        if(!window.crypto||typeof window.crypto.randomUUID!=="function")throw new Error("This secure browser cannot create a retry-safe save request. Please use the latest browser over HTTPS.");
+        form.dataset.requestId=window.crypto.randomUUID();
       }
-      const productId=String(saved.id),slug="cic-"+productId.toLowerCase(),passportUrl=location.origin+"/passport.html?slug="+encodeURIComponent(slug);
-      const {data:oldPassport,error:oldError}=await client.from("product_passports").select("published,origin,public_story").eq("product_id",productId).maybeSingle();
-      if(oldError)throw oldError;
-      const passport={product_id:productId,public_slug:slug,manufacturing_date:mfgDate,ingredients:ingredients.split(/[,;\n]/).map(x=>x.trim()).filter(Boolean),allergen_information:allergens.split(/[,;\n]/).map(x=>x.trim()).filter(Boolean),batch_code:batch||null,best_before:expiryDate,storage_instructions:storage||null,origin:oldPassport?.origin||null,public_story:oldPassport?.public_story||null,published:oldPassport?.published===true,updated_at:new Date().toISOString()};
-      const {error:passportError}=await client.from("product_passports").upsert(passport,{onConflict:"product_id"});
-      if(passportError)throw new Error("Product saved, but its QR passport could not be created: "+passportError.message);
-      const {error:qrError}=await client.from("products").update({qr_code:passportUrl}).eq("id",productId);
-      if(qrError)throw new Error("Product and passport saved, but QR link could not be attached: "+qrError.message);
-      form.reset();delete form.dataset.editId;const saveButton=form.querySelector("button[type=submit]");if(saveButton)saveButton.textContent="Save product as draft";
-      say((editId?"Product updated. ":"Product saved as a hidden draft. ")+"Unique QR passport created and attached. Date added is automatic. Publish the passport before printing labels for customer scans. QR: "+passportUrl);
+      const payload={
+        name,category,price,currency:"LKR",
+        description:$("#cicProdDesc").value.trim()||null,
+        image_url:imageUrl||null,ingredients,
+        allergen_information:allergens||null,batch_number:batch||null,
+        stock_quantity:stockQuantity,low_stock_threshold:lowStockThreshold,
+        manufacturing_date:mfgDate,expiry_date:expiryDate,
+        storage_location:storage||null,track_inventory:$("#cicProdTrackStock").checked
+      };
+      const {data,error}=await client.rpc("owner_save_product_passport",{
+        p_product_id:editId||null,
+        p_request_id:form.dataset.requestId,
+        p_payload:payload
+      });
+      if(error)throw error;
+      const result=Array.isArray(data)?data[0]:data;
+      if(!result||!result.product_id||!result.qr_url)throw new Error("The server did not confirm the saved product and QR passport.");
+      form.reset();delete form.dataset.editId;delete form.dataset.requestId;
+      const saveButton=form.querySelector("button[type=submit]");if(saveButton)saveButton.textContent="Save product as draft";
+      say((result.created?"Product saved as a hidden draft. ":"Product updated. ")+(result.replayed?"Previous confirmed save recovered. ":"")+"Product, passport and QR link were saved together. Passport publishing remains a separate owner action. QR: "+result.qr_url);
       await loadAll();
       if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function")await window.CIC_SUPABASE.refreshCatalogue();
     }catch(error){
       const detail=String(error&&error.message||"Network or permission error").slice(0,220);
-      say("Product save issue: "+detail,true);
+      say("Product save issue: "+detail+" Your form details are still here. Retry without changing them to safely recover the same save.",true);
     }finally{if(btn){btn.disabled=false;btn.textContent=editId?"Update live product":"Save product as draft";}}
   }
 
