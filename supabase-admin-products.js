@@ -115,7 +115,7 @@
 
   function editProduct(id) {
     const p=productRows.find(row=>String(row.id)===String(id)); if(!p)return;
-    const form=$("#cicProductForm"); form.dataset.editId=p.id;
+    const form=$("#cicProductForm"); delete form.dataset.requestId; form.dataset.editId=p.id;
     $("#cicProdName").value=p.name||""; $("#cicProdPrice").value=p.price==null?"":p.price;
     const categorySelect=$("#cicProdCategory");
     if(p.category&&!Array.from(categorySelect.options).some(option=>option.value===p.category)){
