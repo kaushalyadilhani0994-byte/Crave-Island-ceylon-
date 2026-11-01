@@ -218,3 +218,10 @@ Read-only production counts at the time of this check: 1 product total, 0 active
 - This prevents malformed direct RPC payloads from reaching the row-lock query and surfacing as an unhandled UUID-cast error. The Edge Function retains its own matching input validation.
 - Duplicate-line detection now runs only after required item fields have been validated, so missing product IDs cannot be misclassified as duplicate lines.
 - Review-branch only; this SQL has not been executed against production or an isolated PostgreSQL test database.
+
+
+## Order-status endpoint request hardening — 2026-11-01
+
+- Updated the staged `update-order-status` Edge Function to reject anonymous Supabase sessions, malformed JSON shapes (including null, arrays and primitives), and non-canonical UUID order IDs before querying the order table.
+- Existing approved staff-profile and per-module `orders.update` / `dispatch.update` checks and status-transition rules are retained.
+- This is review-branch source only. The production function remains at its previously inspected deployed version until separately tested and explicitly approved for deployment.
