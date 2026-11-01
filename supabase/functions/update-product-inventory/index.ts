@@ -45,8 +45,12 @@ Deno.serve(async (req: Request) => {
       return reply(403, { error: "Inventory update permission is required." });
     }
 
-    let body: Record<string, unknown>;
-    try { body = await req.json(); } catch { return reply(400, { error: "Invalid JSON." }); }
+    let parsedBody: unknown;
+    try { parsedBody = await req.json(); } catch { return reply(400, { error: "Invalid JSON." }); }
+    if (!parsedBody || typeof parsedBody !== "object" || Array.isArray(parsedBody)) {
+      return reply(400, { error: "Request body must be a JSON object." });
+    }
+    const body = parsedBody as Record<string, unknown>;
     const productId = typeof body.product_id === "string" ? body.product_id.trim() : "";
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId)) {
       return reply(400, { error: "Valid product ID required." });
@@ -54,15 +58,15 @@ Deno.serve(async (req: Request) => {
 
     const updates: Record<string, unknown> = {};
     if (Object.hasOwn(body, "stock_quantity")) {
-      const value = Number(body.stock_quantity);
-      if (!Number.isInteger(value) || value < 0 || value > 1000000) {
+      const value = body.stock_quantity;
+      if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0 || value > 1000000) {
         return reply(400, { error: "Stock quantity must be a whole number from 0 to 1,000,000." });
       }
       updates.stock_quantity = value;
     }
     if (Object.hasOwn(body, "low_stock_threshold")) {
-      const value = Number(body.low_stock_threshold);
-      if (!Number.isInteger(value) || value < 0 || value > 1000000) {
+      const value = body.low_stock_threshold;
+      if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0 || value > 1000000) {
         return reply(400, { error: "Low-stock threshold must be a whole number from 0 to 1,000,000." });
       }
       updates.low_stock_threshold = value;
