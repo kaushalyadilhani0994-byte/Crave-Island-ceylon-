@@ -195,7 +195,10 @@
     const storageKey = "cic_order_retry_" + user.id;
     let retry = null;
     try { retry = JSON.parse(sessionStorage.getItem(storageKey) || "null"); } catch (_) {}
-    if (!retry || retry.fingerprint !== fingerprint || !/^[0-9a-f-]{36}$/i.test(retry.key || "")) {
+    if (retry && /^[0-9a-f-]{36}$/i.test(retry.key || "") && retry.fingerprint !== fingerprint) {
+      return message("A previous checkout attempt may still have been saved. Retry with the same details first, or check My Orders before starting another order.", true);
+    }
+    if (!retry || !/^[0-9a-f-]{36}$/i.test(retry.key || "")) {
       retry = { fingerprint, key: crypto.randomUUID() };
       try { sessionStorage.setItem(storageKey, JSON.stringify(retry)); } catch (_) {}
     }
