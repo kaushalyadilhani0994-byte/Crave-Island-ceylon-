@@ -62,7 +62,11 @@ begin
     if v_existing.idempotency_payload_hash is distinct from v_hash then
       raise exception 'IDEMPOTENCY_KEY_REUSED' using errcode='22023';
     end if;
-    select to_jsonb(o) into v_order from public.store_orders o where o.id=v_existing.id;
+    select jsonb_build_object(
+      'id',o.id,'order_number',o.order_number,'subtotal',o.subtotal,
+      'delivery_fee',o.delivery_fee,'total',o.total,'payment_method',o.payment_method,
+      'payment_status',o.payment_status,'order_status',o.order_status,'created_at',o.created_at
+    ) into v_order from public.store_orders o where o.id=v_existing.id;
     select coalesce(jsonb_agg(jsonb_build_object(
       'product_id',i.product_id,'product_name',i.product_name,'quantity',i.quantity,
       'unit_price',i.unit_price,'line_total',i.line_total
@@ -78,7 +82,7 @@ begin
   v_note := nullif(left(btrim(coalesce(p_payload->>'customer_note','')),500),'');
   v_payment := coalesce(p_payload->>'payment_method','');
   if v_name is null or length(v_name)>120 or v_phone is null or length(v_phone)>40
-     or jsonb_typeof(v_address)<>'object'
+     or coalesce(jsonb_typeof(v_address),'')<>'object'
      or nullif(btrim(v_address->>'line1'),'') is null
      or nullif(btrim(v_address->>'city'),'') is null
      or nullif(btrim(v_address->>'district'),'') is null then
@@ -87,7 +91,7 @@ begin
   if v_payment <> 'cod' then
     raise exception 'Only cash on delivery is currently available' using errcode='22023';
   end if;
-  if jsonb_typeof(p_payload->'items')<>'array'
+  if coalesce(jsonb_typeof(p_payload->'items'),'')<>'array'
      or jsonb_array_length(p_payload->'items')<1
      or jsonb_array_length(p_payload->'items')>50 then
     raise exception 'Order must contain 1 to 50 product lines' using errcode='22023';
