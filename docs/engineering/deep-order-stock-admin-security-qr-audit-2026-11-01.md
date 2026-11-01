@@ -203,3 +203,10 @@ Read-only production counts at the time of this check: 1 product total, 0 active
 - These checks were read-only except for the documentation commit on this review branch. No production schema, data, DNS, deployment, or domain assignment was changed.
 
 - Additional live schema compatibility check: all required `store_order_items` insert fields (`order_id`, `product_id`, `product_name`, `quantity`, `unit_price`, `line_total`) are NOT NULL; `sku` is nullable and `id/created_at` have defaults, so the staged RPC's insert column list satisfies current nullability/default requirements. Required `store_orders` fields also match the staged insert, with `updated_at` defaulting to now(). This is schema compatibility evidence only, not an execution test.
+
+
+## SQL and request-shape hardening follow-up — 2026-11-01
+
+- A final static SQL review caught ambiguous set-returning JSON array aliases in the staged order RPC. The product-row lock query and order-line insert now use explicit `item(value)` / `line(value)` aliases and dereference the JSONB value column, avoiding record-vs-JSONB operator resolution errors.
+- The Edge Function now rejects JSON `null`, arrays, and primitive request bodies with HTTP 400 before accessing checkout fields, rather than allowing malformed request shapes to fall into the generic 500 handler.
+- These are review-branch-only fixes. No PostgreSQL migration execution, production RPC call, Edge Function deployment, branch merge, or Vercel deployment was performed. Isolated PostgreSQL tests remain mandatory before any release.
