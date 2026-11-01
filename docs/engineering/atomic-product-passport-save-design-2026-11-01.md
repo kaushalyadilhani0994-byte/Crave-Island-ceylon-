@@ -94,3 +94,28 @@ The live role/table privilege check found a more immediate blocker than the mult
 The existing browser save sequence first commits the product INSERT/UPDATE, then attempts passport UPSERT. Because UPSERT needs INSERT and UPDATE privileges, the passport write is blocked at the SQL privilege layer before its RLS policy can authorize it. This can leave a hidden product draft (on create) or updated product fields (on edit) without the corresponding passport/QR refresh. This is a source + live privilege diagnosis; no live save was attempted.
 
 Do not fix this by adding broad privileges without reconciling the intended staff permissions and the current RLS policies. The minimum candidate is authenticated INSERT and UPDATE on `product_passports`, with the existing approved-owner and certificate-team RLS policies remaining mandatory. DELETE is not required by the current save flow and should not be granted for this fix. Before any grant, verify whether team certificate-create/update permissions are intended to write these rows and confirm no permissive policy grants unintended access. Apply only in isolated staging, test owner/staff/customer/anon cases, and then obtain explicit production approval.
+
+
+## Exact live policy and role check (read-only verified 2026-11-01)
+
+The policy inspection confirms the current RLS intent on `public.product_passports`:
+
+- Public `anon` and `authenticated` SELECT is restricted to `published = true` and a matching active product.
+- Approved owners may SELECT all passports, INSERT, UPDATE (both USING and WITH CHECK), and DELETE.
+- Team INSERT requires `private.has_staff_permission('certificates','create')`.
+- Team UPDATE requires `private.has_staff_permission('certificates','update')` in both USING and WITH CHECK.
+- Team DELETE requires `private.has_staff_permission('certificates','delete')`.
+- Team SELECT requires catalogue.read or certificates.read.
+
+A separate role privilege check reconfirmed:
+- `anon`: no INSERT and no UPDATE on `product_passports`.
+- `authenticated`: no INSERT and no UPDATE on `product_passports`.
+- `authenticated`: INSERT and UPDATE on `products`.
+
+This means a narrowly scoped `GRANT INSERT, UPDATE ON public.product_passports TO authenticated` would make the existing owner and team RLS policies enforce the intended row-level access; it would not itself authorize anon users, and DELETE would remain unavailable. However, the grant is still a live production schema change and has not been applied. It must be tested against owner, certificate-create/update staff, ordinary staff, customer-authenticated, and anonymous roles in an isolated staging project first.
+
+The current browser save sequence is confirmed to commit the product INSERT/UPDATE before attempting the passport UPSERT. Therefore this privilege failure can create a partial product save. The immediate production-safe path is not to reorder browser writes: the durable correction remains a single transaction RPC. Do not enable product creation against the current live grants until the permission repair is approved and the save path is made transaction-safe.
+
+## Current implementation gate
+
+No product/passport mutation, SQL grant, migration, function deployment, merge, or production deployment was performed during this follow-up. The live policy evidence above narrows the permission repair, but the absent staging project and absent recovered migration history remain release gates.
