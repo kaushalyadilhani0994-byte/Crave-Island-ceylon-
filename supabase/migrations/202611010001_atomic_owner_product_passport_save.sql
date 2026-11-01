@@ -119,10 +119,14 @@ begin
   end if;
 
   select array_agg(btrim(part)) into v_ingredients
-  from regexp_split_to_table(replace(btrim(p_payload->>'ingredients'), chr(10), ','), '[,;]+') as part
+  from regexp_split_to_table(replace(btrim(p_payload->>'ingredients'), chr(10), ','), '[,;]+') as parts(part)
   where btrim(part) <> '';
+  if coalesce(cardinality(v_ingredients), 0) = 0 then
+    raise exception 'At least one ingredient is required' using errcode = '22023';
+  end if;
+
   select coalesce(array_agg(btrim(part)), '{}'::text[]) into v_allergens
-  from regexp_split_to_table(replace(coalesce(p_payload->>'allergen_information', ''), chr(10), ','), '[,;]+') as part
+  from regexp_split_to_table(replace(coalesce(p_payload->>'allergen_information', ''), chr(10), ','), '[,;]+') as parts(part)
   where btrim(part) <> '';
 
   if p_product_id is null then
