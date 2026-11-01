@@ -72,52 +72,6 @@ Deno.serve(async (req: Request) => {
       return respond(400, { error: "Please combine duplicate products into one cart line." });
     }
 
-    const productIds = items.map((item) => item.product_id);
-    const { data: products, error: productsError } = await admin
-      .from("products")
-      .select("id,name,category,price,is_active,currency,stock_quantity,track_inventory,expiry_date")
-      .in("id", productIds)
-      .eq("is_active", true);
-    if (productsError) {
-      console.error("Product validation failed", productsError.message);
-      return respond(500, { error: "We could not verify the catalogue. Please try again." });
-    }
-    if (!products || products.length !== productIds.length) {
-      return respond(400, { error: "A product in your basket is no longer available. Refresh the catalogue and try again." });
-    }
-
-    // Reject expired batches and tracked items without enough stock before an order is created.
-    const today = new Date().toISOString().slice(0, 10);
-    const productByIdForStock = new Map(products.map((product) => [String(product.id), product]));
-    for (const item of items) {
-      const product = productByIdForStock.get(item.product_id);
-      if (!product) return respond(400, { error: "A product in your basket is no longer available. Refresh the catalogue and try again." });
-      if (product.expiry_date && String(product.expiry_date) < today) {
-        return respond(409, { error: "A product in your basket has passed its recorded expiry date. Remove it and refresh the catalogue." });
-      }
-      if (product.track_inventory === true && Number(product.stock_quantity || 0) < item.quantity) {
-        return respond(409, { error: "There is not enough stock for " + cleanText(product.name, 120) + ". Please reduce the quantity or try again later." });
-      }
-    }
-
-    // A product must belong to a currently active collection as well as being active itself.
-    const requiredCategories = [...new Set(products.map((product) => cleanText(product.category, 160)).filter(Boolean))];
-    if (requiredCategories.length === 0 || products.some((product) => !cleanText(product.category, 160))) {
-      return respond(400, { error: "A product's collection is missing. Refresh the catalogue and try again." });
-    }
-    const { data: activeCategories, error: categoriesError } = await admin
-      .from("categories")
-      .select("name")
-      .in("name", requiredCategories)
-      .eq("is_active", true);
-    if (categoriesError) {
-      console.error("Collection validation failed", categoriesError.message);
-      return respond(500, { error: "We could not verify product collections. Please try again." });
-    }
-    if (!activeCategories || activeCategories.length !== requiredCategories.length) {
-      return respond(400, { error: "A product or its collection is no longer available. Refresh the catalogue and try again." });
-    }
-
     // Atomic RPC: order header, order lines, stock reservation and retry record commit together.
     const rawKey = req.headers.get("idempotency-key") || "";
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawKey)) {
