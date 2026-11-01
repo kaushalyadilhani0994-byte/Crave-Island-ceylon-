@@ -160,3 +160,11 @@ No live database writes, Edge Function deployments, branch merges, or Vercel dep
 - Production owner-alert-notify has JWT verification disabled for scheduled cron calls; scheduled actions are guarded by a stored cron secret and owner actions perform their own user/profile checks. Keep the cron secret private and preserve those checks.
 
 No live Edge Function was changed during this comparison.
+
+
+## Live grants and team/order access check — 2026-11-01
+
+- The authenticated database role does not have direct UPDATE privilege on store_orders and does not have direct DELETE privilege on store_order_items. This is fail-closed and helps keep customer totals/order lines immutable through the browser. Order status changes must continue through the permission-checking Edge Function.
+- Current store_orders UPDATE RLS policy checks orders.update, dispatch.update or accounts.update, but the missing table UPDATE grant means a direct browser update remains denied. The deployed Edge Function uses its service-role client only after checking the approved profile and allowed transition. Do not add a broad authenticated UPDATE grant as a shortcut.
+- Order-item SELECT policies are separated for approved owners, customers reading their own orders, and staff with orders/dispatch/accounts read permission. There is no authenticated INSERT/DELETE policy for order lines in the inspected policy set.
+- The live stock item trigger function decrements on INSERT and increments on DELETE. The live cancellation alert trigger independently increments stock when an order changes to cancelled. This confirms the duplicate-restock hazard described above.
