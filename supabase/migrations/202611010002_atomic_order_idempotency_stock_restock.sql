@@ -43,7 +43,7 @@ declare
   v_order jsonb;
   v_saved_items jsonb;
 begin
-  if coalesce(auth.role(), '') <> 'service_role' then
+  if coalesce(current_setting('request.jwt.claim.role', true), '') <> 'service_role' then
     raise exception 'Service role required' using errcode='42501';
   end if;
   if p_customer_id is null or p_idempotency_key is null
