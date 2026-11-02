@@ -269,6 +269,47 @@
       dashboard.scrollTop=0;
     });
   }
+  async function openOwnerAlertsPanel(){
+    const client=db();
+    if(!client)return;
+    try{const {data,error}=await client.auth.getUser();if(error||!data||!data.user||!(await isApprovedOwner(data.user))){status("Owner verification failed. Alerts were not opened.",true);return;}}
+    catch(_){status("Could not verify owner access. Alerts were not opened.",true);return;}
+    let panel=document.getElementById("cicOwnerAlertsPanel");
+    if(!panel){
+      const style=document.createElement("style");style.id="cicOwnerAlertsPanelStyle";
+      style.textContent=`#cicOwnerAlertsPanel{position:fixed;inset:0;z-index:10004;background:#160f0de8;display:none;overflow:auto;padding:12px;box-sizing:border-box}#cicOwnerAlertsPanel .cic-alert-sheet{box-sizing:border-box;width:min(820px,100%);margin:12px auto;background:#fff8e7;color:#2c1a14;border:1px solid #d4af37;border-radius:16px;padding:16px;font:14px system-ui;box-shadow:0 15px 45px #0005}#cicOwnerAlertsPanel h2{font:400 25px Georgia,serif;margin:0 0 5px}#cicOwnerAlertsPanel .cic-alert-muted{font-size:12px;color:#67564b;line-height:1.5}#cicOwnerAlertsPanel .cic-alert-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#cicOwnerAlertsPanel button{border:1px solid #d4af37;border-radius:9px;background:#2c1a14;color:#fff8e7;padding:9px 12px;font-weight:650;min-height:40px}#cicOwnerAlertsPanel .cic-alert-item{border:1px solid #e1d2bc;border-left:4px solid #c08a42;border-radius:11px;padding:12px;margin:9px 0;background:#fff}#cicOwnerAlertsPanel .cic-alert-item.critical{border-left-color:#b42318}#cicOwnerAlertsPanel .cic-alert-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}#cicOwnerAlertsPanel .cic-alert-severity{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}#cicOwnerAlertsPanel .cic-alert-message{font-size:12px;line-height:1.5;color:#59483e;margin-top:7px;white-space:pre-wrap}#cicOwnerAlertsPanel .cic-alert-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#b42318;margin-right:6px;vertical-align:middle}#cicOwnerAlertsPanel .cic-alert-count{display:inline-flex;min-width:19px;height:19px;align-items:center;justify-content:center;border-radius:99px;background:#b42318;color:white;font:700 10px system-ui;margin-left:6px;padding:0 5px}@media(max-width:420px){#cicOwnerAlertsPanel{padding:5px}#cicOwnerAlertsPanel .cic-alert-sheet{padding:12px;margin:5px auto}}`;
+      document.head.appendChild(style);
+      panel=document.createElement("div");panel.id="cicOwnerAlertsPanel";panel.setAttribute("role","dialog");panel.setAttribute("aria-modal","true");panel.setAttribute("aria-label","Owner alerts");
+      panel.innerHTML='<section class="cic-alert-sheet"><header class="cic-alert-head"><div><h2>Owner Alerts</h2><div class="cic-alert-muted">Live order, stock, expiry and security alerts · owner-only view.</div></div><button type="button" id="cicAlertsBack">← Admin menu</button></header><div class="cic-alert-actions"><button type="button" id="cicAlertsRefresh">Refresh alerts</button></div><div id="cicAlertsList" aria-live="polite" class="cic-alert-muted">Loading alerts…</div></section>';
+      document.body.appendChild(panel);
+      const back=()=>{panel.style.display="none";const dashboard=document.getElementById("cicOwnerDashboard");if(history.state&&history.state.cicOwnerDashboard)history.back();else if(dashboard){dashboard.style.display="block";dashboard.scrollTop=0;}};
+      panel.addEventListener("click",event=>{if(event.target===panel)back();});
+      document.getElementById("cicAlertsBack").addEventListener("click",back);
+      document.getElementById("cicAlertsRefresh").addEventListener("click",loadOwnerAlerts);
+    }
+    panel.style.display="block";
+    await loadOwnerAlerts();
+  }
+  async function loadOwnerAlerts(){
+    const panel=document.getElementById("cicOwnerAlertsPanel"),list=document.getElementById("cicAlertsList"),client=db();
+    if(!panel||!list||!client)return;
+    list.textContent="Loading open owner alerts…";
+    try{
+      const {data:auth,error:authError}=await client.auth.getUser();
+      if(authError||!auth||!auth.user||!(await isApprovedOwner(auth.user))){panel.style.display="none";list.textContent="Owner access verification failed.";return;}
+      const {data,error}=await client.from("admin_alerts").select("id,alert_type,severity,title,message,entity_type,entity_id,status,created_at").eq("status","open").order("created_at",{ascending:false}).limit(100);
+      if(error||!Array.isArray(data)){list.textContent="Alerts could not be loaded. Check the owner-only alerts policy and try again.";return;}
+      const badge=document.getElementById("cicOwnerAlertCount");
+      if(badge){badge.textContent=String(data.length);badge.hidden=data.length===0;}
+      const card=document.querySelector("#cicOwnerDashboard [data-alerts-open]");
+      if(card)card.setAttribute("aria-label",data.length+" open owner alerts");
+      if(!data.length){list.textContent="No open alerts. Your current alert queue is clear.";return;}
+      list.innerHTML=data.map(alert=>{
+        const critical=alert.severity==="critical";
+        return '<article class="cic-alert-item '+(critical?"critical":"")+'"><div class="cic-alert-head"><strong>'+(critical?'<span class="cic-alert-dot" aria-hidden="true"></span>':"")+cicTeamEscape(alert.title)+'</strong><span class="cic-alert-severity">'+cicTeamEscape(alert.severity||"info")+'</span></div><div class="cic-alert-message">'+cicTeamEscape(alert.message)+'</div><div class="cic-alert-muted">'+cicTeamEscape(alert.alert_type||"alert")+' · '+cicTeamEscape(alert.created_at?new Date(alert.created_at).toLocaleString("en-LK",{timeZone:"Asia/Colombo"}):"")+'</div></article>';
+      }).join("");
+    }catch(_){list.textContent="A connection error prevented alerts from loading.";}
+  }
   function cicTeamEscape(value){
     return String(value==null?"":value).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
   }
@@ -400,6 +441,7 @@
             <button class="cic-dash-card" type="button" data-open="cicOwnerOrdersButton"><strong>Owner Orders</strong><span>Review incoming orders and manage fulfilment.</span></button>
             <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>Owner QR Passport</strong><span>Complete verified product passports and print QR labels.</span></button>
             <button class="cic-dash-card" type="button" data-team-open="1"><strong>Team Access</strong><span>View team roles, approval status and current permissions.</span></button>
+            <button class="cic-dash-card" type="button" data-alerts-open="1"><strong>Owner Alerts <span id="cicOwnerAlertCount" class="cic-alert-count" hidden>0</span></strong><span>Open order, stock, expiry and security alerts.</span></button>
           </div>
           <p class="cic-dash-note">This workspace is visible only after the approved owner account is verified. Customers do not receive these owner tools.</p></section>
           <div class="cic-dash-footer"><p>Verified owner access · CRAVE ISLAND CEYLON</p><button class="cic-dash-action" type="button" id="cicDashClose">Back to shop</button></div>
@@ -408,6 +450,8 @@
       // Make the phone/browser Back action close the owner dashboard instead of leaving the app.
       try{history.pushState({cicOwnerDashboard:true},'','#owner-admin');}catch(_){}
       dashboard.addEventListener("click",async e=>{
+        const alertsCard=e.target.closest("[data-alerts-open]");
+        if(alertsCard){dashboard.style.display="none";try{history.pushState({cicOwnerDashboard:true,cicOwnerTool:true},"","#owner-alerts");}catch(_){}await openOwnerAlertsPanel();return;}
         const teamCard=e.target.closest("[data-team-open]");
         if(teamCard){dashboard.style.display="none";try{history.pushState({cicOwnerDashboard:true,cicOwnerTool:true},"","#owner-team");}catch(_){}await openOwnerTeamPanel();addOwnerMenuReturnButton(dashboard);return;}
         const viewCard=e.target.closest("[data-view]");
@@ -483,7 +527,7 @@
     if(!dashboard)return;
     if(event.state&&event.state.cicOwnerDashboard){
       // Back from a Control Room/tool panel: close the active work modal and return to Admin, not Home.
-      const teamPanel=document.getElementById("cicOwnerTeamPanel");if(teamPanel)teamPanel.style.display="none";
+      const teamPanel=document.getElementById("cicOwnerTeamPanel");if(teamPanel)teamPanel.style.display="none";const alertsPanel=document.getElementById("cicOwnerAlertsPanel");if(alertsPanel)alertsPanel.style.display="none";
       document.querySelectorAll(".modal.open").forEach(modal=>{if(typeof window.closeModal==="function")window.closeModal(modal.id);else{modal.classList.remove("open");modal.style.display="none";}});
       dashboard.style.display="block";
       dashboard.scrollTop=0;
