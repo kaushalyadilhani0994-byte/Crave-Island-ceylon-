@@ -29,7 +29,7 @@ Deno.serve(async (req: Request) => {
     }
     const userClient = createClient(url, anonKey, { global: { headers: { Authorization: authorization } }, auth: { persistSession: false } });
     const { data: userData, error: userError } = await userClient.auth.getUser();
-    if (userError || !userData.user) {
+    if (userError || !userData.user || userData.user.is_anonymous) {
       return new Response(JSON.stringify({ error: "invalid_session" }), { status: 401, headers: { ...headers, "Content-Type": "application/json" } });
     }
 
