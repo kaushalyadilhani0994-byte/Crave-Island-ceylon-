@@ -40,12 +40,19 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: "owner_access_required" }), { status: 403, headers: { ...headers, "Content-Type": "application/json" } });
     }
 
-    const body = await req.json();
-    const email = String(body.email || "").trim().toLowerCase();
-    const displayName = String(body.display_name || "").trim().slice(0, 100);
-    const role = String(body.role || "");
+    let parsedBody: unknown;
+    try { parsedBody = await req.json(); } catch {
+      return new Response(JSON.stringify({ error: "invalid_json" }), { status: 400, headers: { ...headers, "Content-Type": "application/json" } });
+    }
+    if (!parsedBody || typeof parsedBody !== "object" || Array.isArray(parsedBody)) {
+      return new Response(JSON.stringify({ error: "request_body_must_be_object" }), { status: 400, headers: { ...headers, "Content-Type": "application/json" } });
+    }
+    const body = parsedBody as Record<string, unknown>;
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const displayName = typeof body.display_name === "string" ? body.display_name.trim() : "";
+    const role = typeof body.role === "string" ? body.role : "";
     const validRoles = ["supervisor", "staff", "media", "accounts", "star_club"];
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !validRoles.includes(role)) {
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 254 || displayName.length > 100 || !validRoles.includes(role)) {
       return new Response(JSON.stringify({ error: "valid_email_and_role_required" }), { status: 400, headers: { ...headers, "Content-Type": "application/json" } });
     }
 
