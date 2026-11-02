@@ -118,21 +118,38 @@ Deno.serve(async (req: Request) => {
       let sent = 0;
       let failed = 0;
       for (const alert of pending || []) {
+        // Claim each alert atomically before sending. Concurrent cron runs
+        // must not both deliver the same Telegram notification.
         const attemptedAt = new Date().toISOString();
+        const { data: claimed, error: claimError } = await admin.from("admin_alerts")
+          .update({ notification_attempted_at: attemptedAt, notification_error: null })
+          .eq("id", alert.id)
+          .eq("status", "open")
+          .is("notification_sent_at", null)
+          .or("notification_attempted_at.is.null,notification_attempted_at.lt." + cutoff)
+          .select("id")
+          .maybeSingle();
+        if (claimError) {
+          failed++;
+          console.error("Could not claim owner alert for delivery", alert.id, claimError.message);
+          continue;
+        }
+        // No returned row means another dispatcher claimed or completed it.
+        if (!claimed) continue;
         try {
           const result = await sendTelegram(`${alert.severity === "critical" ? "🔴" : alert.severity === "warning" ? "🟠" : "🔔"} CRAVE ISLAND CEYLON ALERT\n${alert.title}\n${alert.message}\nTime: ${attemptedAt} (Sri Lanka)`);
           if (result.sent) {
             const { error: updateError } = await admin.from("admin_alerts")
-              .update({ notification_sent_at: attemptedAt, notification_attempted_at: attemptedAt, notification_error: null })
+              .update({ notification_sent_at: attemptedAt, notification_error: null })
               .eq("id", alert.id).is("notification_sent_at", null);
             if (updateError) failed++; else sent++;
           } else {
             failed++;
-            await admin.from("admin_alerts").update({ notification_attempted_at: attemptedAt, notification_error: "Telegram bot/chat secrets are not configured." }).eq("id", alert.id);
+            await admin.from("admin_alerts").update({ notification_error: "Telegram bot/chat secrets are not configured." }).eq("id", alert.id);
           }
         } catch (e) {
           failed++;
-          await admin.from("admin_alerts").update({ notification_attempted_at: attemptedAt, notification_error: String(e).slice(0, 300) }).eq("id", alert.id);
+          await admin.from("admin_alerts").update({ notification_error: String(e).slice(0, 300) }).eq("id", alert.id);
         }
       }
       return response({ processed: (pending || []).length, sent, failed });
@@ -168,8 +185,10 @@ Deno.serve(async (req: Request) => {
     const tracked = products.filter(p => p.track_inventory);
     const low = tracked.filter(p => Number(p.stock_quantity || 0) <= Number(p.low_stock_threshold || 0));
     const today = colomboDate;
-    const limit = new Date(now.getTime()+30*86400000).toISOString().slice(0,10);
+    const urgentLimit = new Date(Date.UTC(colomboYear, colomboMonth - 1, colomboDay + 7)).toISOString().slice(0,10);
+    const limit = new Date(Date.UTC(colomboYear, colomboMonth - 1, colomboDay + 30)).toISOString().slice(0,10);
     const expired = products.filter(p => p.expiry_date && p.expiry_date < today);
+    const urgentDueSoon = products.filter(p => p.expiry_date && p.expiry_date >= today && p.expiry_date <= urgentLimit);
     const dueSoon = products.filter(p => p.expiry_date && p.expiry_date >= today && p.expiry_date <= limit);
     const recent = orders.filter(o => o.created_at >= since);
     const critical = alerts.filter(a => a.severity === "critical").length;
@@ -184,6 +203,7 @@ Deno.serve(async (req: Request) => {
       "Tracked stock items: " + tracked.length,
       "Low/out-of-stock tracked items: " + low.length,
       "Expired items recorded: " + expired.length,
+      "Expiry within 7 days (urgent): " + urgentDueSoon.length,
       "Expiry within 30 days: " + dueSoon.length,
       "Open alerts: " + alerts.length + " (critical " + critical + ", warning " + warning + ")",
       ...alerts.slice(0,8).map(a => (a.severity === "critical" ? "🔴 " : "🟠 ") + a.title),
