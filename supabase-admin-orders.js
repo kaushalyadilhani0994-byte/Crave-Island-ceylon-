@@ -8,10 +8,16 @@
   async function access() {
     const db=client(); if(!db) return {error:"Supabase connection is not ready."};
     const {data:{session},error}=await db.auth.getSession();
-    if(error||!session) return {error:"Please sign in with the approved owner account first."};
-    const {data:staff,error:se}=await db.from("staff_profiles").select("role,approved").eq("id",session.user.id).maybeSingle();
-    if(se||!staff||staff.role!=="owner"||staff.approved!==true) return {error:"This section is only available to an approved owner."};
-    return {db};
+    if(error||!session||session.user?.is_anonymous) return {error:"Please sign in with an approved CRAVE team account."};
+    const {data:staff,error:se}=await db.from("staff_profiles").select("role,approved,permissions").eq("id",session.user.id).maybeSingle();
+    if(se||!staff||staff.approved!==true) return {error:"This section is only available to an approved CRAVE team account."};
+    const permissions=staff.permissions&&typeof staff.permissions==="object"?staff.permissions:{};
+    const isOwner=staff.role==="owner";
+    const canOrders=Array.isArray(permissions.orders)&&permissions.orders.includes("read");
+    const canDispatch=Array.isArray(permissions.dispatch)&&permissions.dispatch.includes("read");
+    const canAccounts=Array.isArray(permissions.accounts)&&permissions.accounts.includes("read");
+    if(!isOwner&&!canOrders&&!canDispatch&&!canAccounts) return {error:"Your account does not have permission to view orders."};
+    return {db,isOwner,canOrdersUpdate:isOwner||(Array.isArray(permissions.orders)&&permissions.orders.includes("update")),canDispatchUpdate:!isOwner&&Array.isArray(permissions.dispatch)&&permissions.dispatch.includes("update")};
   }
   function notice(el,msg){ if(el) el.innerHTML='<div class="admin-note">'+esc(msg)+'</div>'; }
   async function refresh() {
@@ -26,7 +32,8 @@
     const byOrder={}; (items||[]).forEach(i=>(byOrder[i.order_id]||(byOrder[i.order_id]=[])).push(i));
     el.innerHTML=orders.map(o=>{
       const st=String(o.order_status||"pending").toLowerCase();
-      const options=(next[st]||[]).map(n=>'<option value="'+n+'">'+n.replace(/^./,c=>c.toUpperCase())+'</option>').join("");
+      const allowedNext=a.isOwner||a.canOrdersUpdate?(next[st]||[]):a.canDispatchUpdate?(st==="processing"?["shipped"]:st==="shipped"?["delivered"]:[]):[];
+      const options=allowedNext.map(n=>'<option value="'+n+'">'+n.replace(/^./,c=>c.toUpperCase())+'</option>').join("");
       const addr=o.shipping_address&&typeof o.shipping_address==="object"?Object.values(o.shipping_address).filter(Boolean).join(", "):String(o.shipping_address||"");
       const lines=(byOrder[o.id]||[]).map(i=>esc(i.product_name)+" × "+Number(i.quantity)+" ("+money(i.line_total)+")").join("<br>")||"Item details unavailable";
       return '<article class="table-row" style="display:block;padding:14px;margin:10px 0;border:1px solid #e6dccb;border-radius:12px">'+
@@ -36,7 +43,7 @@
         '<div style="margin-top:9px;font-size:13px">'+lines+'</div>'+
         '<div style="margin-top:9px;font-size:12px">Payment: '+esc(o.payment_method)+' / '+esc(o.payment_status)+' · Status: <b>'+esc(st)+'</b></div>'+
         (o.customer_note?'<div style="margin-top:5px;font-size:12px">Note: '+esc(o.customer_note)+'</div>':"")+
-        '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px"><label style="font-size:12px">Update status</label><select data-cic-order-status="'+esc(o.id)+'" '+(!options?'disabled':'')+' style="max-width:190px;padding:8px;border-radius:8px;border:1px solid #d4c6b5">'+(options||'<option>No further changes</option>')+'</select><button class="secondary-btn" data-cic-save-order="'+esc(o.id)+'" '+(!options?'disabled':'')+'>Save status</button></div></article>';
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px" '+(!options?'hidden':'')+'><label style="font-size:12px">Update status</label><select data-cic-order-status="'+esc(o.id)+'" '+(!options?'disabled':'')+' style="max-width:190px;padding:8px;border-radius:8px;border:1px solid #d4c6b5">'+(options||'<option>No further changes</option>')+'</select><button class="secondary-btn" data-cic-save-order="'+esc(o.id)+'" '+(!options?'disabled':'')+'>Save status</button></div></article>';
     }).join("");
     el.querySelectorAll("[data-cic-save-order]").forEach(btn=>btn.addEventListener("click",async()=>{
       const id=btn.getAttribute("data-cic-save-order"),select=el.querySelector('[data-cic-order-status="'+id+'"]'),status=select&&select.value;
@@ -64,7 +71,7 @@
     `;
     document.head.appendChild(style);
     const button=document.createElement("button");
-    button.id="cicOwnerOrdersButton";button.type="button";button.textContent="Owner · Orders";button.hidden=true;
+    button.id="cicOwnerOrdersButton";button.type="button";button.textContent="Orders & Fulfilment";button.hidden=true;
     button.addEventListener("click",()=>{const modal=document.getElementById("cicOwnerOrdersModal");if(modal){modal.style.display="flex";refresh();}});
     document.body.appendChild(button);
     const modal=document.createElement("div");
@@ -75,12 +82,12 @@
     document.getElementById("cicOwnerOrdersClose").addEventListener("click",()=>{modal.style.display="none";});
     document.getElementById("cicOwnerOrdersRefresh").addEventListener("click",refresh);
     const update=async()=>{
-      const db=client();let approved=false;
+      const db=client();let permitted=false;
       try{
-        if(db){const {data:{session},error}=await db.auth.getSession();if(session&&!error){const {data,error:profileError}=await db.from("staff_profiles").select("role,approved").eq("id",session.user.id).maybeSingle();approved=!profileError&&!!data&&data.role==="owner"&&data.approved===true;}}
+        if(db){const {data:{session},error}=await db.auth.getSession();if(session&&!error&&!session.user?.is_anonymous){const {data,error:profileError}=await db.from("staff_profiles").select("role,approved,permissions").eq("id",session.user.id).maybeSingle();const p=data?.permissions&&typeof data.permissions==="object"?data.permissions:{};permitted=!profileError&&!!data&&data.approved===true&&(data.role==="owner"||["orders","dispatch","accounts"].some(k=>Array.isArray(p[k])&&p[k].includes("read")));}}
       }catch(_){}
-      button.hidden=!approved;
-      if(!approved)modal.style.display="none";
+      button.hidden=!permitted;
+      if(!permitted)modal.style.display="none";
     };
     update();
     const db=client();if(db)db.auth.onAuthStateChange(()=>window.setTimeout(update,120));
