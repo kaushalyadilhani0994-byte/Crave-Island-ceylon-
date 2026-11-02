@@ -464,7 +464,7 @@
         const alertsCard=e.target.closest("[data-alerts-open]");
         if(alertsCard){dashboard.style.display="none";try{history.pushState({cicOwnerDashboard:true,cicOwnerTool:true},"","#owner-alerts");}catch(_){}await openOwnerAlertsPanel();return;}
         const teamCard=e.target.closest("[data-team-open]");
-        if(teamCard){dashboard.style.display="none";try{history.pushState({cicOwnerDashboard:true,cicOwnerTool:true},"","#owner-team");}catch(_){}await openOwnerTeamPanel();addOwnerMenuReturnButton(dashboard);return;}
+        if(teamCard){dashboard.style.display="none";try{history.pushState({cicOwnerDashboard:true,cicOwnerTool:true},"","#owner-team");}catch(_){}await openOwnerTeamPanel();return;}
         const viewCard=e.target.closest("[data-view]");
         if(viewCard){
           const view=viewCard.getAttribute("data-view");
