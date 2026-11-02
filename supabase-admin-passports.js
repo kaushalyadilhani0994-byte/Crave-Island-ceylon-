@@ -28,7 +28,7 @@ passportLoadState="idle";
 const initialSaveButton=$("#cicPassSave");
 if(initialSaveButton)initialSaveButton.disabled=true;
 if(!await owner()){message("Sign in with the approved owner account to manage product passports.");return}
-const {data,error}=await db.from("products").select("id,name,batch_number,ingredients,manufacturing_date,expiry_date,is_active").order("name");
+const {data,error}=await db.rpc("owner_list_products");
 if(error){message("Could not load products. Check the owner access policy and try again.");return}
 const sel=$("#cicPassProduct");
 const saveButton=$("#cicPassSave");
@@ -83,7 +83,8 @@ e.preventDefault();if(!await owner()){message("Owner session expired. Please sig
 const id=$("#cicPassProduct").value,ingredients=$("#cicPassIngredients").value.trim();
 if(!id||passportLoadState!=="loaded"){message("Wait until the selected product's saved passport details have loaded successfully.");return}
 if(!ingredients){message("Enter the verified ingredient list.");return}
-const {data:product,error:productError}=await db.from("products").select("name,is_active").eq("id",id).maybeSingle();
+const {data:ownerProducts,error:productError}=await db.rpc("owner_list_products");
+const product=(ownerProducts||[]).find(row=>row.id===id);
 if(productError||!product){message("Could not verify the selected product. Refresh and try again.");return}
 if($("#cicPassPublished").checked&&product.is_active!==true){message("This product is hidden from the shop. Activate it in Owner Products before publishing its QR passport.");return}
 const mfg=$("#cicPassMfg").value,best=$("#cicPassBest").value;
