@@ -269,6 +269,71 @@
       dashboard.scrollTop=0;
     });
   }
+  function cicTeamEscape(value){
+    return String(value==null?"":value).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+  }
+  async function openOwnerTeamPanel(){
+    const client=db();
+    if(!client)return;
+    try{
+      const {data,error}=await client.auth.getUser();
+      if(error||!data||!data.user||!(await isApprovedOwner(data.user))){
+        status("Owner verification failed. Team information was not opened.",true);
+        return;
+      }
+    }catch(_){status("Could not verify owner access. Team information was not opened.",true);return;}
+    let panel=document.getElementById("cicOwnerTeamPanel");
+    if(!panel){
+      const style=document.createElement("style");
+      style.id="cicOwnerTeamPanelStyle";
+      style.textContent=`#cicOwnerTeamPanel{position:fixed;inset:0;z-index:10003;background:#160f0de8;display:none;overflow:auto;padding:12px;box-sizing:border-box}#cicOwnerTeamPanel .cic-team-sheet{box-sizing:border-box;width:min(820px,100%);margin:12px auto;background:#fff8e7;color:#2c1a14;border:1px solid #d4af37;border-radius:16px;padding:16px;font:14px system-ui;box-shadow:0 15px 45px #0005}#cicOwnerTeamPanel h2{font:400 25px Georgia,serif;margin:0 0 5px}#cicOwnerTeamPanel .cic-team-muted{font-size:12px;color:#67564b;line-height:1.5}#cicOwnerTeamPanel .cic-team-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#cicOwnerTeamPanel button{border:1px solid #d4af37;border-radius:9px;background:#2c1a14;color:#fff8e7;padding:9px 12px;font-weight:650;min-height:40px}#cicOwnerTeamPanel .cic-team-member{border:1px solid #e1d2bc;border-radius:11px;padding:12px;margin:9px 0;background:#fff}#cicOwnerTeamPanel .cic-team-member-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}#cicOwnerTeamPanel .cic-team-role{font-size:11px;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:#6b4d31}#cicOwnerTeamPanel .cic-team-state{font-size:11px;border-radius:99px;padding:3px 8px;background:#eee4d5}#cicOwnerTeamPanel .cic-team-perms{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}#cicOwnerTeamPanel .cic-team-perms span{font-size:10px;border:1px solid #dfd0bb;border-radius:99px;padding:4px 7px;color:#58483e}#cicOwnerTeamPanel .cic-team-warning{padding:11px;border-radius:10px;background:#f4ead9;color:#5a3b22;font-size:12px;line-height:1.5;margin-top:12px}@media(max-width:420px){#cicOwnerTeamPanel{padding:5px}#cicOwnerTeamPanel .cic-team-sheet{padding:12px;margin:5px auto}}`;
+      document.head.appendChild(style);
+      panel=document.createElement("div");
+      panel.id="cicOwnerTeamPanel";
+      panel.setAttribute("role","dialog");
+      panel.setAttribute("aria-modal","true");
+      panel.setAttribute("aria-label","CRAVE team access overview");
+      panel.innerHTML='<section class="cic-team-sheet"><header class="cic-team-member-head"><div><h2>Team Access</h2><div class="cic-team-muted">Private owner view · current staff roles and assigned access.</div></div><button type="button" id="cicTeamClose">Close ✕</button></header><div class="cic-team-actions"><button type="button" id="cicTeamRefresh">Refresh team list</button></div><div id="cicTeamList" aria-live="polite" class="cic-team-muted">Loading team records…</div><div class="cic-team-warning">Permission changes, approvals and invitations are not enabled here yet. The live database mutation function currently lacks the required safe update privilege and audit trail. These controls will remain disabled until that backend is repaired and tested; no staff access is changed by this screen.</div></section>';
+      document.body.appendChild(panel);
+      panel.addEventListener("click",event=>{if(event.target===panel)panel.style.display="none";});
+      document.getElementById("cicTeamClose").addEventListener("click",()=>{panel.style.display="none";});
+      document.getElementById("cicTeamRefresh").addEventListener("click",loadOwnerTeamList);
+    }
+    panel.style.display="block";
+    await loadOwnerTeamList();
+  }
+  async function loadOwnerTeamList(){
+    const panel=document.getElementById("cicOwnerTeamPanel");
+    const list=document.getElementById("cicTeamList");
+    const client=db();
+    if(!panel||!list||!client)return;
+    list.textContent="Loading approved team records…";
+    try{
+      const {data:auth,error:authError}=await client.auth.getUser();
+      if(authError||!auth||!auth.user||!(await isApprovedOwner(auth.user))){
+        panel.style.display="none";
+        list.textContent="Owner access verification failed.";
+        return;
+      }
+      const {data,error}=await client.rpc("owner_list_team_members");
+      if(error||!Array.isArray(data)){
+        list.textContent="Team records could not be loaded. Check the owner team-list RPC and try again.";
+        return;
+      }
+      if(!data.length){list.textContent="No team profiles have been created yet.";return;}
+      const actionLabels={read:"View",create:"Add",update:"Edit",delete:"Delete",approve:"Approve",export:"Export"};
+      list.innerHTML=data.map(member=>{
+        const permissions=member.permissions&&typeof member.permissions==="object"&&!Array.isArray(member.permissions)?member.permissions:{};
+        const badges=Object.entries(permissions).flatMap(([moduleName,actions])=>{
+          if(!Array.isArray(actions))return [];
+          return actions.filter(action=>typeof action==="string").map(action=>'<span>'+cicTeamEscape(moduleName.replace(/_/g," "))+' · '+cicTeamEscape(actionLabels[action]||action)+'</span>');
+        });
+        const display=member.display_name||member.email||"Team member";
+        const state=member.approved===true?"Approved":"Pending approval";
+        return '<article class="cic-team-member"><div class="cic-team-member-head"><div><strong>'+cicTeamEscape(display)+'</strong><div class="cic-team-muted">'+cicTeamEscape(member.email||"No email on profile")+'</div></div><div><div class="cic-team-role">'+cicTeamEscape(member.role||"unassigned")+'</div><div class="cic-team-state">'+state+'</div></div></div><div class="cic-team-perms">'+(badges.length?badges.join(""):'<span>No permissions assigned</span>')+'</div></article>';
+      }).join("");
+    }catch(_){list.textContent="A connection error prevented the team list from loading.";}
+  }
   async function openOwnerDashboard(){
     // Fail closed even if a customer calls the exported dashboard function manually.
     const client=db();
@@ -333,6 +398,7 @@
             <button class="cic-dash-card" type="button" data-open="cicOwnerCatalogueButton" data-section="categories"><strong>Owner Categories</strong><span>Create collections and subcategories, and manage visibility.</span></button>
             <button class="cic-dash-card" type="button" data-open="cicOwnerOrdersButton"><strong>Owner Orders</strong><span>Review incoming orders and manage fulfilment.</span></button>
             <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>Owner QR Passport</strong><span>Complete verified product passports and print QR labels.</span></button>
+            <button class="cic-dash-card" type="button" data-team-open="1"><strong>Team Access</strong><span>View team roles, approval status and current permissions.</span></button>
           </div>
           <p class="cic-dash-note">This workspace is visible only after the approved owner account is verified. Customers do not receive these owner tools.</p></section>
           <div class="cic-dash-footer"><p>Verified owner access · CRAVE ISLAND CEYLON</p><button class="cic-dash-action" type="button" id="cicDashClose">Back to shop</button></div>
@@ -341,6 +407,8 @@
       // Make the phone/browser Back action close the owner dashboard instead of leaving the app.
       try{history.pushState({cicOwnerDashboard:true},'','#owner-admin');}catch(_){}
       dashboard.addEventListener("click",async e=>{
+        const teamCard=e.target.closest("[data-team-open]");
+        if(teamCard){dashboard.style.display="none";try{history.pushState({cicOwnerDashboard:true,cicOwnerTool:true},"","#owner-team");}catch(_){}await openOwnerTeamPanel();addOwnerMenuReturnButton(dashboard);return;}
         const viewCard=e.target.closest("[data-view]");
         if(viewCard){
           const view=viewCard.getAttribute("data-view");
