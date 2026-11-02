@@ -289,3 +289,42 @@ The source allowlist still contains `kaushalyadilhani0994@gmail.com` and `kausha
 - No production database, Edge Function, Vercel deployment, DNS, secret, or customer data was changed.
 - Still required: Deno type/lint check and endpoint tests for malformed JSON, primitive/array bodies, anonymous JWT, non-owner JWT, approved owner, invalid email, overlong fields, invalid role, invite conflict, and profile-write failure.
 - Role-based Admin UI, server-side permission assignment/revocation, 7-day expiry red-dot alerts, durable notification outbox, isolated SQL transaction tests, and mobile/browser end-to-end checks remain incomplete.
+
+
+## Follow-up implementation — owner team/alerts UI and order role alignment (2026-11-03)
+
+### Owner-only Team Access overview
+
+The existing owner dashboard now has a compact **Team Access** card on the review branch. It re-verifies the authenticated user against the approved-owner profile before calling the live `owner_list_team_members()` RPC. It displays team name/email, role, approval state, and assigned permission badges. The panel has a Back-to-Admin action and browser Back handling.
+
+Important safety boundary: this is deliberately read-only. It does not expose invitations, approvals, suspensions, or permission mutation controls because the live `owner_set_team_member_access()` function is SECURITY INVOKER but authenticated lacks UPDATE privilege on `staff_profiles`; no transactional audit table exists. The UI does not attempt a mutation that is known to fail or bypass the safety boundary.
+
+### Owner Alerts panel and red count badge
+
+The existing owner dashboard now has an **Owner Alerts** card, a red open-alert count badge refreshed when the dashboard opens, and an owner-only alert list. It reads `admin_alerts` through the existing authenticated owner RLS policy and displays severity, title, message, alert type and Colombo-local timestamp. Critical alerts have a red marker. It is read-only; it does not acknowledge, resolve, or delete alerts.
+
+Read-only live database inspection confirmed:
+- `admin_alerts` SELECT/UPDATE grants exist for authenticated, with RLS policies restricted to `private.is_approved_owner()`; anon has no table grant.
+- New-order trigger creates a deduplicated `new_order` alert.
+- Order issue trigger creates critical payment-failure and warning cancellation alerts.
+- Product inventory trigger creates/refreshes out-of-stock and low-stock alerts.
+- Product inventory trigger creates/refreshes expiry alerts when expiry is within 30 days; dates within 7 days and expired dates are marked critical.
+- The expiry trigger runs on product INSERT/UPDATE, not merely because the calendar advances. A product that crosses from 8 days remaining to 7 days remaining without a product write will not be re-evaluated by this trigger. A scheduled daily expiry sweep is still required for reliable day-by-day escalation. No new cron job was created.
+
+### Order workspace team-permission alignment
+
+The order workspace was owner-only in the browser even though the deployed `update-order-status` Edge Function and live RLS support approved team members with order/dispatch/accounts read scopes. The review branch now:
+- allows approved owner or approved team profiles with `orders.read`, `dispatch.read`, or `accounts.read` to view the order workspace;
+- shows all allowed order status transitions only to owner or `orders.update`;
+- restricts `dispatch.update` controls to processing → shipped and shipped → delivered;
+- keeps `accounts.read` read-only in this workspace;
+- rejects anonymous sessions and unapproved profiles.
+
+The server Edge Function remains the authority for each status transition; hiding controls is not relied on as the security boundary.
+
+### Static checks and limits
+
+- JavaScript parse checks passed for `supabase-admin-auth.js`, `supabase-admin-orders.js`, `supabase-admin-products.js`, `supabase-admin-passports.js`, and `supabase-checkout.js` using the JavaScript parser.
+- No browser/mobile end-to-end test was run. No staff test accounts exist and no staging Supabase branch is available.
+- Team list RPC, owner alert RLS read, order team read/update paths and browser history behaviour still require staging/integration verification.
+- No production SQL, Edge Function, secrets, cron jobs, staff records, orders, inventory, Vercel deployment, merge, or DNS settings were changed.
