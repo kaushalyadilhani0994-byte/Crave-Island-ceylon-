@@ -263,3 +263,29 @@ Read-only production counts at the time of this check: 1 product total, 0 active
 - Updated `supabase-admin-products.js` and `supabase-admin-passports.js` to load internal product details and activation checks through `owner_list_products()` rather than direct table SELECT. Public storefront and passport page continue using only the explicitly granted customer-facing columns.
 - Static syntax checks passed for the changed standalone JS files and embedded scripts in the current frontend set. The older `CRAVE_ISLAND_CEYLON_V4_COMPLETE.html` includes ES module imports and was not validated by the simple classic-script parser; it is a legacy standalone file and not the V18 deployed entry point.
 - IMPORTANT: this migration is NOT applied to production. Before approval, test PostgREST column-level grants, anon and authenticated storefront queries, owner RPC access, owner activation/deactivation, passport product selection, order creation, and all Edge Functions against an isolated database. Do not deploy the migration until these pass.
+
+## Follow-up review — 2026-11-02
+
+### Team invitation endpoint hardening (review branch only)
+
+A follow-up source review found that `owner-invite-team-member` authenticated a user and checked for an approved owner profile, but did not explicitly reject anonymous Supabase users and parsed the request body without checking its JSON shape or field types. The review branch now:
+
+- rejects anonymous sessions even if a valid JWT is present;
+- returns a controlled 400 for invalid JSON and non-object bodies;
+- accepts email and display name only as strings;
+- bounds email length to 254 characters and display name to 100;
+- retains the existing explicit role allowlist (supervisor, staff, media, accounts, star_club);
+- does not approve invited profiles or grant permissions automatically.
+
+This is input/authentication hardening only. It does **not** implement the requested role-specific Admin screens or the permission assignment workflow. Invited users remain unapproved with empty permissions until an owner approval process is implemented and tested. The endpoint has not been deployed or runtime-tested.
+
+### Owner email mismatch remains an unresolved release blocker
+
+The source allowlist still contains `kaushalyadilhani0994@gmail.com` and `kaushalyadhanidissanayake@gmail.com`. The project handover notes separately record `kaushalyadilhanidissanayake@gmail.com` as the corrected intended owner email. No address was changed: the exact live approved owner identity must be confirmed against the authenticated account before altering this security boundary. The email allowlist is a UI gate; the approved `staff_profiles` owner row remains the database authority.
+
+### Follow-up verification status
+
+- Static source changes above are committed to `review/atomic-order-idempotency`.
+- No production database, Edge Function, Vercel deployment, DNS, secret, or customer data was changed.
+- Still required: Deno type/lint check and endpoint tests for malformed JSON, primitive/array bodies, anonymous JWT, non-owner JWT, approved owner, invalid email, overlong fields, invalid role, invite conflict, and profile-write failure.
+- Role-based Admin UI, server-side permission assignment/revocation, 7-day expiry red-dot alerts, durable notification outbox, isolated SQL transaction tests, and mobile/browser end-to-end checks remain incomplete.
