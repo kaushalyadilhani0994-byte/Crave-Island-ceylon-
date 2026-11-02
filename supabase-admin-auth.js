@@ -293,10 +293,11 @@
       panel.setAttribute("role","dialog");
       panel.setAttribute("aria-modal","true");
       panel.setAttribute("aria-label","CRAVE team access overview");
-      panel.innerHTML='<section class="cic-team-sheet"><header class="cic-team-member-head"><div><h2>Team Access</h2><div class="cic-team-muted">Private owner view · current staff roles and assigned access.</div></div><button type="button" id="cicTeamClose">Close ✕</button></header><div class="cic-team-actions"><button type="button" id="cicTeamRefresh">Refresh team list</button></div><div id="cicTeamList" aria-live="polite" class="cic-team-muted">Loading team records…</div><div class="cic-team-warning">Permission changes, approvals and invitations are not enabled here yet. The live database mutation function currently lacks the required safe update privilege and audit trail. These controls will remain disabled until that backend is repaired and tested; no staff access is changed by this screen.</div></section>';
+      panel.innerHTML='<section class="cic-team-sheet"><header class="cic-team-member-head"><div><h2>Team Access</h2><div class="cic-team-muted">Private owner view · current staff roles and assigned access.</div></div><button type="button" id="cicTeamClose">← Admin menu</button></header><div class="cic-team-actions"><button type="button" id="cicTeamRefresh">Refresh team list</button></div><div id="cicTeamList" aria-live="polite" class="cic-team-muted">Loading team records…</div><div class="cic-team-warning">Permission changes, approvals and invitations are not enabled here yet. The live database mutation function currently lacks the required safe update privilege and audit trail. These controls will remain disabled until that backend is repaired and tested; no staff access is changed by this screen.</div></section>';
       document.body.appendChild(panel);
-      panel.addEventListener("click",event=>{if(event.target===panel)panel.style.display="none";});
-      document.getElementById("cicTeamClose").addEventListener("click",()=>{panel.style.display="none";});
+      const returnToAdmin=()=>{panel.style.display="none";const dashboard=document.getElementById("cicOwnerDashboard");if(history.state&&history.state.cicOwnerDashboard)history.back();else if(dashboard){dashboard.style.display="block";dashboard.scrollTop=0;}};
+      panel.addEventListener("click",event=>{if(event.target===panel)returnToAdmin();});
+      document.getElementById("cicTeamClose").addEventListener("click",returnToAdmin);
       document.getElementById("cicTeamRefresh").addEventListener("click",loadOwnerTeamList);
     }
     panel.style.display="block";
@@ -482,6 +483,7 @@
     if(!dashboard)return;
     if(event.state&&event.state.cicOwnerDashboard){
       // Back from a Control Room/tool panel: close the active work modal and return to Admin, not Home.
+      const teamPanel=document.getElementById("cicOwnerTeamPanel");if(teamPanel)teamPanel.style.display="none";
       document.querySelectorAll(".modal.open").forEach(modal=>{if(typeof window.closeModal==="function")window.closeModal(modal.id);else{modal.classList.remove("open");modal.style.display="none";}});
       dashboard.style.display="block";
       dashboard.scrollTop=0;
