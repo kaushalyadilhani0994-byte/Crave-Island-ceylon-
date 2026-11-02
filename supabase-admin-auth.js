@@ -290,6 +290,17 @@
     panel.style.display="block";
     await loadOwnerAlerts();
   }
+  async function refreshOwnerAlertCount(){
+    const client=db(),badge=document.getElementById("cicOwnerAlertCount");
+    if(!client||!badge)return;
+    try{
+      const {data:auth,error:authError}=await client.auth.getUser();
+      if(authError||!auth||!auth.user||!(await isApprovedOwner(auth.user))){badge.hidden=true;return;}
+      const {count,error}=await client.from("admin_alerts").select("id",{count:"exact",head:true}).eq("status","open");
+      if(error){badge.hidden=true;return;}
+      badge.textContent=String(count||0);badge.hidden=!count;
+    }catch(_){badge.hidden=true;}
+  }
   async function loadOwnerAlerts(){
     const panel=document.getElementById("cicOwnerAlertsPanel"),list=document.getElementById("cicAlertsList"),client=db();
     if(!panel||!list||!client)return;
@@ -417,7 +428,7 @@
           #cicOwnerDashboard .cic-dash-card strong{font:400 20px Georgia,serif;color:#24150f}
           #cicOwnerDashboard .cic-dash-card span{font-size:13px;color:#59463b;line-height:1.45}
           #cicOwnerDashboard .cic-dash-card:active{transform:scale(.99)}
-          #cicOwnerDashboard .cic-dash-action{border:1px solid #d4af37;border-radius:10px;padding:10px 13px;background:#2c1a14;color:#fff8e7;font-weight:650;touch-action:manipulation}
+          #cicOwnerDashboard .cic-alert-count{display:inline-flex;min-width:19px;height:19px;align-items:center;justify-content:center;border-radius:99px;background:#b42318;color:#fff;font:700 10px system-ui;margin-left:6px;padding:0 5px;vertical-align:middle}#cicOwnerDashboard .cic-alert-count[hidden]{display:none}#cicOwnerDashboard .cic-dash-action{border:1px solid #d4af37;border-radius:10px;padding:10px 13px;background:#2c1a14;color:#fff8e7;font-weight:650;touch-action:manipulation}
           #cicOwnerDashboard .cic-dash-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}
           #cicOwnerDashboard .cic-dash-section{margin-top:20px}
           #cicOwnerDashboard .cic-dash-section h2{font:400 22px Georgia,serif;margin:0 0 10px}
@@ -521,6 +532,7 @@
     }
     dashboard.style.display="block";
     dashboard.scrollTop=0;
+    refreshOwnerAlertCount();
   }
   window.addEventListener("popstate",function(event){
     const dashboard=document.getElementById("cicOwnerDashboard");
