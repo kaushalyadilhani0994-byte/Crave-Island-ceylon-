@@ -396,3 +396,35 @@ The earlier 2026-11-03 paragraph above mentioning `accounts.read` as a qualifyin
 ### Latest static review note
 
 The order atomicity migration and public-product column restriction migration remain review-branch proposals only. They have not been applied to Supabase and have not passed isolated database integration tests. Do not deploy or apply either migration until the owner identity, database migration history, grants/RLS, stock triggers, rollback/restock, idempotent replay and public storefront queries are verified in an isolated environment.
+
+
+## Further deep verification — live stock trigger and order retention behaviour (2026-11-03)
+
+Read-only queries against the live project confirmed:
+- `products.price`, `currency`, `stock_quantity`, and `track_inventory` are NOT NULL; `expiry_date` is nullable.
+- The live `store_order_items_inventory_delta` trigger currently runs AFTER INSERT OR DELETE and calls `apply_order_item_inventory_delta()`. Its INSERT path decrements tracked stock only when sufficient stock exists and raises `INSUFFICIENT_STOCK` otherwise. The review migration deliberately replaces this dual-purpose trigger with INSERT-only decrement and a separate DELETE guard so cancellation is the only restock path.
+- A separate runout-forecast trigger also fires AFTER INSERT on order items and is retained by the review migration.
+- `store_orders_issue_alert_trigger` runs AFTER UPDATE OF payment_status, order_status. The cancellation function's nested update of only `stock_restocked_at` does not re-enter that trigger.
+- `store_order_items_order_id_fkey` uses `ON DELETE CASCADE`.
+
+The review-branch order migration was hardened after these checks:
+1. Expiry comparison now uses the Asia/Colombo calendar date rather than the database's UTC `current_date`, avoiding early expiry rejection during the Sri Lankan evening.
+2. Price/currency checks fail closed using explicit null-safe comparisons.
+3. Cancellation restock aggregates quantities by product ID before `UPDATE ... FROM`. This correctly handles legacy orders containing repeated product lines; PostgreSQL otherwise may choose only one matching source row.
+4. The order-line DELETE guard now blocks direct line deletion while the parent order exists, but permits the FK cascade after an explicitly authorised parent-order retention deletion. This avoids making the documented `ON DELETE CASCADE` path impossible while still preventing direct line deletion from causing duplicate stock credit.
+
+### Required isolated transaction tests expanded
+
+Before this migration can be approved, an isolated database test must prove:
+- two simultaneous orders competing for the last stock unit: only one commits;
+- same customer/key/same payload returns the same order and does not decrement twice;
+- same customer/key/different payload is rejected;
+- malformed IDs/quantities and missing/inactive/expired products fail without partial order rows;
+- rollback after any order-line/trigger failure leaves no order header and no stock decrement;
+- cancellation restores all lines once, including legacy duplicate-product lines; a repeated cancellation does not restock again;
+- direct order-line deletion is rejected;
+- deleting an order parent through the authorised retention path cascades its lines without running a stock restock;
+- runout forecast trigger still fires once for a new line;
+- product expiry boundary uses Colombo date.
+
+These remain source-level fixes and test requirements only. No live schema or data was changed.
