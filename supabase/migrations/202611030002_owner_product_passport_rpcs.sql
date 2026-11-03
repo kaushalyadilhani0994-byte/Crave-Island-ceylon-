@@ -91,6 +91,10 @@ begin
      and (p_payload->>'manufacturing_date')::date > (p_payload->>'expiry_date')::date then
     raise exception 'invalid_product_date_range' using errcode = '22023';
   end if;
+  if nullif(p_payload->>'expiry_date','') is not null
+     and (p_payload->>'expiry_date')::date < (now() at time zone 'Asia/Colombo')::date then
+    raise exception 'expired_product_cannot_be_saved' using errcode = '22023';
+  end if;
 
   -- Serialize duplicate/retried requests for the same owner and request UUID.
   perform pg_catalog.pg_advisory_xact_lock(
@@ -100,7 +104,7 @@ begin
     from private.owner_product_save_requests
    where actor_user_id = v_actor and request_id = p_request_id;
   if found then
-    if v_existing.request_payload is distinct from p_payload then
+    if v_existing.request_payload is distinct from (p_payload || jsonb_build_object('_site_origin', v_origin)) then
       raise exception 'idempotency_key_reused_with_different_payload' using errcode = '22023';
     end if;
     return jsonb_build_object(
@@ -186,7 +190,7 @@ begin
 
   insert into private.owner_product_save_requests (
     actor_user_id, request_id, request_payload, product_id, qr_url
-  ) values (v_actor, p_request_id, p_payload, v_product_id, v_qr_url);
+  ) values (v_actor, p_request_id, p_payload || jsonb_build_object('_site_origin', v_origin), v_product_id, v_qr_url);
 
   return jsonb_build_object(
     'product_id', v_product_id,
