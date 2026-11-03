@@ -176,14 +176,14 @@ begin
     );
   else
     -- Keep the passport's public ingredients and batch dates in sync when the owner edits a product.
-    v_ingredients := regexp_split_to_array(btrim(p_payload->>'ingredients'), '[,;\\n]+');
+    v_ingredients := regexp_split_to_array(btrim(p_payload->>'ingredients'), '[,;\n]+');
     select coalesce(array_agg(btrim(x) order by ord), '{}'::text[])
       into v_ingredients
       from unnest(v_ingredients) with ordinality as t(x,ord)
      where btrim(x) <> '';
     v_allergens := case
       when nullif(btrim(p_payload->>'allergen_information'),'') is null then '{}'::text[]
-      else regexp_split_to_array(btrim(p_payload->>'allergen_information'), '[,;\\n]+')
+      else regexp_split_to_array(btrim(p_payload->>'allergen_information'), '[,;\n]+')
     end;
     select coalesce(array_agg(btrim(x) order by ord), '{}'::text[])
       into v_allergens
