@@ -68,7 +68,7 @@ begin
   exception when others then
     raise exception 'invalid_price_or_inventory_value' using errcode = '22023';
   end;
-  if v_price <= 0 or v_price > 2000000 or v_stock < 0 or v_low_stock < 0
+  if v_price is null or v_price <= 0 or v_price > 2000000 or v_stock < 0 or v_low_stock < 0
      or p_payload->>'currency' is distinct from 'LKR' then
     raise exception 'invalid_price_or_inventory_value' using errcode = '22023';
   end if;
