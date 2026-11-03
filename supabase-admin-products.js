@@ -167,7 +167,23 @@
       const result=await client.from(table).update({is_active:!isActive}).eq("id",id);
       error=result.error;
     }
-    if(error){say("Could not update this item. Confirm owner permissions and try again.",true);return;}
+    if(error){
+      const raw=String(error.message||"").toLowerCase();
+      const known=[
+        ["approved_owner_required","Only the approved owner account can change product visibility."],
+        ["product_missing_verified_sale_details","Add the verified ingredients and a valid LKR price before activating this product."],
+        ["test_product_cannot_be_activated","Rename this prototype or sample before activating it."],
+        ["active_category_required","Activate the product collection before activating this product."],
+        ["active_parent_category_required","Activate the parent collection before activating this product."],
+        ["manufacturing_date_cannot_be_in_future","The manufacturing date cannot be in the future."],
+        ["invalid_product_date_range","The manufacturing date must be before the expiry date."],
+        ["expired_product_cannot_be_activated","This product is already past its expiry date and cannot be activated."],
+        ["product_passport_required_before_activation","Save the product's QR passport before activating it."]
+      ];
+      const match=known.find(([code])=>raw.includes(code));
+      say(match?match[1]:"Could not update this item. Check the owner connection and database permissions, then retry.",true);
+      return;
+    }
     say((isActive?"Hidden":"Activated")+" successfully."); await loadAll();
     if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function") await window.CIC_SUPABASE.refreshCatalogue();
   }
