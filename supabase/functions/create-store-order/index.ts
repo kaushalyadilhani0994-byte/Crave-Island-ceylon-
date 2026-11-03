@@ -78,12 +78,29 @@ Deno.serve(async (req: Request) => {
 
     // Atomic RPC: order header, order lines, stock reservation and retry record commit together.
     const rawKey = req.headers.get("idempotency-key") || "";
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawKey)) {
-      return respond(400, { error: "A valid checkout retry key is required. Refresh checkout and try again." });
+    const validKey = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (rawKey && !validKey.test(rawKey)) {
+      return respond(400, { error: "The checkout retry key is invalid. Refresh checkout and try again." });
     }
     const normalizedAddress = { line1: addressLine, line2: cleanText(address?.line2, 180), city, district, postal_code: cleanText(address?.postal_code, 20), country: "Sri Lanka" };
     const atomicPayload = { customer_name: customerName, email: user.email || null, phone, shipping_address: normalizedAddress, payment_method: paymentMethod, customer_note: note || null, items };
-    const { data: result, error: atomicError } = await admin.rpc("create_store_order_atomic", { p_customer_id: user.id, p_idempotency_key: rawKey, p_payload: atomicPayload });
+    // Backward compatibility for the currently-live storefront build, which does not yet send
+    // an Idempotency-Key header. Identical retries in the same five-minute window share a key.
+    // Newer checkout builds send a persistent client-generated key and do not use this fallback.
+    let idempotencyKey = rawKey;
+    if (!idempotencyKey) {
+      const bucket = Math.floor(Date.now() / 300000);
+      const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(user.id + ":" + JSON.stringify(atomicPayload) + ":" + bucket),
+      );
+      const bytes = new Uint8Array(digest).slice(0, 16);
+      bytes[6] = (bytes[6] & 0x0f) | 0x40;
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;
+      const hex = Array.from(bytes, value => value.toString(16).padStart(2, "0")).join("");
+      idempotencyKey = hex.slice(0, 8) + "-" + hex.slice(8, 12) + "-" + hex.slice(12, 16) + "-" + hex.slice(16, 20) + "-" + hex.slice(20);
+    }
+    const { data: result, error: atomicError } = await admin.rpc("create_store_order_atomic", { p_customer_id: user.id, p_idempotency_key: idempotencyKey, p_payload: atomicPayload });
     if (atomicError || !result || !result.order) {
       const detail = String(atomicError?.message || "");
       console.error("Atomic order creation failed", detail);
