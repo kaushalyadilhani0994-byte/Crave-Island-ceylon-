@@ -52,7 +52,7 @@ Deno.serve(async (req: Request) => {
     const displayName = typeof body.display_name === "string" ? body.display_name.trim() : "";
     const role = typeof body.role === "string" ? body.role : "";
     const validRoles = ["supervisor", "staff", "media", "accounts", "star_club"];
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 254 || displayName.length > 100 || !validRoles.includes(role)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || displayName.length > 100 || !validRoles.includes(role)) {
       return new Response(JSON.stringify({ error: "valid_email_and_role_required" }), { status: 400, headers: { ...headers, "Content-Type": "application/json" } });
     }
 
@@ -74,7 +74,14 @@ Deno.serve(async (req: Request) => {
       permissions: {},
     }, { onConflict: "id" });
     if (profileError) {
-      return new Response(JSON.stringify({ error: "invite_sent_but_profile_setup_failed", detail: profileError.message }), { status: 500, headers: { ...headers, "Content-Type": "application/json" } });
+      // The Auth invite and profile write are separate services. Compensate by
+      // deleting the just-created invited identity so it cannot remain orphaned.
+      const { error: cleanupError } = await admin.auth.admin.deleteUser(invited.user.id);
+      return new Response(JSON.stringify({
+        error: cleanupError ? "invite_profile_failed_cleanup_required" : "invite_profile_failed_and_invite_cancelled",
+        recoverable: !!cleanupError,
+        user_id: cleanupError ? invited.user.id : undefined,
+      }), { status: 500, headers: { ...headers, "Content-Type": "application/json" } });
     }
 
     return new Response(JSON.stringify({ ok: true, invited: email, role, approved: false, message: "Invitation sent. Approve this team member after they accept and sign in." }), {
