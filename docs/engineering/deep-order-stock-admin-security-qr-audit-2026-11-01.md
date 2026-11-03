@@ -374,3 +374,25 @@ JavaScript parser checks passed for:
 Email regex sample checks passed. Deno runtime/type checks and browser/staging integration tests were not available/performed.
 
 No production SQL, cron jobs, Edge Functions, secrets, invitations, staff profiles, permissions, orders, inventory, Vercel deployment, or DNS settings were changed.
+
+
+
+## Follow-up verification — owner identity gate and order workspace documentation (2026-11-03)
+
+### Owner email allowlist mismatch — release blocker
+
+A fresh source inspection of `supabase-admin-auth.js` confirms the current browser allowlist contains:
+- `kaushalyadilhani0994@gmail.com`
+- `kaushalyadhanidissanayake@gmail.com`
+
+The corrected intended owner email recorded in the project handover is `kaushalyadilhanidissanayake@gmail.com`. These strings are not identical. The code also requires a matching approved `staff_profiles` row with role `owner`, so adding an email to the browser list alone would not grant database access; nevertheless, the mismatch can prevent the intended owner from reaching the OTP flow.
+
+No allowlist or database owner profile was changed. Confirm the exact account email and its approved owner profile together before changing this security boundary. This is a release-blocking identity check, not a reason to weaken server-side approval.
+
+### Order workspace documentation correction
+
+The earlier 2026-11-03 paragraph above mentioning `accounts.read` as a qualifying permission is superseded by the subsequent least-privilege correction. The current review-branch implementation allows the full order workspace only to the approved owner or approved profiles with `orders.read` or `dispatch.read`. Accounts-only users are excluded because the full workspace contains customer phone numbers, addresses and notes. A separate restricted accounts/invoices view remains unimplemented.
+
+### Latest static review note
+
+The order atomicity migration and public-product column restriction migration remain review-branch proposals only. They have not been applied to Supabase and have not passed isolated database integration tests. Do not deploy or apply either migration until the owner identity, database migration history, grants/RLS, stock triggers, rollback/restock, idempotent replay and public storefront queries are verified in an isolated environment.
