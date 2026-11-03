@@ -65,9 +65,23 @@ begin
     end if;
 
     if v_product.manufacturing_date is not null
+       and v_product.manufacturing_date > (now() at time zone 'Asia/Colombo')::date then
+      raise exception 'manufacturing_date_cannot_be_in_future' using errcode = '22023';
+    end if;
+
+    if v_product.manufacturing_date is not null
        and v_product.expiry_date is not null
        and v_product.manufacturing_date > v_product.expiry_date then
       raise exception 'invalid_product_date_range' using errcode = '22023';
+    end if;
+
+    if nullif(btrim(coalesce(v_product.qr_code, '')), '') is null
+       or not exists (
+         select 1
+           from public.product_passports passport
+          where passport.product_id = p_product_id::text
+       ) then
+      raise exception 'product_passport_required_before_activation' using errcode = '22023';
     end if;
 
     if v_product.expiry_date is not null
