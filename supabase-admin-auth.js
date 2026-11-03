@@ -157,7 +157,7 @@
       setOwnerNavVisible(true);
       if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
       else {const m=$("#adminAccessModal");if(m)m.style.display="none";}
-      openOwnerDashboard();
+      openOriginalControlRoom();
     }catch(e){status("Could not verify the code because of a connection error.",true);}
     finally{if(btn){btn.disabled=false;btn.textContent="Verify code & open Admin";}}
   }
@@ -564,7 +564,7 @@
       setOwnerNavVisible(true);
       if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
       else {const modal=$("#adminAccessModal");if(modal)modal.style.display="none";}
-      openOwnerDashboard();
+      openOriginalControlRoom();
     }catch(_){status("Could not verify the owner session. Please reopen Admin and try again.",true);}
     finally{handlingPendingOwnerSession=false;}
   }
@@ -610,7 +610,7 @@
               const {data}=await client.auth.getSession();
               if(data&&data.session&&await isApprovedOwner(data.session.user)){
                 setOwnerNavVisible(true);
-                openOwnerDashboard();
+                openOriginalControlRoom();
                 return;
               }
             }catch(_){}
@@ -645,7 +645,7 @@
               try{sessionStorage.setItem("cicOwnerOtpVerified","1");localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
               setOwnerNavVisible(true);
               if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
-              openOwnerDashboard();
+              openOriginalControlRoom();
             }else if(session&&session.user){
               await recordDeniedOwnerAttempt();
               await client.auth.signOut();
