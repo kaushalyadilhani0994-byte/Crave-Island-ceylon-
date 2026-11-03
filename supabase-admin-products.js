@@ -95,7 +95,7 @@
     say("Loading collections and products…");
     const [cats,products]=await Promise.all([
       client.from("categories").select("id,name,description,image_url,is_active,sort_order,parent_id").order("sort_order").order("name"),
-      client.rpc("owner_list_products")
+      client.from("products").select("id,name,description,category,price,currency,image_url,ingredients,allergen_information,batch_number,qr_code,is_active,stock_quantity,low_stock_threshold,track_inventory,expiry_date,manufacturing_date,storage_location,created_at,sku").order("created_at",{ascending:false})
     ]);
     if(cats.error||products.error){say("Catalogue could not be loaded. Check the categories/products table access and try Refresh.",true);return;}
     productRows=products.data||[];
@@ -142,8 +142,7 @@
 
     // Keep incomplete/test records out of the public shop. Deactivation is always allowed.
     if(table==="products"&&!isActive){
-      const {data:ownerProducts,error:productError}=await client.rpc("owner_list_products");
-      const product=(ownerProducts||[]).find(row=>row.id===id);
+      const {data:product,error:productError}=await client.from("products").select("id,name,ingredients,price,currency,category,qr_code,manufacturing_date,expiry_date").eq("id",id).maybeSingle();
       if(productError||!product){say("Could not verify this product. Refresh the catalogue and try again.",true);return;}
       const name=String(product.name||"").trim();
       if(/prototype|not\s+for\s+sale|test\s+product|sample\s+only/i.test(name)){
