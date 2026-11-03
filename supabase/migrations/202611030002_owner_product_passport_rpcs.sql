@@ -58,7 +58,7 @@ begin
  values(v_id::text,v_slug,v_mfg,array(select btrim(x) from regexp_split_to_table(p_payload->>'ingredients','[,;\n]+') x where btrim(x)<>''),array(select btrim(x) from regexp_split_to_table(coalesce(p_payload->>'allergen_information',''),'[,;\n]+') x where btrim(x)<>''),nullif(p_payload->>'batch_number',''),v_exp,nullif(p_payload->>'storage_location',''),false,now())
  on conflict(product_id) do update set public_slug=excluded.public_slug,manufacturing_date=excluded.manufacturing_date,ingredients=excluded.ingredients,allergen_information=excluded.allergen_information,batch_code=excluded.batch_code,best_before=excluded.best_before,storage_instructions=excluded.storage_instructions,updated_at=now();
  update public.products set qr_code=v_url where id=v_id;
- return jsonb_build_object('id',v_id,'product_id',v_id,'qr_url',v_url,'public_slug',v_slug,'replayed',v_old.product_id is not null);
+ return jsonb_build_object('id',v_id,'product_id',v_id,'qr_url',v_url,'public_slug',v_slug,'created',p_product_id is null,'replayed',v_old.product_id is not null);
 end $$;
 
 revoke all on function private.owner_save_product_passport_impl(uuid,uuid,jsonb,text) from public,anon;
