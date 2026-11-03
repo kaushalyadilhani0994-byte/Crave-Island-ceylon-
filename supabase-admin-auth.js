@@ -338,22 +338,51 @@
     if(!panel){
       const style=document.createElement("style");
       style.id="cicOwnerTeamPanelStyle";
-      style.textContent=`#cicOwnerTeamPanel{position:fixed;inset:0;z-index:10003;background:#160f0de8;display:none;overflow:auto;padding:12px;box-sizing:border-box}#cicOwnerTeamPanel .cic-team-sheet{box-sizing:border-box;width:min(820px,100%);margin:12px auto;background:#fff8e7;color:#2c1a14;border:1px solid #d4af37;border-radius:16px;padding:16px;font:14px system-ui;box-shadow:0 15px 45px #0005}#cicOwnerTeamPanel h2{font:400 25px Georgia,serif;margin:0 0 5px}#cicOwnerTeamPanel .cic-team-muted{font-size:12px;color:#67564b;line-height:1.5}#cicOwnerTeamPanel .cic-team-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#cicOwnerTeamPanel button{border:1px solid #d4af37;border-radius:9px;background:#2c1a14;color:#fff8e7;padding:9px 12px;font-weight:650;min-height:40px}#cicOwnerTeamPanel .cic-team-member{border:1px solid #e1d2bc;border-radius:11px;padding:12px;margin:9px 0;background:#fff}#cicOwnerTeamPanel .cic-team-member-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}#cicOwnerTeamPanel .cic-team-role{font-size:11px;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:#6b4d31}#cicOwnerTeamPanel .cic-team-state{font-size:11px;border-radius:99px;padding:3px 8px;background:#eee4d5}#cicOwnerTeamPanel .cic-team-perms{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}#cicOwnerTeamPanel .cic-team-perms span{font-size:10px;border:1px solid #dfd0bb;border-radius:99px;padding:4px 7px;color:#58483e}#cicOwnerTeamPanel .cic-team-warning{padding:11px;border-radius:10px;background:#f4ead9;color:#5a3b22;font-size:12px;line-height:1.5;margin-top:12px}@media(max-width:420px){#cicOwnerTeamPanel{padding:5px}#cicOwnerTeamPanel .cic-team-sheet{padding:12px;margin:5px auto}}`;
+      style.textContent=`#cicOwnerTeamPanel{position:fixed;inset:0;z-index:10003;background:#160f0de8;display:none;overflow:auto;padding:12px;box-sizing:border-box}#cicOwnerTeamPanel .cic-team-sheet{box-sizing:border-box;width:min(820px,100%);margin:12px auto;background:#fff8e7;color:#2c1a14;border:1px solid #d4af37;border-radius:16px;padding:16px;font:14px system-ui;box-shadow:0 15px 45px #0005}#cicOwnerTeamPanel h2{font:400 25px Georgia,serif;margin:0 0 5px}#cicOwnerTeamPanel .cic-team-muted{font-size:12px;color:#67564b;line-height:1.5}#cicOwnerTeamPanel .cic-team-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#cicOwnerTeamPanel button{border:1px solid #d4af37;border-radius:9px;background:#2c1a14;color:#fff8e7;padding:9px 12px;font-weight:650;min-height:40px}#cicOwnerTeamPanel .cic-team-member{border:1px solid #e1d2bc;border-radius:11px;padding:12px;margin:9px 0;background:#fff}#cicOwnerTeamPanel .cic-team-member-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}#cicOwnerTeamPanel .cic-team-role{font-size:11px;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:#6b4d31}#cicOwnerTeamPanel .cic-team-state{font-size:11px;border-radius:99px;padding:3px 8px;background:#eee4d5}#cicOwnerTeamPanel .cic-team-perms{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}#cicOwnerTeamPanel .cic-team-perms span{font-size:10px;border:1px solid #dfd0bb;border-radius:99px;padding:4px 7px;color:#58483e}#cicOwnerTeamPanel .cic-team-warning{padding:11px;border-radius:10px;background:#f4ead9;color:#5a3b22;font-size:12px;line-height:1.5;margin-top:12px}#cicOwnerTeamPanel .cic-team-invite{border:1px solid #e1d2bc;border-radius:12px;padding:12px;margin:14px 0;background:#fff}#cicOwnerTeamPanel .cic-team-invite h3{margin:0 0 9px;font:400 19px Georgia,serif}#cicOwnerTeamPanel .cic-team-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}#cicOwnerTeamPanel .cic-team-form-grid label{display:block;font-size:11px;font-weight:700;color:#58483e}#cicOwnerTeamPanel input,#cicOwnerTeamPanel select{box-sizing:border-box;width:100%;min-height:40px;margin-top:4px;padding:8px;border:1px solid #d6c7b5;border-radius:8px;background:#fff;color:#2c1a14;font:14px system-ui}#cicOwnerTeamPanel .cic-team-form-grid button{align-self:end}#cicOwnerTeamPanel .cic-team-member-controls{display:grid;grid-template-columns:1fr 1fr auto;align-items:end;gap:8px;margin-top:10px;padding-top:9px;border-top:1px solid #eee4d5}#cicOwnerTeamPanel .cic-team-member-controls label{font-size:11px;font-weight:700;color:#58483e}#cicOwnerTeamPanel .cic-team-member-controls button{white-space:nowrap}@media(max-width:520px){#cicOwnerTeamPanel .cic-team-form-grid{grid-template-columns:1fr}#cicOwnerTeamPanel .cic-team-member-controls{grid-template-columns:1fr 1fr}#cicOwnerTeamPanel .cic-team-member-controls button{grid-column:1/-1}}@media(max-width:420px){#cicOwnerTeamPanel{padding:5px}#cicOwnerTeamPanel .cic-team-sheet{padding:12px;margin:5px auto}}`;
       document.head.appendChild(style);
       panel=document.createElement("div");
       panel.id="cicOwnerTeamPanel";
       panel.setAttribute("role","dialog");
       panel.setAttribute("aria-modal","true");
       panel.setAttribute("aria-label","CRAVE team access overview");
-      panel.innerHTML='<section class="cic-team-sheet"><header class="cic-team-member-head"><div><h2>Team Access</h2><div class="cic-team-muted">Private owner view · current staff roles and assigned access.</div></div><button type="button" id="cicTeamClose">← Admin menu</button></header><div class="cic-team-actions"><button type="button" id="cicTeamRefresh">Refresh team list</button></div><div id="cicTeamList" aria-live="polite" class="cic-team-muted">Loading team records…</div><div class="cic-team-warning">Permission changes, approvals and invitations are not enabled here yet. The live database mutation function currently lacks the required safe update privilege and audit trail. These controls will remain disabled until that backend is repaired and tested; no staff access is changed by this screen.</div></section>';
+      panel.innerHTML='<section class="cic-team-sheet"><header class="cic-team-member-head"><div><h2>Team Access</h2><div class="cic-team-muted">Private owner view · invite staff, assign role-based access and approve accounts.</div></div><button type="button" id="cicTeamClose">← Admin menu</button></header><form id="cicTeamInviteForm" class="cic-team-invite"><h3>Invite a team member</h3><div class="cic-team-form-grid"><label>Email address<input id="cicTeamInviteEmail" type="email" maxlength="254" autocomplete="email" required></label><label>Display name<input id="cicTeamInviteName" maxlength="100" autocomplete="name"></label><label>Role<select id="cicTeamInviteRole"><option value="supervisor">Supervisor</option><option value="staff" selected>Staff</option><option value="media">Media</option><option value="accounts">Accounts</option><option value="star_club">Loyalty / Star Club</option></select></label><button type="submit" id="cicTeamInviteSubmit">Send secure invitation</button></div><div class="cic-team-muted">Invited accounts start pending and cannot use staff tools until you approve them.</div></form><div class="cic-team-actions"><button type="button" id="cicTeamRefresh">Refresh team list</button></div><div id="cicTeamStatus" class="cic-team-muted" role="status" aria-live="polite"></div><div id="cicTeamList" aria-live="polite" class="cic-team-muted">Loading team records…</div><div class="cic-team-warning">Role presets apply the minimum module permissions shown for each job. Accounts access does not include raw customer order records. The Main Admin / Owner account cannot be edited or removed from this panel.</div></section>';
       document.body.appendChild(panel);
       const returnToAdmin=()=>{panel.style.display="none";const dashboard=document.getElementById("cicOwnerDashboard");if(history.state&&history.state.cicOwnerDashboard)history.back();else if(dashboard){dashboard.style.display="block";dashboard.scrollTop=0;}};
       panel.addEventListener("click",event=>{if(event.target===panel)returnToAdmin();});
       document.getElementById("cicTeamClose").addEventListener("click",returnToAdmin);
       document.getElementById("cicTeamRefresh").addEventListener("click",loadOwnerTeamList);
+      document.getElementById("cicTeamInviteForm").addEventListener("submit",async event=>{
+        event.preventDefault();
+        const email=document.getElementById("cicTeamInviteEmail").value.trim().toLowerCase();
+        const displayName=document.getElementById("cicTeamInviteName").value.trim();
+        const role=document.getElementById("cicTeamInviteRole").value;
+        const submit=document.getElementById("cicTeamInviteSubmit");
+        const note=document.getElementById("cicTeamStatus");
+        const {data:auth,error:authError}=await client.auth.getUser();
+        if(authError||!auth||!auth.user||!(await isApprovedOwner(auth.user))){note.textContent="Owner verification failed. Invitation was not sent.";return;}
+        submit.disabled=true;submit.textContent="Sending invitation…";note.textContent="Checking owner access and sending invitation…";
+        try{
+          const {data,error}=await client.functions.invoke("owner-invite-team-member",{body:{email,display_name:displayName,role}});
+          if(error||!data||data.ok!==true)throw new Error(data&&data.error?data.error:(error&&error.message)||"Invitation could not be sent.");
+          document.getElementById("cicTeamInviteForm").reset();
+          note.textContent="Invitation sent to "+email+". The account is pending until you approve it after sign-in.";
+          await loadOwnerTeamList();
+        }catch(error){note.textContent="Invitation failed: "+String(error&&error.message||"Please try again.").slice(0,180);}
+        finally{submit.disabled=false;submit.textContent="Send secure invitation";}
+      });
     }
     panel.style.display="block";
     await loadOwnerTeamList();
+  }
+  function permissionsForTeamRole(role){
+    const presets={
+      supervisor:{catalogue:["read","create","update"],inventory:["read","update"],orders:["read","update"],dispatch:["read","update"],reports:["read"],tasks:["read","update"]},
+      staff:{catalogue:["read"],inventory:["read"],tasks:["read","update"]},
+      media:{media:["read","create","update"],star_club:["read","create","update"],certificates:["read"],reports:["read"]},
+      accounts:{accounts:["read","create","update","export"],reports:["read","export"]},
+      star_club:{star_club:["read","create","update"],reports:["read"]}
+    };
+    return presets[role]||presets.staff;
   }
   async function loadOwnerTeamList(){
     const panel=document.getElementById("cicOwnerTeamPanel");
@@ -373,8 +402,9 @@
         list.textContent="Team records could not be loaded. Check the owner team-list RPC and try again.";
         return;
       }
-      if(!data.length){list.textContent="No team profiles have been created yet.";return;}
+      if(!data.length){list.textContent="No team profiles yet. Use the invitation form above to add your first staff member.";return;}
       const actionLabels={read:"View",create:"Add",update:"Edit",delete:"Delete",approve:"Approve",export:"Export"};
+      const roleOptions=[["supervisor","Supervisor"],["staff","Staff"],["media","Media"],["accounts","Accounts"],["star_club","Loyalty / Star Club"]];
       list.innerHTML=data.map(member=>{
         const permissions=member.permissions&&typeof member.permissions==="object"&&!Array.isArray(member.permissions)?member.permissions:{};
         const badges=Object.entries(permissions).flatMap(([moduleName,actions])=>{
@@ -383,8 +413,29 @@
         });
         const display=member.display_name||member.email||"Team member";
         const state=member.approved===true?"Approved":"Pending approval";
-        return '<article class="cic-team-member"><div class="cic-team-member-head"><div><strong>'+cicTeamEscape(display)+'</strong><div class="cic-team-muted">'+cicTeamEscape(member.email||"No email on profile")+'</div></div><div><div class="cic-team-role">'+cicTeamEscape(member.role||"unassigned")+'</div><div class="cic-team-state">'+state+'</div></div></div><div class="cic-team-perms">'+(badges.length?badges.join(""):'<span>No permissions assigned</span>')+'</div></article>';
+        const isOwner=member.role==="owner";
+        const controls=isOwner?'<div class="cic-team-muted">Main Admin · Full owner access protected</div>':
+          '<div class="cic-team-member-controls"><label>Role<select data-team-role="'+cicTeamEscape(member.user_id)+'">'+roleOptions.map(([value,label])=>'<option value="'+value+'" '+(member.role===value?'selected':'')+'>'+label+'</option>').join("")+'</select></label><label><input type="checkbox" data-team-approved="'+cicTeamEscape(member.user_id)+'" '+(member.approved===true?'checked':'')+' style="width:auto;min-height:0;margin-right:5px">Approved access</label><button type="button" data-team-save="'+cicTeamEscape(member.user_id)+'">Save role & access</button></div>';
+        return '<article class="cic-team-member"><div class="cic-team-member-head"><div><strong>'+cicTeamEscape(display)+'</strong><div class="cic-team-muted">'+cicTeamEscape(member.email||"No email on profile")+'</div></div><div><div class="cic-team-role">'+cicTeamEscape(member.role||"unassigned")+'</div><div class="cic-team-state">'+state+'</div></div></div><div class="cic-team-perms">'+(badges.length?badges.join(""):'<span>No permissions assigned</span>')+'</div>'+controls+'</article>';
       }).join("");
+      list.querySelectorAll("[data-team-save]").forEach(button=>button.addEventListener("click",async()=>{
+        const userId=button.getAttribute("data-team-save");
+        const roleSelect=list.querySelector('[data-team-role="'+userId+'"]');
+        const approvedBox=list.querySelector('[data-team-approved="'+userId+'"]');
+        if(!roleSelect||!approvedBox)return;
+        const role=roleSelect.value;
+        const permissions=permissionsForTeamRole(role);
+        if(!window.confirm("Save "+role+" access for this team member?"))return;
+        button.disabled=true;button.textContent="Saving…";
+        try{
+          const {data:auth,error:authError}=await client.auth.getUser();
+          if(authError||!auth||!auth.user||!(await isApprovedOwner(auth.user)))throw new Error("Owner verification failed.");
+          const {error}=await client.rpc("owner_set_team_member_access",{_user_id:userId,_role:role,_approved:approvedBox.checked,_permissions:permissions});
+          if(error)throw error;
+          const note=document.getElementById("cicTeamStatus");if(note)note.textContent="Role and approval updated for "+(data.find(x=>x.user_id===userId)?.email||"team member")+".";
+          await loadOwnerTeamList();
+        }catch(error){const note=document.getElementById("cicTeamStatus");if(note)note.textContent="Access update failed: "+String(error&&error.message||"Please try again.").slice(0,180);button.disabled=false;button.textContent="Save role & access";}
+      }));
     }catch(_){list.textContent="A connection error prevented the team list from loading.";}
   }
   async function openOwnerDashboard(){
