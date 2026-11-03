@@ -116,7 +116,19 @@ return;
 } finally {
 btn.textContent="Save product passport";
 }
-if(error){message("Could not save the passport and QR together: "+String(error.message||"Owner permission or server error").slice(0,180));return}
+if(error){
+const raw=String(error.message||"").toLowerCase();
+const known=[
+["approved_owner_required","Only the approved owner account can save a product passport."],
+["activate_product_before_publishing_passport","Activate this product in Owner Products before publishing its public QR passport."],
+["manufacturing_date_cannot_be_in_future","The manufacturing date cannot be in the future."],
+["invalid_product_date_range","The manufacturing date must be before the best-before date."],
+["invalid_site_origin","The secure app address could not be verified. Reopen the official app and retry."]
+];
+const match=known.find(([code])=>raw.includes(code));
+message(match?match[1]:"Could not save the passport and QR together. Your entered details are still here; check owner access and retry.");
+return;
+}
 const saved=Array.isArray(data)?data[0]:data;
 if(!saved||!saved.qr_url){message("The server did not confirm the passport and QR save. Please retry.");return}
 const url=saved.qr_url;
