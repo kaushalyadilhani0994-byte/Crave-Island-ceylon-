@@ -269,7 +269,12 @@ language plpgsql
 set search_path = 'pg_catalog','public'
 as $function$
 begin
-  raise exception 'Order lines are immutable; cancel the order instead.' using errcode='55000';
+  -- Block direct line edits while the order exists, but allow the FK's ON DELETE
+  -- CASCADE when an explicitly authorised retention job deletes the parent order.
+  if exists(select 1 from public.store_orders where id=old.order_id) then
+    raise exception 'Order lines are immutable; cancel the order instead.' using errcode='55000';
+  end if;
+  return old;
 end;
 $function$;
 drop trigger if exists store_order_items_no_delete on public.store_order_items;
