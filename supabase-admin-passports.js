@@ -106,7 +106,8 @@ let data,error;
 try {
 const response=await db.rpc("owner_update_product_passport",{
 p_product_id:id,
-p_payload:row
+p_payload:row,
+p_site_origin:location.origin
 });
 data=response.data;error=response.error;
 } catch (requestError) {
