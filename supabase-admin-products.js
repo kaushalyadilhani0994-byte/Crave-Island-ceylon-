@@ -159,7 +159,14 @@
       }
     }
 
-    const {error}=await client.from(table).update({is_active:!isActive}).eq("id",id);
+    let error=null;
+    if(table==="products"){
+      const result=await client.rpc("owner_set_product_active",{p_product_id:id,p_is_active:!isActive});
+      error=result.error;
+    }else{
+      const result=await client.from(table).update({is_active:!isActive}).eq("id",id);
+      error=result.error;
+    }
     if(error){say("Could not update this item. Confirm owner permissions and try again.",true);return;}
     say((isActive?"Hidden":"Activated")+" successfully."); await loadAll();
     if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function") await window.CIC_SUPABASE.refreshCatalogue();
