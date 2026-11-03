@@ -142,13 +142,13 @@ begin
        or not exists(select 1 from public.categories c where c.name=v_product.category and c.is_active=true) then
       raise exception 'PRODUCT_UNAVAILABLE' using errcode='P0002';
     end if;
-    if v_product.expiry_date is not null and v_product.expiry_date<current_date then
+    if v_product.expiry_date is not null and v_product.expiry_date<(now() at time zone 'Asia/Colombo')::date then
       raise exception 'PRODUCT_EXPIRED' using errcode='P0002';
     end if;
-    if v_product.currency<>'LKR' or v_product.price<=0 then
+    if v_product.currency is distinct from 'LKR' or v_product.price is null or v_product.price<=0 then
       raise exception 'INVALID_PRODUCT_PRICE' using errcode='22023';
     end if;
-    if v_product.track_inventory and v_product.stock_quantity<v_qty then
+    if v_product.track_inventory is true and (v_product.stock_quantity is null or v_product.stock_quantity<v_qty) then
       raise exception 'INSUFFICIENT_STOCK' using errcode='P0001';
     end if;
 
@@ -238,10 +238,17 @@ begin
     on conflict (dedupe_key) do update set status='open',severity='warning',updated_at=now();
 
     if new.stock_restocked_at is null then
+      -- Aggregate duplicate legacy lines before UPDATE FROM; otherwise PostgreSQL may
+      -- choose one matching source row and under-restock an older order.
       update public.products p
-      set stock_quantity=p.stock_quantity+i.quantity,updated_at=now()
-      from public.store_order_items i
-      where i.order_id=new.id and p.track_inventory=true and p.id::text=i.product_id;
+      set stock_quantity=p.stock_quantity+restock.total_quantity,updated_at=now()
+      from (
+        select product_id, sum(quantity)::integer as total_quantity
+        from public.store_order_items
+        where order_id=new.id
+        group by product_id
+      ) restock
+      where p.track_inventory=true and p.id::text=restock.product_id;
       update public.store_orders set stock_restocked_at=now()
       where id=new.id and stock_restocked_at is null;
     end if;
