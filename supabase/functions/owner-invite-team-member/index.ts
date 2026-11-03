@@ -7,16 +7,26 @@ const corsHeaders = {
   "Vary": "Origin",
 };
 
-function cors(origin: string | null) {
-  const allowed = origin === "https://craveislandceylonv18supabaseintegra.vercel.app"
+const OWNER_EMAILS = new Set([
+  "kaushalyadilhani0994@gmail.com",
+  "kaushalyadhanidissanayake@gmail.com",
+]);
+
+function isAllowedOrigin(origin: string | null): origin is string {
+  return origin === "https://craveislandceylonv18supabaseintegra.vercel.app"
     || (!!origin && /^https:\/\/craveislandceylonv18supabaseintegratedbuild-[a-z0-9-]+\.vercel\.app$/.test(origin));
-  return { ...corsHeaders, "Access-Control-Allow-Origin": allowed ? origin! : "https://craveislandceylonv18supabaseintegra.vercel.app" };
+}
+
+function cors(origin: string | null) {
+  const allowed = isAllowedOrigin(origin);
+  return { ...corsHeaders, "Access-Control-Allow-Origin": allowed ? origin : "https://craveislandceylonv18supabaseintegra.vercel.app" };
 }
 
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin");
   const headers = cors(origin);
   if (req.method === "OPTIONS") return new Response("ok", { headers });
+  if (!isAllowedOrigin(origin)) return new Response(JSON.stringify({ error: "origin_not_allowed" }), { status: 403, headers: { ...headers, "Content-Type": "application/json" } });
   if (req.method !== "POST") return new Response(JSON.stringify({ error: "method_not_allowed" }), { status: 405, headers: { ...headers, "Content-Type": "application/json" } });
 
   try {
@@ -34,9 +44,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const ownerEmail = String(userData.user.email || "").trim().toLowerCase();
     const { data: ownerProfile, error: ownerError } = await admin.from("staff_profiles")
       .select("role,approved").eq("id", userData.user.id).maybeSingle();
-    if (ownerError || ownerProfile?.role !== "owner" || ownerProfile?.approved !== true) {
+    if (!OWNER_EMAILS.has(ownerEmail) || ownerError || ownerProfile?.role !== "owner" || ownerProfile?.approved !== true) {
       return new Response(JSON.stringify({ error: "owner_access_required" }), { status: 403, headers: { ...headers, "Content-Type": "application/json" } });
     }
 
