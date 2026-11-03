@@ -328,3 +328,49 @@ The server Edge Function remains the authority for each status transition; hidin
 - No browser/mobile end-to-end test was run. No staff test accounts exist and no staging Supabase branch is available.
 - Team list RPC, owner alert RLS read, order team read/update paths and browser history behaviour still require staging/integration verification.
 - No production SQL, Edge Function, secrets, cron jobs, staff records, orders, inventory, Vercel deployment, merge, or DNS settings were changed.
+
+
+## Follow-up — team permission repair and expiry sweep preparation (2026-11-03)
+
+### Team invite Edge Function
+
+The review branch invitation endpoint now fixes a real validation defect: the email regex was double-escaped, so the intended whitespace/dot checks were not interpreted correctly. It now uses the intended email-shape regex and retains length/role bounds.
+
+If Auth invitation succeeds but the subsequent `staff_profiles` upsert fails, the endpoint now attempts compensating deletion of the invited Auth identity. The response distinguishes successful cleanup from cleanup failure and returns the user ID only when manual recovery is needed. This is not a fully atomic cross-service transaction; the cleanup-failure path remains a recoverable exception requiring owner attention.
+
+Static email-regex samples passed for valid basic/tagged emails and invalid missing-at, duplicate-at, whitespace and missing-local-part values. No real invitation was sent.
+
+### Order workspace least-privilege correction
+
+A follow-up review found that allowing `accounts.read` to open the complete order workspace exposed more customer details (phone, address, notes and line items) than an accounts-only role needs. The review branch now limits the full order workspace to approved owner, `orders.read`, or `dispatch.read`. Accounts-only users do not receive the full order workspace. A dedicated narrow invoices/payments view remains future work.
+
+Status controls now correctly hide/disable when a member has no permitted transitions (empty transition list), rather than relying on array truthiness.
+
+### Daily expiry sweep preparation
+
+Read-only live checks confirmed:
+- `products_inventory_alerts_trigger` runs after product INSERT/UPDATE only.
+- `refresh_product_inventory_alerts()` opens/reopens expiry alerts inside a 30-day window and marks expiry within 7 days or already expired as critical.
+- Existing alert deduplication key is `expiry:<product UUID>`.
+- `admin_alerts` has `dedupe_key` uniqueness, RLS owner-only SELECT/UPDATE for authenticated, and service-role INSERT; anonymous has no table grant.
+- Existing pg_cron timezone is GMT/UTC. Existing owner daily report job at 14:30 UTC corresponds to 20:00 Sri Lanka.
+- A daily sweep at 18:45 UTC (00:15 Asia/Colombo) can refresh expiry severity without requiring product edits.
+
+A review design document was committed at `docs/engineering/team-management-and-expiry-sweep-implementation-draft-2026-11-03.md`. It specifies a private SECURITY DEFINER helper + transactional audit row for team permission changes, preserving the live role/module/action contract and avoiding direct UPDATE grants; it also specifies the daily Colombo-date expiry sweep and cron schedule.
+
+### Migration-history blocker retained
+
+Live Supabase migration history lists five team migrations (20261031025555, 20261031025613, 20261031025621, 20261031025842, 20261031025852) that are not present as SQL files in the GitHub migration directory. The team audit/expiry SQL is therefore not placed in the executable migration folder and was not applied. Exact historical SQL recovery and staging validation remain mandatory.
+
+### Static validation
+
+JavaScript parser checks passed for:
+- `supabase-admin-auth.js`
+- `supabase-admin-orders.js`
+- `supabase-admin-products.js`
+- `supabase-admin-passports.js`
+- `supabase-checkout.js`
+
+Email regex sample checks passed. Deno runtime/type checks and browser/staging integration tests were not available/performed.
+
+No production SQL, cron jobs, Edge Functions, secrets, invitations, staff profiles, permissions, orders, inventory, Vercel deployment, or DNS settings were changed.
