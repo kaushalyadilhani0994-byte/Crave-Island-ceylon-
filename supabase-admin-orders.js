@@ -15,8 +15,7 @@
     const isOwner=staff.role==="owner";
     const canOrders=Array.isArray(permissions.orders)&&permissions.orders.includes("read");
     const canDispatch=Array.isArray(permissions.dispatch)&&permissions.dispatch.includes("read");
-    const canAccounts=Array.isArray(permissions.accounts)&&permissions.accounts.includes("read");
-    if(!isOwner&&!canOrders&&!canDispatch&&!canAccounts) return {error:"Your account does not have permission to view orders."};
+    if(!isOwner&&!canOrders&&!canDispatch) return {error:"Your account does not have permission to view orders."};
     return {db,isOwner,canOrdersUpdate:isOwner||(Array.isArray(permissions.orders)&&permissions.orders.includes("update")),canDispatchUpdate:!isOwner&&Array.isArray(permissions.dispatch)&&permissions.dispatch.includes("update")};
   }
   function notice(el,msg){ if(el) el.innerHTML='<div class="admin-note">'+esc(msg)+'</div>'; }
@@ -84,7 +83,7 @@
     const update=async()=>{
       const db=client();let permitted=false;
       try{
-        if(db){const {data:{session},error}=await db.auth.getSession();if(session&&!error&&!session.user?.is_anonymous){const {data,error:profileError}=await db.from("staff_profiles").select("role,approved,permissions").eq("id",session.user.id).maybeSingle();const p=data?.permissions&&typeof data.permissions==="object"?data.permissions:{};permitted=!profileError&&!!data&&data.approved===true&&(data.role==="owner"||["orders","dispatch","accounts"].some(k=>Array.isArray(p[k])&&p[k].includes("read")));}}
+        if(db){const {data:{session},error}=await db.auth.getSession();if(session&&!error&&!session.user?.is_anonymous){const {data,error:profileError}=await db.from("staff_profiles").select("role,approved,permissions").eq("id",session.user.id).maybeSingle();const p=data?.permissions&&typeof data.permissions==="object"?data.permissions:{};permitted=!profileError&&!!data&&data.approved===true&&(data.role==="owner"||["orders","dispatch"].some(k=>Array.isArray(p[k])&&p[k].includes("read")));}}
       }catch(_){}
       button.hidden=!permitted;
       if(!permitted)modal.style.display="none";
