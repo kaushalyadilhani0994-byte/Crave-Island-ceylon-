@@ -184,6 +184,29 @@ begin
       nullif(p_payload->>'expiry_date','')::date,
       false, now()
     );
+  else
+    -- Keep the passport's public ingredients and batch dates in sync when the owner edits a product.
+    v_ingredients := regexp_split_to_array(btrim(p_payload->>'ingredients'), '[,;\\n]+');
+    select coalesce(array_agg(btrim(x) order by ord), '{}'::text[])
+      into v_ingredients
+      from unnest(v_ingredients) with ordinality as t(x,ord)
+     where btrim(x) <> '';
+    v_allergens := case
+      when nullif(btrim(p_payload->>'allergen_information'),'') is null then '{}'::text[]
+      else regexp_split_to_array(btrim(p_payload->>'allergen_information'), '[,;\\n]+')
+    end;
+    select coalesce(array_agg(btrim(x) order by ord), '{}'::text[])
+      into v_allergens
+      from unnest(v_allergens) with ordinality as t(x,ord)
+     where btrim(x) <> '';
+    update public.product_passports set
+      ingredients=v_ingredients,
+      allergen_information=v_allergens,
+      batch_code=nullif(btrim(p_payload->>'batch_number'),''),
+      manufacturing_date=nullif(p_payload->>'manufacturing_date','')::date,
+      best_before=nullif(p_payload->>'expiry_date','')::date,
+      updated_at=now()
+    where product_id=v_product_id::text;
   end if;
   v_qr_url := v_origin || '/passport.html?slug=' || v_slug;
   update public.products set qr_code=v_qr_url, updated_at=now() where id=v_product_id;
