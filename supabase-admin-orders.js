@@ -43,7 +43,7 @@
         '<div style="margin-top:9px;font-size:13px">'+lines+'</div>'+
         '<div style="margin-top:9px;font-size:12px">Payment: '+esc(o.payment_method)+' / '+esc(o.payment_status)+' · Status: <b>'+esc(st)+'</b></div>'+
         (o.customer_note?'<div style="margin-top:5px;font-size:12px">Note: '+esc(o.customer_note)+'</div>':"")+
-        '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px" '+(!options?'hidden':'')+'><label style="font-size:12px">Update status</label><select data-cic-order-status="'+esc(o.id)+'" '+(!options?'disabled':'')+' style="max-width:190px;padding:8px;border-radius:8px;border:1px solid #d4c6b5">'+(options||'<option>No further changes</option>')+'</select><button class="secondary-btn" data-cic-save-order="'+esc(o.id)+'" '+(!options?'disabled':'')+'>Save status</button></div></article>';
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px" '+(!options.length?'hidden':'')+'><label style="font-size:12px">Update status</label><select data-cic-order-status="'+esc(o.id)+'" '+(!options.length?'disabled':'')+' style="max-width:190px;padding:8px;border-radius:8px;border:1px solid #d4c6b5">'+(options||'<option>No further changes</option>')+'</select><button class="secondary-btn" data-cic-save-order="'+esc(o.id)+'" '+(!options.length?'disabled':'')+'>Save status</button></div></article>';
     }).join("");
     el.querySelectorAll("[data-cic-save-order]").forEach(btn=>btn.addEventListener("click",async()=>{
       const id=btn.getAttribute("data-cic-save-order"),select=el.querySelector('[data-cic-order-status="'+id+'"]'),status=select&&select.value;
