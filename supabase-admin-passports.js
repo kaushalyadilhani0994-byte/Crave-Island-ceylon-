@@ -28,13 +28,13 @@ passportLoadState="idle";
 const initialSaveButton=$("#cicPassSave");
 if(initialSaveButton)initialSaveButton.disabled=true;
 if(!await owner()){message("Sign in with the approved owner account to manage product passports.");return}
-const {data,error}=await db.from("products").select("id,name,batch_number,ingredients,manufacturing_date,expiry_date,is_active").order("name");
+const {data,error}=await db.from("products").select("id,name,description,batch_number,ingredients,manufacturing_date,expiry_date,is_active").order("name");
 if(error){message("Could not load products. Check the owner access policy and try again.");return}
 const sel=$("#cicPassProduct");
 const saveButton=$("#cicPassSave");
 passportLoadState="idle";
 if(saveButton)saveButton.disabled=true;
-sel.innerHTML='<option value="">Choose a product</option>'+(data||[]).map(p=>'<option value="'+esc(p.id)+'" data-batch="'+esc(p.batch_number||"")+'" data-ingredients="'+esc(p.ingredients||"")+'" data-mfg="'+esc(p.manufacturing_date||"")+'" data-expiry="'+esc(p.expiry_date||"")+'">'+esc(p.name)+'</option>').join("");
+sel.innerHTML='<option value="">Choose a product</option>'+(data||[]).map(p=>'<option value="'+esc(p.id)+'" data-description="'+esc(p.description||"")+'" data-batch="'+esc(p.batch_number||"")+'" data-ingredients="'+esc(p.ingredients||"")+'" data-mfg="'+esc(p.manufacturing_date||"")+'" data-expiry="'+esc(p.expiry_date||"")+'">'+esc(p.name)+'</option>').join("");
 sel.onchange=async()=>{
 $("#cicPassResult").innerHTML="";
 const id=sel.value;
@@ -58,7 +58,7 @@ $("#cicPassMfg").value=p?.manufacturing_date||opt.dataset.mfg||"";
 $("#cicPassBest").value=p?.best_before||opt.dataset.expiry||"";
 $("#cicPassStorage").value=p?.storage_instructions||"";
 $("#cicPassAllergens").value=(p?.allergen_information||[]).join(", ")||"";
-$("#cicPassStory").value=p?.public_story||"";
+$("#cicPassStory").value=p?.public_story||opt.dataset.description||"";
 $("#cicPassPublished").checked=!!p?.published;
 passportLoadState="loaded";
 if(saveButton)saveButton.disabled=false;
