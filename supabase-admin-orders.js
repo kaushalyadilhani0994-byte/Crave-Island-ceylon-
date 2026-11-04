@@ -23,7 +23,7 @@
     const el=document.getElementById("adminOrderTable"); if(!el)return;
     notice(el,"Loading live orders from Supabase…");
     const a=await access(); if(a.error){notice(el,a.error);return;}
-    const {data:orders,error}=await a.db.from("store_orders").select("id,order_number,customer_name,email,phone,shipping_address,subtotal,delivery_fee,total,currency,payment_method,payment_status,order_status,customer_note,created_at").order("created_at",{ascending:false}).limit(100);
+    const {data:orders,error}=await a.db.from("store_orders").select("id,order_number,customer_name,email,phone,shipping_address,subtotal,delivery_fee,total,currency,payment_method,payment_status,order_status,customer_note,created_at,delivered_at").order("created_at",{ascending:false}).limit(100);
     if(error){notice(el,"Could not load live orders. Check the owner access policy and try again.");return;}
     if(!orders||!orders.length){notice(el,"No real customer orders yet. New successful checkouts will appear here.");return;}
     const {data:items,error:itemError}=await a.db.from("store_order_items").select("order_id,product_name,quantity,unit_price,line_total").in("order_id",orders.map(o=>o.id));
@@ -41,6 +41,7 @@
         '<div style="margin-top:5px;color:#75645a;font-size:12px">'+esc(addr)+'</div>'+
         '<div style="margin-top:9px;font-size:13px">'+lines+'</div>'+
         '<div style="margin-top:9px;font-size:12px">Payment: '+esc(o.payment_method)+' / '+esc(o.payment_status)+' · Status: <b>'+esc(st)+'</b></div>'+
+        (o.delivered_at?'<div style="margin-top:5px;font-size:11px;color:#75645a">Delivered: '+esc(new Date(o.delivered_at).toLocaleString("en-LK",{timeZone:"Asia/Colombo"}))+'</div>':"")+
         (o.customer_note?'<div style="margin-top:5px;font-size:12px">Note: '+esc(o.customer_note)+'</div>':"")+
         '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px" '+(!options.length?'hidden':'')+'><label style="font-size:12px">Update status</label><select data-cic-order-status="'+esc(o.id)+'" '+(!options.length?'disabled':'')+' style="max-width:190px;padding:8px;border-radius:8px;border:1px solid #d4c6b5">'+(options||'<option>No further changes</option>')+'</select><button class="secondary-btn" data-cic-save-order="'+esc(o.id)+'" '+(!options.length?'disabled':'')+'>Save status</button></div></article>';
     }).join("");
