@@ -648,20 +648,26 @@
       authModalObserver.observe(document.documentElement, { childList: true, subtree: true });
       window.setTimeout(() => authModalObserver.disconnect(), 20000);
     }
-    const original=window.openAdminAccess;
-    window.openAdminAccess=function(){
-      // Let the original entry point check Supabase's persisted session first.
-      // It opens the existing Control Room only for an approved owner; everyone
-      // else is shown the secure OTP panel. sessionStorage must not be the gate,
-      // because it can reset while Supabase's authenticated session remains valid.
-      if(typeof original==="function"){
-        try{
-          const result=original.apply(this,arguments);
-          if(result&&typeof result.catch==="function")result.catch(()=>{});
-        }catch(_){}
-      }else if(typeof window.openModal==="function")window.openModal("adminAccessModal");
-      else {const m=$("#adminAccessModal");if(m)m.style.display="";}
-      const s=$("#cicOwnerAuthStatus");if(s)s.hidden=true;
+    window.openAdminAccess=async function(){
+      // Do not invoke the legacy entry point: it can route an authenticated
+      // owner into the newer dashboard instead of the original V18 Control Room.
+      const showLogin=()=>{
+        setOwnerNavVisible(false);
+        if(typeof window.openModal==="function")window.openModal("adminAccessModal");
+        else {const m=$("#adminAccessModal");if(m)m.style.display="";}
+        const s=$("#cicOwnerAuthStatus");if(s)s.hidden=true;
+      };
+      const client=db();
+      if(!client){showLogin();return;}
+      try{
+        const {data,error}=await client.auth.getSession();
+        if(!error&&data&&data.session&&await isApprovedOwner(data.session.user)){
+          setOwnerNavVisible(true);
+          await openOriginalControlRoom();
+          return;
+        }
+      }catch(_){}
+      showLogin();
     };
     const ownerEntryTargets=[document.querySelector(".hero-copy h2"),document.querySelector(".hero-copy"),document.querySelector("header .logo"),document.querySelector(".brand-logo"),document.querySelector("[data-brand-logo]")].filter((el,index,all)=>el&&all.indexOf(el)===index);
     ownerEntryTargets.forEach(target=>{
