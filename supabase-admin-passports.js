@@ -28,13 +28,14 @@ passportLoadState="idle";
 const initialSaveButton=$("#cicPassSave");
 if(initialSaveButton)initialSaveButton.disabled=true;
 if(!await owner()){message("Sign in with the approved owner account to manage product passports.");return}
-const {data,error}=await db.from("products").select("id,name,description,batch_number,ingredients,manufacturing_date,expiry_date,is_active").order("name");
-if(error){message("Could not load products. Check the owner access policy and try again.");return}
+const {data,error}=await db.rpc("owner_list_products");
+if(error){message("Could not load the secure owner product list. Check owner access and try again.");return}
+const ownerProducts=(data||[]).map(row=>typeof row==="string"?JSON.parse(row):row).sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
 const sel=$("#cicPassProduct");
 const saveButton=$("#cicPassSave");
 passportLoadState="idle";
 if(saveButton)saveButton.disabled=true;
-sel.innerHTML='<option value="">Choose a product</option>'+(data||[]).map(p=>'<option value="'+esc(p.id)+'" data-description="'+esc(p.description||"")+'" data-batch="'+esc(p.batch_number||"")+'" data-ingredients="'+esc(p.ingredients||"")+'" data-mfg="'+esc(p.manufacturing_date||"")+'" data-expiry="'+esc(p.expiry_date||"")+'">'+esc(p.name)+'</option>').join("");
+sel.innerHTML='<option value="">Choose a product</option>'+(ownerProducts||[]).map(p=>'<option value="'+esc(p.id)+'" data-description="'+esc(p.description||"")+'" data-batch="'+esc(p.batch_number||"")+'" data-ingredients="'+esc(p.ingredients||"")+'" data-mfg="'+esc(p.manufacturing_date||"")+'" data-expiry="'+esc(p.expiry_date||"")+'">'+esc(p.name)+'</option>').join("");
 sel.onchange=async()=>{
 $("#cicPassResult").innerHTML="";
 const id=sel.value;
@@ -83,8 +84,8 @@ e.preventDefault();if(!await owner()){message("Owner session expired. Please sig
 const id=$("#cicPassProduct").value,ingredients=$("#cicPassIngredients").value.trim();
 if(!id||passportLoadState!=="loaded"){message("Wait until the selected product's saved passport details have loaded successfully.");return}
 if(!ingredients){message("Enter the verified ingredient list.");return}
-const {data:product,error:productError}=await db.from("products").select("id,is_active").eq("id",id).maybeSingle();
-if(productError||!product){message("Could not verify the selected product. Refresh and try again.");return}
+const product=ownerProducts.find(item=>String(item.id)===String(id));
+if(!product){message("Could not verify the selected product. Refresh and try again.");return}
 if($("#cicPassPublished").checked&&product.is_active!==true){message("This product is hidden from the shop. Activate it in Owner Products before publishing its QR passport.");return}
 const mfg=$("#cicPassMfg").value,best=$("#cicPassBest").value;
 if(mfg&&best&&mfg>best){message("Manufacturing date cannot be later than the expiry / best-before date.");return}
