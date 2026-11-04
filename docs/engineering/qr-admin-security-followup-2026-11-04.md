@@ -4,9 +4,9 @@
 This is a read-only production inspection plus review-branch source changes. No production database migration, product/order edit, Edge Function deployment, merge, or Vercel deployment was performed.
 
 ## Confirmed live owner identity
-- The live `staff_profiles` row confirms `kaushalyadilhani0994@gmail.com` is the single approved owner.
-- The owner auth frontend allowlist matches this address.
-- The team-invitation Edge Function source has been narrowed to this same verified address; the live deployed function remains unchanged until an approved deployment.
+- The live `staff_profiles` row confirms one approved owner account.
+- The owner auth frontend allowlist matches that verified account.
+- The team-invitation Edge Function source has been narrowed to the same verified owner identity; the live deployed function remains unchanged until an approved deployment.
 
 ## Critical product-column grant finding
 - Live RLS is enabled on `public.products`, and active-product row policies are present.
@@ -45,7 +45,7 @@ This is a read-only production inspection plus review-branch source changes. No 
 - Native Supabase leaked-password protection is still DISABLED. The browser-side password breach check is supplementary, not equivalent. Owner must enable it in Authentication → Settings → Password Security before public launch.
 
 ## Remaining acceptance and launch gates
-1. Review and apply the three migrations in numeric order, then verify anon/authenticated can read only storefront-safe product columns and approved owner/team RPCs return only their permitted projections.
+1. Review all five staged migrations in numeric order before any production change: (1) `202611040001_owner_list_products_rpc.sql`, (2) `202611040002_restrict_public_product_columns.sql`, (3) `202611040003_team_inventory_read_rpc.sql`, (4) `202611040004_order_delivered_timestamp.sql`, and (5) `202611040005_sync_product_passport_fields.sql`. Apply only after explicit owner approval. Then verify anon/authenticated can read only storefront-safe product columns, owner/team RPCs return only their permitted projections, the delivered timestamp is set once, and passport/product traceability fields remain synchronized.
 2. Run owner OTP and original V18 Control Room navigation tests on a real phone.
 3. Enter only verified real product facts; test draft → passport save → activation → passport publish → QR print → physical scan.
 4. Complete role-specific staff OTP login/workspaces. Team invitation/profile/permission backend exists, but separate role-specific login and workspaces are not yet complete.
