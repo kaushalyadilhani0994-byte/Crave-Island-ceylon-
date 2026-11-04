@@ -60,8 +60,7 @@ from public.store_orders;
 -- * Query 2: only the reviewed storefront-safe column allowlist appears.
 -- * Query 3: anon_can_execute=false for all listed functions;
 --   authenticated_can_execute=true for owner_list_products and team_list_inventory;
---   authenticated_can_execute=false for the private implementation;
---   service_role_can_execute=true for the private implementation only if
---   separately granted by the existing secure wrapper design (otherwise false).
+--   authenticated_can_execute=true for the private implementation (per migration 005);
+--   service_role_can_execute=false unless a separate explicit grant exists.
 -- * Query 4: both migrated columns appear exactly once.
 -- * Query 5: use the returned counts to confirm no draft product was accidentally published.
