@@ -1,9 +1,13 @@
 -- CRAVE ISLAND CEYLON
--- Keep storefront reads public while hiding operational inventory fields.
--- Public catalogue code reads only the explicit allowlist below; owner tools use
--- the approved-owner RPCs for full inventory data.
+-- Storefront users may read only customer-safe catalogue fields.
+-- Inventory, expiry, SKU, manufacturing and storage fields are private.
+-- Approved owners retrieve the full product row through owner_list_products().
+--
+-- Revoke broad table grants from both browser roles. Authenticated customers
+-- must not inherit operational fields merely because they have a login.
+revoke select on table public.products from anon, authenticated, public;
 
-revoke select on table public.products from anon, public;
+-- Remove any earlier column-level grants for operational fields.
 revoke select (
   stock_quantity,
   low_stock_threshold,
@@ -15,8 +19,9 @@ revoke select (
   allergen_information,
   created_at,
   updated_at
-) on table public.products from anon, public;
+) on table public.products from anon, authenticated, public;
 
+-- Keep only the fields needed by the public storefront and product passport.
 grant select (
   id,
   name,
@@ -29,7 +34,7 @@ grant select (
   batch_number,
   qr_code,
   is_active
-) on table public.products to anon;
+) on table public.products to anon, authenticated;
 
 comment on table public.products is
-  'Public storefront access is column-limited; inventory, expiry, storage and operational fields are owner-only.';
+  'Browser roles can read storefront-safe catalogue fields only; inventory, expiry, SKU, manufacturing, storage and operational fields require approved-owner access.';
