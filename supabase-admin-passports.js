@@ -123,7 +123,9 @@ const known=[
 ["activate_product_before_publishing_passport","Activate this product in Owner Products before publishing its public QR passport."],
 ["manufacturing_date_cannot_be_in_future","The manufacturing date cannot be in the future."],
 ["invalid_product_date_range","The manufacturing date must be before the best-before date."],
-["invalid_site_origin","The secure app address could not be verified. Reopen the official app and retry."]
+["invalid_site_origin","The secure app address could not be verified. Reopen the official app and retry."],
+["expired_passport_cannot_be_published","A product with a past best-before date cannot be published. Check the verified date before publishing."],
+["passport_text_field_too_long","One or more passport fields are too long. Shorten the text and save again."]
 ];
 const match=known.find(([code])=>raw.includes(code));
 message(match?match[1]:"Could not save the passport and QR together. Your entered details are still here; check owner access and retry.");
