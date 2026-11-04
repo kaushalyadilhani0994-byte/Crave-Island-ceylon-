@@ -134,6 +134,7 @@
     return false;
   }
   async function sendCode() {
+    if(!requireOwnerRoleForCurrentOtp())return;
     const client=db(), email=($("#adminEmail")?.value||"").trim().toLowerCase();
     if(!client)return status("Supabase is still connecting. Please wait and try again.",true);
     if(!isOwnerEmail(email))return status("This email is not on the owner's allowed email list.",true);
