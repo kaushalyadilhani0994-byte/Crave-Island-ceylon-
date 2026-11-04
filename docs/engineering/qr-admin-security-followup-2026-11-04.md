@@ -64,3 +64,5 @@ Not launch-ready. Source fixes are staged in GitHub PR #17. Production remains u
 - Owner Orders and My Orders display the delivered timestamp once the migration is applied.
 
 These are review-branch changes only. They still require isolated SQL tests and a fresh browser preview before deployment.
+
+- The passport editor/public page now also support an optional verified net-content / pack-size field (for example, `100 g` or `250 ml`); no weight or pack size is invented for the existing draft.
