@@ -33,3 +33,9 @@ Scope: read-only verification of the live Supabase project and review-branch sou
 ## Preservation rule
 
 Keep the existing V18 storefront and original Owner Control Room intact. No production deployment, domain alias change, destructive policy change, or live customer/order mutation is authorized by this review.
+
+## Team and storefront readiness snapshot
+
+- Current live `staff_profiles` aggregation: 1 approved owner; 0 Supervisor, Staff, Media, Accounts, or Loyalty members. There are therefore no real staff accounts with which to validate role-specific OTP/workspace isolation yet.
+- The customer-facing live catalogue currently has 14 active categories but 0 active products and 0 published passports attached to active products. Public product/passport QR testing must wait until a real product is safely added and published.
+- `private.has_staff_permission(module, action)` checks `auth.uid()`, `approved = true`, and either owner role or the exact permission in the profile JSON. `private.is_approved_owner()` separately checks the owner role and approval flag. This is the intended RLS boundary; do not replace it with client-side role labels.
