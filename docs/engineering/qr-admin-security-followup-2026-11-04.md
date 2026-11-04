@@ -63,6 +63,6 @@ Not launch-ready. Source fixes are staged in GitHub PR #17. Production remains u
 - `my-orders.html` now provides a customer-scoped printable receipt using stored order/item snapshots, including subtotal, delivery fee, total, delivery address, contact details and unit prices. It does not store customer PII in local storage.
 - Owner Orders and My Orders display the delivered timestamp once the migration is applied.
 
-These are review-branch changes only. They still require isolated SQL tests and a fresh browser preview before deployment.
+These are review-branch changes only. All five migrations remain staged and unapplied in production. They still require isolated SQL tests and a fresh browser preview before deployment.
 
 - The passport editor/public page now also support an optional verified net-content / pack-size field (for example, `100 g` or `250 ml`); no weight or pack size is invented for the existing draft.
