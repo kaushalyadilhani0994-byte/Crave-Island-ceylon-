@@ -137,9 +137,19 @@
     if(btn){btn.disabled=true;btn.textContent="Sending…";}
     try{
       const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:window.location.origin+window.location.pathname}});
-      if(error)status("Could not send a sign-in code. Check the email address and Supabase Auth email configuration, then try again.",true);
-      else status("Secure sign-in email requested. Check your inbox and spam folder. If it contains a 6-digit code, enter it below; if it contains a sign-in link, tap that link and return to this app. Owner database approval is still required.");
-    }catch(e){status("Could not request a code because of a connection error.",true);}
+      if(error){
+        // Surface Supabase's non-secret error code/message so delivery failures
+        // can be diagnosed instead of showing the same generic message every time.
+        const detail=[error.code,error.message].filter(Boolean).join(": ").replace(/[\\r\\n]+/g," ").slice(0,220);
+        console.warn("[CRAVE owner sign-in] OTP request rejected", {code:error.code||null,status:error.status||null});
+        status("Supabase could not send the owner sign-in email"+(detail?" ("+detail+")":".")+" Check the exact approved owner email, email rate limit, and Auth SMTP/Resend delivery settings. No login code was issued.",true);
+      } else {
+        status("Supabase accepted the owner sign-in email request. Check Inbox, Spam, Promotions and All Mail. If no message arrives within 2 minutes, do not keep resending; the Auth email delivery log needs checking. Owner approval is still required.");
+      }
+    }catch(e){
+      console.warn("[CRAVE owner sign-in] OTP request connection failure", {name:e&&e.name||"Error"});
+      status("Could not reach Supabase Auth to request the owner email. Check the connection and try again.",true);
+    }
     finally{if(btn){btn.disabled=false;btn.textContent="Send secure sign-in email";}}
   }
   async function verifyCode() {
