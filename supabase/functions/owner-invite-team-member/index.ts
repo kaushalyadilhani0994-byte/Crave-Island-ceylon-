@@ -9,7 +9,6 @@ const corsHeaders = {
 
 const OWNER_EMAILS = new Set([
   "kaushalyadilhani0994@gmail.com",
-  "kaushalyadhanidissanayake@gmail.com",
 ]);
 
 function isAllowedOrigin(origin: string | null): origin is string {
