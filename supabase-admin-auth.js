@@ -156,7 +156,8 @@
     }
     finally{if(btn){btn.disabled=false;btn.textContent="Send secure sign-in email";}}
   }
-  async function verifyCode() {\n    if(!requireOwnerRoleForCurrentOtp())return;
+  async function verifyCode() {
+    if(!requireOwnerRoleForCurrentOtp())return;
     const client=db(), email=($("#adminEmail")?.value||"").trim().toLowerCase(), token=($("#adminOtp")?.value||"").trim();
     if(!client)return status("Supabase is still connecting. Please wait and try again.",true);
     if(!isOwnerEmail(email))return status("This email is not on the owner's allowed email list.",true);
