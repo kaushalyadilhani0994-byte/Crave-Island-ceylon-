@@ -11,10 +11,11 @@ Target: `review/atomic-order-idempotency`
 ## Changes in this branch
 - Restricted the owner allowlist to the single address verified against the approved production owner account; the address is intentionally not repeated in this note.
 - Added a short-lived DOM observer to re-run the existing secure modal wiring when the storefront injects the Admin modal after page initialization.
-- Preserved the approved-owner profile check, OTP verification, RLS boundaries, hidden customer Admin navigation, hidden owner QR tooling, public shop QR route, and original V18 Control Room.
+- Updated the dynamically loaded auth script's cache-busting query in `supabase-store.js`, so a browser is less likely to keep using a cached pre-fix auth module.
+- Source inspection confirmed the approved-owner profile check and OTP verification remain in place; customer Admin and owner QR tooling remain hidden; direct public passport routes and the shop QR page remain separate; and the original V18 Control Room remains the owner workspace. The customer-facing QR navigation markup still exists in `index.html`, but the auth module hides it at runtime.
 
 ## Verification and limitations
-- Git diff verified: only `supabase-admin-auth.js` changed relative to the review branch; the change is isolated to the owner auth module.
+- Git diff verified: three files changed relative to the review branch — `supabase-admin-auth.js`, `supabase-store.js`, and this engineering note. The storefront change only refreshes the auth module cache key; it does not alter checkout or storefront data logic.
 - The branch was not merged and no Vercel deployment was triggered.
 - A live phone/email OTP test, browser UI test, and production deployment test have not been performed. These remain required before promotion.
 - No Supabase schema, policies, secrets, auth settings, product/order data, or production records were changed.
