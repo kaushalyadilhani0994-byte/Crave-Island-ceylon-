@@ -35,7 +35,7 @@ document.title=productName+" | CRAVE ISLAND CEYLON";
 const story=data.public_story||product.description||"";
 const image=product.image_url?'<img src="'+esc(product.image_url)+'" alt="'+esc(productName)+'" style="display:block;width:100%;max-height:320px;object-fit:contain;border-radius:12px;margin:12px auto;background:#f4ead8" loading="lazy">':"";
 const description=story?'<p class="muted">'+esc(story)+'</p>':"";
-const price=product.price!=null?Number(product.price).toLocaleString("en-LK",{style:"currency",currency:product.currency||"LKR"}):"";
+let price="";if(product.price!=null){const amount=Number(product.price);if(Number.isFinite(amount)){try{price=amount.toLocaleString("en-LK",{style:"currency",currency:/^[A-Z]{3}$/.test(product.currency||"")?product.currency:"LKR"});}catch(_){price="LKR "+amount.toLocaleString("en-LK");}}}
 root.innerHTML=image+'<h1>'+esc(productName)+'</h1>'+description+'<div class="grid">'+f("Collection",product.category)+f("Price",price)+f("Batch / lot",data.batch_code)+f("Origin",data.origin)+f("Manufacturing date",data.manufacturing_date)+f("Best before / expiry",data.best_before)+f("Ingredients",data.ingredients,true)+f("Allergen information",data.allergen_information,true)+f("Storage instructions",data.storage_instructions,true)+'</div>';
 }catch(e){fail("Product verification is temporarily unavailable. Please try again later.")}
 }
