@@ -97,6 +97,7 @@ button{border:0;border-radius:9px;background:var(--cocoa);color:var(--cream);pad
       const totals=document.createElement("div");totals.className="total";
       addText(totals,"span","","Total");addText(totals,"span","",money(order.total));card.appendChild(totals);
       addText(card,"p","note","Payment: "+String(order.payment_method||"").replaceAll("_"," ")+" · Payment status: "+(order.payment_status||"pending"));
+      if(order.delivered_at)addText(card,"p","note","Delivered: "+new Date(order.delivered_at).toLocaleString("en-LK"));
       const receipt=document.createElement("button");receipt.type="button";receipt.className="secondary";receipt.textContent="Print / Save receipt";receipt.addEventListener("click",()=>printReceipt(order,items[order.id]||[]));card.appendChild(receipt);
       root.appendChild(card);
     });
@@ -106,7 +107,7 @@ button{border:0;border-radius:9px;background:var(--cocoa);color:var(--cream);pad
     try{
       const {data:{user},error:userError}=await client.auth.getUser();
       if(userError)throw userError;if(!user){showSignedIn(false);msg("Please sign in to see your orders.");return;}
-      const {data:orders,error}=await client.from("store_orders").select("id,order_number,created_at,order_status,payment_method,payment_status,currency,subtotal,delivery_fee,total,customer_name,email,phone,shipping_address").eq("customer_id",user.id).order("created_at",{ascending:false});
+      const {data:orders,error}=await client.from("store_orders").select("id,order_number,created_at,order_status,payment_method,payment_status,currency,subtotal,delivery_fee,total,customer_name,email,phone,shipping_address,delivered_at").eq("customer_id",user.id).order("created_at",{ascending:false});
       if(error)throw error;
       const ids=(orders||[]).map(o=>o.id);const grouped={};
       if(ids.length){
