@@ -3,7 +3,7 @@
 "use strict";
 const $=s=>document.querySelector(s);
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let db, passportLoadState="idle", passportSaving=false;
+let db, passportLoadState="idle", passportSaving=false, ownerProducts=[];
 async function owner(){
 db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
 if(!db)return false;
@@ -30,7 +30,7 @@ if(initialSaveButton)initialSaveButton.disabled=true;
 if(!await owner()){message("Sign in with the approved owner account to manage product passports.");return}
 const {data,error}=await db.rpc("owner_list_products");
 if(error){message("Could not load the secure owner product list. Check owner access and try again.");return}
-const ownerProducts=(data||[]).map(row=>typeof row==="string"?JSON.parse(row):row).sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
+ownerProducts=(data||[]).map(row=>typeof row==="string"?JSON.parse(row):row).sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
 const sel=$("#cicPassProduct");
 const saveButton=$("#cicPassSave");
 passportLoadState="idle";
