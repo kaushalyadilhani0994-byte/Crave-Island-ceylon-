@@ -55,3 +55,12 @@ This is a read-only production inspection plus review-branch source changes. No 
 
 ## Current release status
 Not launch-ready. Source fixes are staged in GitHub PR #17. Production remains unchanged and protected until migration review, real-device acceptance, and explicit owner approval.
+
+
+## Additional fixes staged after the initial follow-up
+- `202611040004_order_delivered_timestamp.sql` adds a first-delivery timestamp and updates the status RPC to set it once, without resetting it on retries. Owner Orders and My Orders can display this timestamp.
+- `202611040005_sync_product_passport_fields.sql` makes the passport editor update the matching product ingredients, allergens, batch, manufacturing date and expiry date in the same transaction as passport publication. This keeps storefront details, QR passport details, checkout expiry checks and inventory expiry alerts consistent. It also blocks publishing a passport with a past best-before date and validates text field lengths.
+- `my-orders.html` now provides a customer-scoped printable receipt using stored order/item snapshots, including subtotal, delivery fee, total, delivery address, contact details and unit prices. It does not store customer PII in local storage.
+- Owner Orders and My Orders display the delivered timestamp once the migration is applied.
+
+These are review-branch changes only. They still require isolated SQL tests and a fresh browser preview before deployment.
