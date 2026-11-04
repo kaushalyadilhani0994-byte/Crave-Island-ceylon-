@@ -632,6 +632,22 @@
     // persisted session or auth-state callback is processed.
     setOwnerNavVisible(false);
     install();
+    // The storefront may inject the Admin access modal after this script runs.
+    // Retry wiring when its DOM arrives; otherwise the visible buttons can remain
+    // connected to legacy handlers and no Supabase OTP request is ever sent.
+    if (!document.getElementById("adminAccessModal")?.dataset.cicRealOtp) {
+      const authModalObserver = new MutationObserver(() => {
+        const modal = document.getElementById("adminAccessModal");
+        if (modal?.dataset.cicRealOtp === "true") {
+          authModalObserver.disconnect();
+          return;
+        }
+        install();
+        if (modal?.dataset.cicRealOtp === "true") authModalObserver.disconnect();
+      });
+      authModalObserver.observe(document.documentElement, { childList: true, subtree: true });
+      window.setTimeout(() => authModalObserver.disconnect(), 20000);
+    }
     const original=window.openAdminAccess;
     window.openAdminAccess=function(){
       // Let the original entry point check Supabase's persisted session first.
