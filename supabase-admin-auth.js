@@ -121,6 +121,18 @@
     if(note)note.textContent="Secure email sign-in. A code or sign-in link may be delivered depending on the configured email template; database owner approval is always required.";
     modal.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target===email||e.target===otp)){e.preventDefault();e.target===email?sendCode():verifyCode();}});
   }
+  function selectedAdminRole(){
+    const active=document.querySelector("#adminAccessModal .role-card-v9.active");
+    const id=active&&active.id||"role-v9-owner";
+    return id.replace(/^role-v9-/,"").replace(/^role-/,"")||"owner";
+  }
+  function requireOwnerRoleForCurrentOtp(){
+    const role=selectedAdminRole();
+    if(role==="owner")return true;
+    const labels={supervisor:"Supervisor",staff:"Staff",media:"Media",accounts:"Accounts"};
+    status((labels[role]||"This")+" role's separate secure sign-in and workspace are not enabled yet. Select Main Admin only if you are the approved owner. Choosing a role never grants access.",true);
+    return false;
+  }
   async function sendCode() {
     const client=db(), email=($("#adminEmail")?.value||"").trim().toLowerCase();
     if(!client)return status("Supabase is still connecting. Please wait and try again.",true);
@@ -144,7 +156,7 @@
     }
     finally{if(btn){btn.disabled=false;btn.textContent="Send secure sign-in email";}}
   }
-  async function verifyCode() {
+  async function verifyCode() {\n    if(!requireOwnerRoleForCurrentOtp())return;
     const client=db(), email=($("#adminEmail")?.value||"").trim().toLowerCase(), token=($("#adminOtp")?.value||"").trim();
     if(!client)return status("Supabase is still connecting. Please wait and try again.",true);
     if(!isOwnerEmail(email))return status("This email is not on the owner's allowed email list.",true);
