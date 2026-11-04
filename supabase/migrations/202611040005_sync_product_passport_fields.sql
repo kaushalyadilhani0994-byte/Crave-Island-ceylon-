@@ -1,5 +1,10 @@
 -- CRAVE ISLAND CEYLON
 -- Keep the public passport and the operational product row in sync.
+-- Include optional verified net content / pack size for the public food label.
+
+alter table public.product_passports
+  add column if not exists net_content text;
+
 -- This prevents the shop catalogue, stock/expiry automation, checkout and QR
 -- passport from showing conflicting ingredients, allergens, batch or dates.
 
@@ -27,6 +32,7 @@ declare
   v_origin_value text;
   v_storage text;
   v_story text;
+  v_net_content text;
   v_published boolean;
 begin
   if auth.uid() is null or not private.is_approved_owner() then
@@ -78,12 +84,14 @@ begin
   v_origin_value := nullif(btrim(p_payload->>'origin'),'');
   v_storage := nullif(btrim(p_payload->>'storage_instructions'),'');
   v_story := nullif(btrim(p_payload->>'public_story'),'');
+  v_net_content := nullif(btrim(p_payload->>'net_content'),'');
   v_published := coalesce((p_payload->>'published')::boolean,false);
 
   if length(coalesce(v_batch,''))>100
      or length(coalesce(v_origin_value,''))>180
      or length(coalesce(v_storage,''))>500
-     or length(coalesce(v_story,''))>2000 then
+     or length(coalesce(v_story,''))>2000
+     or length(coalesce(v_net_content,''))>80 then
     raise exception 'passport_text_field_too_long' using errcode = '22023';
   end if;
   if v_mfg is not null and v_mfg > (now() at time zone 'Asia/Colombo')::date then
@@ -116,17 +124,18 @@ begin
       best_before=v_best,
       storage_instructions=v_storage,
       public_story=v_story,
+      net_content=v_net_content,
       published=v_published,
       updated_at=now()
     where product_id=p_product_id::text;
   else
     v_slug := replace(gen_random_uuid()::text, '-', '');
     insert into public.product_passports (
-      product_id, public_slug, ingredients, allergen_information, origin,
+      product_id, public_slug, ingredients, allergen_information, origin, net_content,
       batch_code, manufacturing_date, best_before, storage_instructions,
       public_story, published, updated_at
     ) values (
-      p_product_id::text, v_slug, v_ingredients, v_allergens, v_origin_value,
+      p_product_id::text, v_slug, v_ingredients, v_allergens, v_origin_value, v_net_content,
       v_batch, v_mfg, v_best, v_storage, v_story, v_published, now()
     );
   end if;
