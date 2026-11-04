@@ -9,7 +9,7 @@ Target: `review/atomic-order-idempotency`
 2. The secure-auth module only wired the OTP buttons when `#adminAccessModal` already existed at its first initialization. If the storefront injected the modal later, the legacy controls could remain unwired and the real OTP handler would not be attached.
 
 ## Changes in this branch
-- Corrected the owner allowlist to the confirmed spelling: `kaushalyadilhanidissanayake@gmail.com`.
+- Corrected the owner allowlist to the confirmed owner-email spelling from the project handover.
 - Added a short-lived DOM observer to re-run the existing secure modal wiring when the storefront injects the Admin modal after page initialization.
 - Preserved the approved-owner profile check, OTP verification, RLS boundaries, hidden customer Admin navigation, hidden owner QR tooling, public shop QR route, and original V18 Control Room.
 
