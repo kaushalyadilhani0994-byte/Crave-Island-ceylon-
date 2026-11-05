@@ -104,15 +104,49 @@
     select.innerHTML='<option value="">Choose a category or subcategory</option>'+(cats.data||[]).filter(c=>c.is_active).map(c=>{const parent=(cats.data||[]).find(p=>p.id===c.parent_id);return '<option value="'+esc(c.name)+'">'+(parent?esc(parent.name)+' › ':'')+esc(c.name)+'</option>';}).join("");
      const parentSelect=$("#cicCatParent"); if(parentSelect)parentSelect.innerHTML='<option value="">Main category</option>'+(cats.data||[]).filter(c=>!c.parent_id).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join("");
     const catList=(cats.data||[]).map(c=>{const parent=(cats.data||[]).find(p=>p.id===c.parent_id);return '<div class="cic-card"><div><b>'+(parent?esc(parent.name)+' › ':'')+esc(c.name)+'</b><div class="cic-muted">'+(c.parent_id?"Subcategory · ":"Main category · ")+(c.is_active?"Active":"Hidden")+'</div></div><div><button type="button" data-cic-category-edit="'+esc(c.id)+'">Edit details</button> <button type="button" data-cic-category-toggle="'+esc(c.id)+'" data-active="'+String(!!c.is_active)+'">'+(c.is_active?"Hide":"Activate")+'</button></div></div>';}).join("");
-    const prodList=productRows.map(p=>'<div class="cic-card"><div><b>'+esc(p.name)+'</b><div class="cic-muted">'+esc(p.category||"Uncategorised")+' · '+money(p.price)+' · '+(p.is_active?"Active":"Hidden")+'</div><div class="cic-muted">'+(p.track_inventory?"Stock: "+Number(p.stock_quantity||0)+" · Low-stock threshold: "+Number(p.low_stock_threshold||5):"Stock tracking off")+(p.manufacturing_date?" · MFG: "+esc(p.manufacturing_date):" · MFG not set")+(p.expiry_date?" · Expiry: "+esc(p.expiry_date):" · No expiry date recorded")+(p.batch_number?" · Batch: "+esc(p.batch_number):"")+(p.storage_location?" · Stored: "+esc(p.storage_location):"")+(p.created_at?" · Added: "+esc(new Date(p.created_at).toLocaleDateString()):"")+(p.sku?" · SKU: "+esc(p.sku):"") +'</div></div><div><button type="button" data-cic-product-edit="'+esc(p.id)+'">Edit details</button> <button type="button" data-cic-product-toggle="'+esc(p.id)+'" data-active="'+String(!!p.is_active)+'">'+(p.is_active?"Hide product":"Activate product")+'</button></div></div>').join("");
+    const prodList=productRows.map(p=>'<div class="cic-card" data-cic-product-card="'+esc(p.id)+'"><div style="min-width:0;flex:1"><b>'+esc(p.name)+'</b><div class="cic-muted">'+esc(p.category||"Uncategorised")+' · '+money(p.price)+' · '+(p.is_active?"Active":"Hidden")+'</div><div class="cic-muted">'+(p.track_inventory?"Stock: "+Number(p.stock_quantity||0)+" · Low-stock threshold: "+Number(p.low_stock_threshold||5):"Stock tracking off")+(p.manufacturing_date?" · MFG: "+esc(p.manufacturing_date):" · MFG not set")+(p.expiry_date?" · Expiry: "+esc(p.expiry_date):" · No expiry date recorded")+(p.batch_number?" · Batch: "+esc(p.batch_number):"")+(p.storage_location?" · Stored: "+esc(p.storage_location):"")+(p.created_at?" · Added: "+esc(new Date(p.created_at).toLocaleDateString()):"")+(p.sku?" · SKU: "+esc(p.sku):"")+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:end;margin-top:9px"><label style="margin:0">Stock<input data-cic-stock-qty type="number" min="0" max="1000000" step="1" value="'+Number(p.stock_quantity||0)+'" style="width:88px;min-height:34px;padding:6px"></label><label style="margin:0">Low-stock at<input data-cic-stock-threshold type="number" min="0" max="1000000" step="1" value="'+Number(p.low_stock_threshold||5)+'" style="width:88px;min-height:34px;padding:6px"></label><label style="margin:0">Expiry<input data-cic-stock-expiry type="date" value="'+esc(p.expiry_date||"")+'" style="width:145px;min-height:34px;padding:6px"></label><label style="margin:0"><input data-cic-track-stock type="checkbox" '+(p.track_inventory?"checked":"")+' style="width:auto;min-height:0"> Track</label><button type="button" data-cic-stock-save="'+esc(p.id)+'">Save stock</button></div></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start"><button type="button" data-cic-product-edit="'+esc(p.id)+'">Edit details</button> <button type="button" data-cic-product-toggle="'+esc(p.id)+'" data-active="'+String(!!p.is_active)+'">'+(p.is_active?"Hide product":"Activate product")+'</button></div></div>').join("");
     $("#cicOwnerCatalogueList").innerHTML='<h3 style="margin-top:14px">Collections ('+(cats.data||[]).length+')</h3>'+(catList||'<p class="cic-muted">No collections yet. Create one above.</p>')+'<h3 style="margin-top:18px">Products ('+(products.data||[]).length+')</h3>'+(prodList||'<p class="cic-muted">No products yet. Add verified product details above.</p>');
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-category-edit]").forEach(btn=>btn.addEventListener("click",()=>editCategory(btn.getAttribute("data-cic-category-edit"))));
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-category-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("categories",btn.getAttribute("data-cic-category-toggle"),btn.getAttribute("data-active")==="true")));
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-product-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("products",btn.getAttribute("data-cic-product-toggle"),btn.getAttribute("data-active")==="true")));
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-product-edit]").forEach(btn=>btn.addEventListener("click",()=>editProduct(btn.getAttribute("data-cic-product-edit"))));
+    $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-stock-save]").forEach(btn=>btn.addEventListener("click",()=>saveInventory(btn.getAttribute("data-cic-stock-save"),btn)));
     say("Connected. "+(cats.data||[]).length+" collections and "+(products.data||[]).length+" products loaded.");
   }
 
+
+  async function saveInventory(productId, button) {
+    if (!await checkAccess()) { say("Owner session expired. Please sign in again.", true); return; }
+    const card = button && button.closest("[data-cic-product-card]");
+    if (!card) { say("Could not locate this product's inventory form. Refresh and try again.", true); return; }
+    const quantity = Number(card.querySelector("[data-cic-stock-qty]")?.value);
+    const threshold = Number(card.querySelector("[data-cic-stock-threshold]")?.value);
+    const expiry = card.querySelector("[data-cic-stock-expiry]")?.value || null;
+    const track = !!card.querySelector("[data-cic-track-stock]")?.checked;
+    if (!Number.isSafeInteger(quantity) || quantity < 0 || quantity > 1000000 || !Number.isSafeInteger(threshold) || threshold < 0 || threshold > 1000000) {
+      say("Stock and low-stock threshold must be whole numbers from 0 to 1,000,000.", true); return;
+    }
+    if (expiry && (!/^\\d{4}-\\d{2}-\\d{2}$/.test(expiry) || Number.isNaN(Date.parse(expiry + "T00:00:00Z")) || new Date(expiry + "T00:00:00Z").toISOString().slice(0,10) !== expiry)) {
+      say("Enter a valid expiry date.", true); return;
+    }
+    const original = button.textContent;
+    button.disabled = true; button.textContent = "Saving…";
+    try {
+      const { data, error } = await client.functions.invoke("update-product-inventory", { body: {
+        product_id: productId, stock_quantity: quantity, low_stock_threshold: threshold,
+        track_inventory: track, expiry_date: expiry
+      }});
+      if (error || data?.error) throw new Error(data?.error || error?.message || "Inventory update failed.");
+      const row = productRows.find(item => String(item.id) === String(productId));
+      if (row && data?.product) Object.assign(row, data.product);
+      say("Inventory saved for " + (data?.product?.name || "this product") + ".");
+      await loadAll();
+    } catch (error) {
+      say("Inventory was not confirmed as saved: " + String(error?.message || "Please retry.").slice(0,180), true);
+    } finally {
+      button.disabled = false; button.textContent = original;
+    }
+  }
   function editProduct(id) {
     const form=$("#cicProductForm");
     if(form.dataset.saving==="true"){say("Please wait until the current product save finishes before switching products.",true);return;}
