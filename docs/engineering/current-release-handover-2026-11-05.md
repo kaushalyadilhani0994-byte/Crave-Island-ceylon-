@@ -175,3 +175,12 @@ Also review the staged atomic product/passport save migration:
 - Staff inventory remains a distinct pending workflow: live team list RPC is absent, staged `team_list_inventory()` is not yet installed, and live profiles contain only the single approved owner. No staff inventory UI or staff-role end-to-end test is claimed.
 - The Security Advisor's anonymous-policy warnings are not proof of public data exposure by themselves: several policies target the authenticated role and contain owner/customer/team predicates. Keep them for now; test anonymous-session semantics and each role before changing them. Leaked-password protection remains a dashboard-level recommended setting.
 - No database writes, Auth setting changes, Edge Function deployments, PR merge, or Vercel build occurred during this deeper audit.
+
+
+## 2026-11-05 inventory alert automation verification
+
+- Read-only live check confirms three active scheduled jobs: daily owner report at 14:30 UTC (20:00 Sri Lanka), pending-alert Telegram dispatcher every minute, and expiry sweep at 18:45 UTC (00:15 Sri Lanka).
+- Live `owner-alert-notify` is ACTIVE v11 with JWT verification disabled intentionally because the function performs its own request authentication: scheduled report/dispatcher calls require the stored cron secret; manual alert actions require a valid registered session and approved-owner profile. The cron secret remains in the private, RLS-closed configuration table and is not copied into this handover.
+- Live alert generation code records new orders, failed payments/cancellations, low/out-of-stock items, and expiry windows. Stock alerts are critical at zero and warning at/below the configured threshold; expiry alerts are critical when expired or within seven days, and warning for the remainder of the 30-day window. Telegram delivery attempts and failures are recorded on `admin_alerts`.
+- Current live product is a hidden prototype with stock tracking off, zero stock, and no expiry date. No live stock/expiry alert was expected from that record. No real sellable product has been activated.
+- Alert automation is scheduled and the owner reports have previously been received, but the current audit did not send test alerts or alter products. Real stock/expiry alert delivery should be tested only after a genuine product and verified dates/quantities are entered.
