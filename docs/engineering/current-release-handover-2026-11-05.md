@@ -151,3 +151,12 @@ Also review the staged atomic product/passport save migration:
 - This is a PR-branch source change only. Live Edge Function remains unchanged (currently deployed version v3 per prior inventory); do not claim the CORS hardening is live until a separately approved deployment.
 - Commit: `1ffc2cf1c7f8e914377325a109063eeec7d9369f`.
 - The updated owner/customer order-history fallback commits are recorded above. No production changes or deployment occurred.
+
+## Inventory and security continuation — 2026-11-05 (review branch only)
+- Added per-product inventory controls to the existing owner catalogue panel: stock quantity, low-stock threshold, inventory tracking toggle, and expiry date. Save calls the authenticated `update-product-inventory` Edge Function; browser input validation and server-side validation both remain in place. The owner catalogue still loads product operational fields only through the owner-only `owner_list_products()` RPC.
+- Static JavaScript parse check passed after the change. This is code on PR #17 only; no production deployment or database change was made.
+- Re-read the live `private.has_staff_permission(text,text)` definition: it requires `auth.uid()`, an approved staff profile, and the requested action in the JSON permission array (or owner role). The staged inventory read RPC uses this check and returns a limited JSON projection.
+- Confirmed a live/review mismatch: deployed `update-product-inventory` is active at version 3 and still returns wildcard CORS; the PR branch source has an explicit production + Vercel preview origin allowlist and rejects other origins. Deploy the hardened function only after the branch is reviewed and explicitly approved.
+- Inventory update endpoint authorization independently verifies a registered non-anonymous Auth user, approved staff profile, and owner or `inventory.update` permission. It validates UUID, integer ranges, boolean tracking, and real ISO expiry date before using the service-role client.
+- The inventory UI was not yet tested in a real browser/device, and there are no approved non-owner staff profiles for an end-to-end staff permission test. Do not claim stock alerts or expiry alerts are live solely because these input controls exist.
+- The column-grant migration remains staged. Keep it unapplied until all storefront and passport reads are rechecked and the owner RPC / staff inventory RPC are installed together in migration order.
