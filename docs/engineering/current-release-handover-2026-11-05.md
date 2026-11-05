@@ -78,3 +78,12 @@ Also review the staged atomic product/passport save migration:
 - Rechecked migration 001: 307 lines, exactly two function definitions, legacy request-table compatibility conversion, private-table RLS/grant hardening, and validated `p_site_origin` logic.
 - Rechecked migration 005: 196 lines, one private implementation and one public three-argument wrapper; drops the obsolete two-argument wrapper/implementation.
 - Current Vercel check failures are still explicitly `build-rate-limit`; no new build was triggered during this review.
+
+
+## Additional static review — 2026-11-05
+- Reviewed all five staged 2026-11-04 migrations and the changed browser/Edge Function call sites again.
+- Confirmed the storefront's direct `products` query selects only columns granted by migration 002: `id,name,description,category,price,currency,image_url,ingredients,batch_number,qr_code,is_active`. Owner catalogue and passport admin modules use `owner_list_products()` instead of direct reads of restricted inventory columns. Public passport reads the passport's own published fields plus only safe product display fields.
+- Read-only live SQL confirms `private.has_staff_permission(text,text)` exists, requires a matching approved staff profile, and allows the owner role; this is the authorization dependency used by the staged `team_list_inventory()` RPC. The RPC exposes only an inventory projection and has EXECUTE granted to authenticated users; its internal permission check is still required for each call.
+- Read-only live SQL confirms the current order-status RPC is service-role-only and already uses the same status transition / one-time restock safeguards. Migration 004 extends it with `delivered_at`; the Edge Function authenticates the caller and checks approved staff permissions before invoking it.
+- The changed owner-invite Edge Function currently allowlists the legacy email that is actually linked to the approved live owner profile. The preferred email is not yet a live Auth identity; do not widen or switch the identity until the owner completes an explicit verified Auth email-change/link process.
+- No DDL, migration, Auth identity, Edge Function, PR merge, or production deployment was changed by this review. All checks above are static or read-only; browser/device/checkout/QR-print tests remain outstanding.
