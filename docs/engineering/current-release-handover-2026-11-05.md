@@ -46,13 +46,15 @@ A read-only query of the live Supabase database confirms:
 - Current live data: 60 categories (14 active), 1 product (0 active), 1 unpublished passport, 0 orders.
 
 ## Required migrations — review and apply in order only after approval
+Live migration history ends at `20261103141947`. The current review branch contains these six unapplied migrations, in timestamp order:
 1. `supabase/migrations/202611040001_owner_list_products_rpc.sql`
 2. `supabase/migrations/202611040002_restrict_public_product_columns.sql`
 3. `supabase/migrations/202611040003_team_inventory_read_rpc.sql`
 4. `supabase/migrations/202611040004_order_delivered_timestamp.sql`
 5. `supabase/migrations/202611040005_sync_product_passport_fields.sql`
-Also review the staged atomic product/passport save migration:
-- `supabase/migrations/202611010001_atomic_owner_product_passport_save.sql`
+6. `supabase/migrations/202611050001_atomic_owner_product_passport_save.sql`
+
+The former `202611010001_atomic_owner_product_passport_save.sql` path was removed from the branch because its timestamp predates already-applied production migrations. Do not apply the old path. Migration 050001 includes a compatibility conversion for the live legacy `actor_user_id` / `qr_url` request table.
 
 ## Still not completed / not tested
 - No production migration has been applied.
@@ -206,3 +208,15 @@ Also review the staged atomic product/passport save migration:
 - Renamed the staged migration to `202611050001_atomic_owner_product_passport_save.sql`, after the five pending `20261104` migrations. It now applies after the owner/product read permissions, team inventory RPC, delivered timestamp and passport-field sync migrations.
 - Verified the new file is present on the PR branch and the obsolete `202611010001_...` path is no longer in the PR changed-file list. No SQL was executed against production.
 - Apply order is now: `202611040001` → `202611040002` → `202611040003` → `202611040004` → `202611040005` → `202611050001`. Stop on any migration error; do not skip or manually mark a version applied.
+
+
+## Follow-up verification — 2026-11-05 late review
+- Re-read the complete six staged migrations and the review-branch inventory Edge Function. Live production schema confirms `product_passports.product_id` is UNIQUE, so the atomic product/passport upsert conflict target is valid.
+- Live legacy idempotency table is exactly `actor_user_id uuid NOT NULL, request_id uuid NOT NULL, request_payload jsonb NOT NULL, product_id uuid NOT NULL, qr_url text NOT NULL, created_at timestamptz`, with primary key `(actor_user_id, request_id)`. The 050001 compatibility migration renames both legacy columns and converts the stored QR URL to a JSON result payload; this must be exercised against a disposable copy of this exact legacy shape before production.
+- Confirmed current owner catalogue reads inventory fields through `owner_list_products()`; owner stock/threshold/expiry writes use `update-product-inventory` Edge Function. The review-branch UI does not call `team_list_inventory()`; no staff inventory read screen is wired, and no approved non-owner team profiles exist.
+- Therefore do not release the product-column SELECT restriction until the staff inventory workflow is either implemented and permission-tested or the owner explicitly confirms no staff inventory access is required at launch. The staged team inventory RPC alone does not provide a usable staff UI.
+- The live deployed `update-product-inventory` remains v3 with wildcard CORS (`Access-Control-Allow-Origin: *`). The review-branch source has an origin allowlist and `Vary: Origin`, but it is not deployed. The live function verifies registered Auth user + approved staff profile + inventory.update permission (owner bypass) and validates stock/threshold/date fields; no service-role key is exposed to the browser.
+- Static review of the staged inventory function found it accepts POST only, validates origin, requires bearer token, uses server-side service-role client, and limits updates to stock quantity, low-stock threshold, tracking toggle and expiry. Real invocation tests and Deno type-check remain outstanding.
+- The 050001 atomic save migration is separate from migration 040005's retired two-argument passport implementation; 040005 drops only the obsolete `private.owner_update_product_passport_impl(uuid,jsonb)` signature. The new atomic save uses `private.owner_save_product_passport_impl(uuid,uuid,jsonb,text)`, so there is no direct function-signature collision.
+- No production migration, database write, Edge Function deployment, Auth change, PR merge, or Vercel deployment was performed during this review.
+- Remaining release gates: disposable-database migration rehearsal; Deno type-check and authenticated inventory tests; staff inventory UI/role provisioning decision; leaked-password protection enabled in Supabase Auth; verify deployed owner sign-in and product save on a real phone; real QR scan/print; checkout/order/cancellation/concurrency tests; only then approve staged migrations and deploy the exact reviewed branch.
