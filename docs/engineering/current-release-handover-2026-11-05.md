@@ -87,3 +87,13 @@ Also review the staged atomic product/passport save migration:
 - Read-only live SQL confirms the current order-status RPC is service-role-only and already uses the same status transition / one-time restock safeguards. Migration 004 extends it with `delivered_at`; the Edge Function authenticates the caller and checks approved staff permissions before invoking it.
 - The changed owner-invite Edge Function currently allowlists the legacy email that is actually linked to the approved live owner profile. The preferred email is not yet a live Auth identity; do not widen or switch the identity until the owner completes an explicit verified Auth email-change/link process.
 - No DDL, migration, Auth identity, Edge Function, PR merge, or production deployment was changed by this review. All checks above are static or read-only; browser/device/checkout/QR-print tests remain outstanding.
+
+
+## Admin sign-in UI repair and preview — 2026-11-05
+- Restored a single clean, compact Owner Sign In modal in `index.html`, using the existing `cic-owner-login-sheet` responsive styles.
+- Removed the duplicated OTP button block and removed the non-functional role-preview cards from the sign-in modal. Role selection must not imply access; the original V18 Control Room remains the owner workspace.
+- Preserved real Supabase OTP wiring in `supabase-admin-auth.js`, approved-owner profile verification, customer-hidden Admin navigation, and the existing V18 Control Room/dashboard flow.
+- Commit: `d10a28b029bc396c4d0c250a04684a2ee34ac6a6`.
+- Verified a Vercel preview deployment is READY for this exact commit: `https://craveislandceylonv18supabaseintegratedbuild-jdk3lwa9h.vercel.app` (preview only; production alias unchanged).
+- To open the sign-in panel while logged out, tap the CRAVE hero title/logo five times; after successful approved-owner OTP sign-in, the Admin navigation entry becomes visible. This trigger is only an entry point; Supabase Auth + approved owner profile remain the actual access gate.
+- Real-phone OTP, navigation, product, and QR tests remain pending. Production DB migrations and production deployment remain untouched.
