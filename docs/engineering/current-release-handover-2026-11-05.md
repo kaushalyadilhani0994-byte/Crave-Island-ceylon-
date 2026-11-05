@@ -198,3 +198,11 @@ Also review the staged atomic product/passport save migration:
 - JavaScript syntax parsing passed for all five integrated browser modules (`supabase-admin-auth.js`, `supabase-admin-orders.js`, `supabase-admin-products.js`, `supabase-admin-passports.js`, `supabase-store.js`) and inline scripts in `my-orders.html` and `passport.html`.
 - No GitHub Actions PR workflow run was associated with the latest handover commit. Syntax checks are static only; browser/mobile runtime, checkout concurrency, and physical QR/label tests remain outstanding.
 - Current launch limitation remains: live database has one registered Auth user, one approved owner profile, zero approved team profiles, one hidden prototype product, no active product and no real published QR. Therefore owner inventory UI is code-reviewed but not yet end-to-end verified against a real saleable product or staff account.
+
+
+## Migration-order defect found and corrected — 2026-11-05
+
+- Live migration history ends at `20261103141947`; the staged atomic product-save migration was originally named `202611010001_...` but was not present in live migration history. That would introduce an unapplied migration timestamp older than already-applied production migrations and risk an out-of-order release.
+- Renamed the staged migration to `202611050001_atomic_owner_product_passport_save.sql`, after the five pending `20261104` migrations. It now applies after the owner/product read permissions, team inventory RPC, delivered timestamp and passport-field sync migrations.
+- Verified the new file is present on the PR branch and the obsolete `202611010001_...` path is no longer in the PR changed-file list. No SQL was executed against production.
+- Apply order is now: `202611040001` → `202611040002` → `202611040003` → `202611040004` → `202611040005` → `202611050001`. Stop on any migration error; do not skip or manually mark a version applied.
