@@ -58,6 +58,8 @@ $compat$;
 
 revoke all on table private.owner_product_save_requests from public, anon, authenticated;
 alter table private.owner_product_save_requests enable row level security;
+revoke all on table private.staff_access_audit from public, anon, authenticated;
+alter table private.staff_access_audit enable row level security;
 
 create or replace function private.owner_save_product_passport_impl(
   p_product_id uuid,
