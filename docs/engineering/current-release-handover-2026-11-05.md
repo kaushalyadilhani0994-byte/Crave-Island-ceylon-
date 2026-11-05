@@ -220,3 +220,9 @@ The former `202611010001_atomic_owner_product_passport_save.sql` path was remove
 - The 050001 atomic save migration is separate from migration 040005's retired two-argument passport implementation; 040005 drops only the obsolete `private.owner_update_product_passport_impl(uuid,jsonb)` signature. The new atomic save uses `private.owner_save_product_passport_impl(uuid,uuid,jsonb,text)`, so there is no direct function-signature collision.
 - No production migration, database write, Edge Function deployment, Auth change, PR merge, or Vercel deployment was performed during this review.
 - Remaining release gates: disposable-database migration rehearsal; Deno type-check and authenticated inventory tests; staff inventory UI/role provisioning decision; leaked-password protection enabled in Supabase Auth; verify deployed owner sign-in and product save on a real phone; real QR scan/print; checkout/order/cancellation/concurrency tests; only then approve staged migrations and deploy the exact reviewed branch.
+
+
+## Additional defect caught during final migration review
+- The atomic owner product/passport save migration originally checked manufacturing date ordering but did not reject a future manufacturing date, and could preserve an already-published passport while changing its best-before date to the past. This bypassed the equivalent validation in the separate passport-update RPC.
+- Fixed in review branch commit `66095805c4d3e631ce2aa81855b0bbd5519efc2e`: reject future manufacturing dates using Asia/Colombo local date; read the existing passport publication state and reject a past best-before date when that passport is already published. New product drafts remain unpublished as before.
+- This is a static code correction only. It still needs a disposable-database migration rehearsal and owner-authenticated create/edit/replay tests before release.
