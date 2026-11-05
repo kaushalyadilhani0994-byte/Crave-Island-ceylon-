@@ -164,3 +164,32 @@ $function$;
 
 revoke all on function private.owner_update_product_passport_impl(uuid,jsonb,text) from public, anon, authenticated;
 grant execute on function private.owner_update_product_passport_impl(uuid,jsonb,text) to authenticated;
+
+-- Expose the three-argument RPC expected by the browser client. The previous
+-- two-argument wrapper would otherwise remain callable but the updated client
+-- would receive PGRST202 (function not found) when saving a passport.
+drop function if exists public.owner_update_product_passport(uuid, jsonb);
+
+create or replace function public.owner_update_product_passport(
+  p_product_id uuid,
+  p_payload jsonb,
+  p_site_origin text
+)
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $wrapper$
+  select private.owner_update_product_passport_impl(
+    p_product_id,
+    p_payload,
+    p_site_origin
+  );
+$wrapper$;
+
+revoke all on function public.owner_update_product_passport(uuid, jsonb, text) from public, anon;
+grant execute on function public.owner_update_product_passport(uuid, jsonb, text) to authenticated;
+
+-- Retire the superseded implementation signature; all calls now pass a
+-- validated site origin to the replacement implementation.
+drop function if exists private.owner_update_product_passport_impl(uuid, jsonb);
