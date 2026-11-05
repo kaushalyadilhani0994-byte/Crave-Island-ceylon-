@@ -23,13 +23,21 @@
     const el=document.getElementById("adminOrderTable"); if(!el)return;
     notice(el,"Loading live orders from Supabase…");
     const a=await access(); if(a.error){notice(el,a.error);return;}
-    const {data:orders,error}=await a.db.from("store_orders").select("id,order_number,customer_name,email,phone,shipping_address,subtotal,delivery_fee,total,currency,payment_method,payment_status,order_status,customer_note,created_at,delivered_at").order("created_at",{ascending:false}).limit(100);
+    let deliveredAtAvailable=true;
+    let ordersResult=await a.db.from("store_orders").select("id,order_number,customer_name,email,phone,shipping_address,subtotal,delivery_fee,total,currency,payment_method,payment_status,order_status,customer_note,created_at,delivered_at").order("created_at",{ascending:false}).limit(100);
+    if(ordersResult.error && (ordersResult.error.code==="42703" || ordersResult.error.code==="PGRST204" || /delivered_at.*(does not exist|schema cache)|column.*delivered_at/i.test([ordersResult.error.message,ordersResult.error.details].filter(Boolean).join(" ")))){
+      // Keep live orders usable while the separately reviewed delivered_at migration is still staged.
+      deliveredAtAvailable=false;
+      ordersResult=await a.db.from("store_orders").select("id,order_number,customer_name,email,phone,shipping_address,subtotal,delivery_fee,total,currency,payment_method,payment_status,order_status,customer_note,created_at").order("created_at",{ascending:false}).limit(100);
+    }
+    const {data:orders,error}=ordersResult;
     if(error){notice(el,"Could not load live orders. Check the owner access policy and try again.");return;}
     if(!orders||!orders.length){notice(el,"No real customer orders yet. New successful checkouts will appear here.");return;}
     const {data:items,error:itemError}=await a.db.from("store_order_items").select("order_id,product_name,quantity,unit_price,line_total").in("order_id",orders.map(o=>o.id));
     if(itemError){notice(el,"Orders loaded, but item details could not be retrieved.");return;}
     const byOrder={}; (items||[]).forEach(i=>(byOrder[i.order_id]||(byOrder[i.order_id]=[])).push(i));
-    el.innerHTML=orders.map(o=>{
+    const migrationNotice=deliveredAtAvailable?"":'<div class="admin-note" style="margin-bottom:10px">Delivery timestamps are awaiting the approved database migration. Orders remain available; delivered-at history will appear after that migration is released.</div>';
+    el.innerHTML=migrationNotice+orders.map(o=>{
       const st=String(o.order_status||"pending").toLowerCase();
       const allowedNext=a.isOwner||a.canOrdersUpdate?(next[st]||[]):a.canDispatchUpdate?(st==="processing"?["shipped"]:st==="shipped"?["delivered"]:[]):[];
       const options=allowedNext.map(n=>'<option value="'+n+'">'+n.replace(/^./,c=>c.toUpperCase())+'</option>').join("");
