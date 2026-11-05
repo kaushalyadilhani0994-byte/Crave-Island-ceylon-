@@ -14,11 +14,11 @@ This note preserves the working state so the project can continue without asking
 
 ## Important owner-login finding
 A read-only query of the live Supabase database confirms:
-- Exactly one approved `staff_profiles` owner record exists.
-- That approved owner record is linked to the existing Auth identity `kaushalyadilhani0994@gmail.com` (legacy alias 1).
-- The preferred primary email `kaushalyadilhanidissanayake@gmail.com` is NOT currently linked to that approved owner record.
-- The review-branch browser allowlist and the live team-invite Edge Function both include the linked legacy alias.
-- Therefore, entering the preferred primary email can fail because it is not the Auth identity currently attached to the approved owner profile. Do not change Auth identity or owner profile automatically; that requires the owner's explicit decision and a verified migration of the login identity.
+- Exactly one approved `staff_profiles` owner record exists and its `id` matches the existing Supabase Auth user for `kaushalyadilhani0994@gmail.com` (legacy alias 1).
+- The `staff_profiles.email` field on that owner row is NULL; the identity link is by the shared Auth user UUID, not by the profile email field.
+- The preferred primary email `kaushalyadilhanidissanayake@gmail.com` is NOT currently an Auth user in this project. The review-branch browser allowlist includes it, but allowlisting alone cannot create or verify that Auth identity.
+- The linked legacy Auth identity is in the review-branch browser allowlist and was recently used to sign in (last sign-in recorded 2026-11-04).
+- Therefore, the currently provisioned owner login is the legacy alias. Do not change Auth identity or owner profile automatically; adding the preferred email requires a verified Auth email-change / identity-linking process and the owner's explicit decision.
 
 ## Work verified on the review branch
 - Original V18 Control Room path is preserved; no wholesale admin redesign.
@@ -30,12 +30,12 @@ A read-only query of the live Supabase database confirms:
 - Product and passport ingredients/allergens/batch/date/storage fields are synchronized.
 - QR label printing waits for the QR image to load and checks `naturalWidth` before printing; the QR image still depends on the external `api.qrserver.com` service.
 - Owner Orders and My Orders include a first-delivery timestamp and customer-scoped printable receipts.
-- JavaScript syntax checks passed for `supabase-admin-auth.js`, `supabase-admin-orders.js`, `supabase-admin-passports.js`, `supabase-admin-products.js`, `supabase-store.js`, and `supabase-checkout.js`. Inline scripts in `my-orders.html` and `passport.html` also passed.
+- Latest JavaScript syntax checks passed for `supabase-admin-auth.js`, `supabase-admin-orders.js`, `supabase-admin-passports.js`, `supabase-admin-products.js`, and `supabase-store.js`. Inline scripts in `my-orders.html` and `passport.html` also passed. (A prior broader check also covered `supabase-checkout.js`.)
 - Edge Function TypeScript files were fetched and basic brace-balance checked; a Deno/TypeScript build was not run.
 
 ## Live database findings — read-only audit
 - Live database has not applied the five 2026-11-04 review migrations.
-- Live `products` table still grants broad SELECT to `anon` and `authenticated`, exposing operational fields such as stock and expiry. This is a confirmed security issue.
+- Live `products` table still grants broad table-level SELECT to `anon` and `authenticated`, exposing operational fields such as stock and expiry. This is a confirmed security issue; staged migration 002 removes broad grants and grants only storefront-safe columns.
 - Live `owner_list_products()` RPC is missing; the review branch adds it.
 - Live `product_passports.net_content` is missing; migration 005 adds it.
 - Live `store_orders.delivered_at` is missing; migration 004 adds it.
@@ -70,3 +70,11 @@ Also review the staged atomic product/passport save migration:
 3. Do not repeatedly trigger Vercel builds while the daily deployment/build limit is active.
 4. Finish static review of the staged migrations and check every browser query against the column grants.
 5. After owner approval, apply migrations in order, verify schema/grants/RPC signatures, deploy only the required functions, then test on a real phone before announcing readiness.
+
+## Latest review update (2026-11-05 09:15 Sri Lanka time)
+- Rechecked live owner identity by joining `staff_profiles.id` to the existing Auth user UUID: the owner profile is present and `approved=true`; the legacy Auth email is the currently provisioned login. This corrects the earlier assumption that the profile's email column was populated.
+- Rechecked live products table grants: broad SELECT remains granted to `anon` and `authenticated` until migration 002 is applied.
+- Rechecked live public RPC signatures: `owner_save_product_passport(uuid,uuid,jsonb,text)` and `owner_update_product_passport(uuid,jsonb,text)` exist; `owner_list_products()` is still absent.
+- Rechecked migration 001: 307 lines, exactly two function definitions, legacy request-table compatibility conversion, private-table RLS/grant hardening, and validated `p_site_origin` logic.
+- Rechecked migration 005: 196 lines, one private implementation and one public three-argument wrapper; drops the obsolete two-argument wrapper/implementation.
+- Current Vercel check failures are still explicitly `build-rate-limit`; no new build was triggered during this review.
