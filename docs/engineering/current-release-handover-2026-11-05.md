@@ -184,3 +184,6 @@ Also review the staged atomic product/passport save migration:
 - Live alert generation code records new orders, failed payments/cancellations, low/out-of-stock items, and expiry windows. Stock alerts are critical at zero and warning at/below the configured threshold; expiry alerts are critical when expired or within seven days, and warning for the remainder of the 30-day window. Telegram delivery attempts and failures are recorded on `admin_alerts`.
 - Current live product is a hidden prototype with stock tracking off, zero stock, and no expiry date. No live stock/expiry alert was expected from that record. No real sellable product has been activated.
 - Alert automation is scheduled and the owner reports have previously been received, but the current audit did not send test alerts or alter products. Real stock/expiry alert delivery should be tested only after a genuine product and verified dates/quantities are entered.
+
+
+- Additional auth/RLS check: live `auth.users` currently contains 1 registered user and 0 anonymous Auth users. This is only a current-state observation, not a guarantee that anonymous sign-ins are disabled in project Auth settings; keep the actual Auth configuration check as a launch gate.
