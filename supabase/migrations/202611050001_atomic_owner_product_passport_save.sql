@@ -90,6 +90,7 @@ declare
   v_track_inventory boolean;
   v_ingredients text[];
   v_allergens text[];
+  v_passport_published boolean := false;
   v_result jsonb;
 begin
   v_owner_id := auth.uid();
@@ -165,6 +166,9 @@ begin
   end if;
   if v_mfg is not null and v_expiry is not null and v_mfg > v_expiry then
     raise exception 'Manufacturing date cannot be later than best-before date' using errcode = '22023';
+  end if;
+  if v_mfg is not null and v_mfg > (now() at time zone 'Asia/Colombo')::date then
+    raise exception 'Manufacturing date cannot be in the future' using errcode = '22023';
   end if;
   if coalesce(p_payload->>'currency', 'LKR') <> 'LKR' then
     raise exception 'Only LKR currency is supported' using errcode = '22023';
@@ -242,6 +246,18 @@ begin
     if v_product_id is null then
       raise exception 'Product not found or not available for owner update' using errcode = 'P0002';
     end if;
+  end if;
+
+  select coalesce(pp.published, false)
+    into v_passport_published
+    from public.product_passports pp
+   where pp.product_id = v_product_id::text;
+  if not found then
+    v_passport_published := false;
+  end if;
+  if v_passport_published and v_expiry is not null
+     and v_expiry < (now() at time zone 'Asia/Colombo')::date then
+    raise exception 'A published passport cannot be saved with an expired best-before date' using errcode = '22023';
   end if;
 
   v_slug := 'cic-' || lower(v_product_id::text);
