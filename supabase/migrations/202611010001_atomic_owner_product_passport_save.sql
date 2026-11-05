@@ -102,7 +102,12 @@ begin
   end if;
 
   v_site_origin := btrim(coalesce(p_site_origin, ''));
-  if v_site_origin !~ '^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?  -- Serialize simultaneous retries that carry the same owner/request key.
+  if v_site_origin !~ '^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?$'
+     and v_site_origin !~ '^http://(localhost|127[.]0[.]0[.]1)(:[0-9]{1,5})?$' then
+    raise exception 'A valid secure app origin is required' using errcode = '22023';
+  end if;
+  v_request_payload := p_payload || jsonb_build_object('_site_origin', v_site_origin);
+
   perform pg_advisory_xact_lock(hashtextextended(v_owner_id::text || ':' || p_request_id::text, 0));
 
   select * into v_existing
