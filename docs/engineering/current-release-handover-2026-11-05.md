@@ -142,3 +142,12 @@ Also review the staged atomic product/passport save migration:
 - JavaScript syntax validation passed for the updated owner orders module and all inline scripts in `my-orders.html`.
 - Commits: owner order fallback `caa65cb8421149c14c9d99d38cd5f46ff9ab0205`; customer order fallback `28c9a36e74bfb6bc18bc9118a66f977b0dce5b9b`.
 - No Vercel build was triggered. No production schema, data, Auth settings, Edge Functions, or deployment was changed.
+
+
+## 2026-11-05 immediate security code hardening — inventory Edge Function
+
+- Reviewed `supabase/functions/update-product-inventory/index.ts`. It already validates the bearer token against Supabase Auth, rejects anonymous users, requires an approved staff profile, checks owner or explicit `inventory.update` permission, validates product UUID and numeric/date/boolean fields, and only accepts the inventory field allowlist. It writes using the server-side service-role client; no service key is exposed to the browser.
+- Tightened its CORS policy from wildcard `*` to the same exact production origin + constrained Vercel preview hostname allowlist used by the order-status function. Requests from other origins are rejected; OPTIONS and response headers now vary by origin.
+- This is a PR-branch source change only. Live Edge Function remains unchanged (currently deployed version v3 per prior inventory); do not claim the CORS hardening is live until a separately approved deployment.
+- Commit: `1ffc2cf1c7f8e914377325a109063eeec7d9369f`.
+- The updated owner/customer order-history fallback commits are recorded above. No production changes or deployment occurred.
