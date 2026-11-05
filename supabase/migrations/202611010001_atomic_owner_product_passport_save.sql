@@ -16,7 +16,48 @@ create table if not exists private.owner_product_save_requests (
   primary key (owner_id, request_id)
 );
 
+-- Older production schema used actor_user_id + qr_url. Normalize it before
+-- installing the idempotent save function so existing deployments upgrade
+-- safely instead of silently keeping incompatible NOT NULL columns.
+do $compat$
+begin
+  if exists (
+    select 1 from information_schema.columns
+     where table_schema='private' and table_name='owner_product_save_requests'
+       and column_name='actor_user_id'
+  ) and not exists (
+    select 1 from information_schema.columns
+     where table_schema='private' and table_name='owner_product_save_requests'
+       and column_name='owner_id'
+  ) then
+    alter table private.owner_product_save_requests rename column actor_user_id to owner_id;
+  end if;
+
+  if exists (
+    select 1 from information_schema.columns
+     where table_schema='private' and table_name='owner_product_save_requests'
+       and column_name='qr_url'
+  ) and not exists (
+    select 1 from information_schema.columns
+     where table_schema='private' and table_name='owner_product_save_requests'
+       and column_name='result_payload'
+  ) then
+    alter table private.owner_product_save_requests rename column qr_url to result_payload;
+    alter table private.owner_product_save_requests
+      alter column result_payload type jsonb
+      using jsonb_build_object(
+        'product_id', product_id,
+        'qr_url', result_payload,
+        'slug', substring(result_payload from '[?&]slug=([^&]+)'),
+        'created', false,
+        'replayed', false
+      );
+  end if;
+end;
+$compat$;
+
 revoke all on table private.owner_product_save_requests from public, anon, authenticated;
+alter table private.owner_product_save_requests enable row level security;
 
 create or replace function private.owner_save_product_passport_impl(
   p_product_id uuid,
