@@ -132,3 +132,13 @@ Also review the staged atomic product/passport save migration:
 - Performance Advisor: four unused indexes and 15 multiple-permissive-policy findings. With almost no order/product traffic, keep indexes; consolidate policies only after role/customer/published-passport tests.
 - No production database changes, migration applications, Auth settings changes, Edge Function deployments, PR merge, or Vercel builds were made.
 - Immediate implementation sequence: (1) finish role invite + secure role OTP/session authorization; (2) wire a staff-only read-only inventory screen to `team_list_inventory()`; (3) add mutation only through separately authorized server-side operations; (4) run isolated staging tests for product-column grants and every frontend query; (5) only then request approval for production migration rollout.
+
+
+## 2026-11-05 immediate code fix — order history compatibility
+
+- Found a release-order mismatch: the PR branch's owner Orders and customer My Orders queries requested `store_orders.delivered_at`, but live production schema does not yet contain that column because migration `202611040004_order_delivered_timestamp.sql` is staged only.
+- Updated `supabase-admin-orders.js` and `my-orders.html` to retry their otherwise-identical order query without `delivered_at` only when Postgres/PostgREST reports that exact missing-column/schema-cache condition. Other query errors still fail visibly; the code does not hide unrelated failures.
+- Owner Orders now shows a concise notice that delivered-at history awaits the approved migration, while order records remain visible. Customer order history continues to load without the optional delivery timestamp.
+- JavaScript syntax validation passed for the updated owner orders module and all inline scripts in `my-orders.html`.
+- Commits: owner order fallback `caa65cb8421149c14c9d99d38cd5f46ff9ab0205`; customer order fallback `28c9a36e74bfb6bc18bc9118a66f977b0dce5b9b`.
+- No Vercel build was triggered. No production schema, data, Auth settings, Edge Functions, or deployment was changed.
