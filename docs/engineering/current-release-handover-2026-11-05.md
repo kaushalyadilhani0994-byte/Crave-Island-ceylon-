@@ -187,3 +187,14 @@ Also review the staged atomic product/passport save migration:
 
 
 - Additional auth/RLS check: live `auth.users` currently contains 1 registered user and 0 anonymous Auth users. This is only a current-state observation, not a guarantee that anonymous sign-ins are disabled in project Auth settings; keep the actual Auth configuration check as a launch gate.
+
+
+## 2026-11-05 final cross-check of inventory release path
+
+- Verified the production private idempotency table still uses legacy columns `actor_user_id uuid NOT NULL` and `qr_url text NOT NULL`; staged migration `202611010001_atomic_owner_product_passport_save.sql` contains the exact guarded rename + JSONB conversion needed for that live schema. Both `private.staff_access_audit` and `private.owner_product_save_requests` exist, so the migration's table revokes/RLS statements do not target a missing table.
+- Verified the owner inventory UI now loads the complete product projection through `owner_list_products()` and saves stock/threshold/tracking/expiry through the `update-product-inventory` Edge Function; it no longer relies on browser-wide SELECT for those operational fields.
+- Cross-checked all product-table browser read call sites on the review branch: storefront and public passport read only safe fields; owner catalogue/passport read through the owner-only RPC; inventory updates use the permission-checked Edge Function. The order-creation Edge Function uses service-role access and validates inventory server-side.
+- Verified the passport editor's direct read of `product_passports` is covered by the live approved-owner read policy; public reads remain restricted to published passports for active products. The new passport RPC wrapper remains SECURITY INVOKER and delegates to an owner-checking SECURITY DEFINER implementation.
+- JavaScript syntax parsing passed for all five integrated browser modules (`supabase-admin-auth.js`, `supabase-admin-orders.js`, `supabase-admin-products.js`, `supabase-admin-passports.js`, `supabase-store.js`) and inline scripts in `my-orders.html` and `passport.html`.
+- No GitHub Actions PR workflow run was associated with the latest handover commit. Syntax checks are static only; browser/mobile runtime, checkout concurrency, and physical QR/label tests remain outstanding.
+- Current launch limitation remains: live database has one registered Auth user, one approved owner profile, zero approved team profiles, one hidden prototype product, no active product and no real published QR. Therefore owner inventory UI is code-reviewed but not yet end-to-end verified against a real saleable product or staff account.
