@@ -160,3 +160,18 @@ Also review the staged atomic product/passport save migration:
 - Inventory update endpoint authorization independently verifies a registered non-anonymous Auth user, approved staff profile, and owner or `inventory.update` permission. It validates UUID, integer ranges, boolean tracking, and real ISO expiry date before using the service-role client.
 - The inventory UI was not yet tested in a real browser/device, and there are no approved non-owner staff profiles for an end-to-end staff permission test. Do not claim stock alerts or expiry alerts are live solely because these input controls exist.
 - The column-grant migration remains staged. Keep it unapplied until all storefront and passport reads are rechecked and the owner RPC / staff inventory RPC are installed together in migration order.
+
+
+## 2026-11-05 deeper inventory/security verification
+
+- Read-only catalogue call-site audit on the review branch:
+  - Storefront product list requests only `id,name,description,category,price,currency,image_url,ingredients,batch_number,qr_code,is_active`.
+  - Public passport page requests only `name,category,description,image_url,price,currency` from `products`; ingredient/allergen/lot/date facts come from the published `product_passports` row.
+  - Owner catalogue and owner passport modules call `owner_list_products()`; migration `202611040001_owner_list_products_rpc.sql` creates the owner-only full-row RPC before migration 002 narrows browser column grants.
+  - Owner stock controls call `update-product-inventory`; the browser does not write inventory columns directly.
+- Rechecked every current public-schema table: RLS is enabled on all nine public tables. `owner_report_cron_config` has no browser table grants, as intended. No public-schema SECURITY DEFINER function in the current live inventory was executable by `anon` or `authenticated`; order atomic/status RPCs are service-role-only. Private permission helpers require approved profiles.
+- Confirmed the only direct broad public SELECT exposure among the reviewed business tables is `products`; both `anon` and `authenticated` still have table-level SELECT and operational column grants until the staged owner-RPC + column-grant migrations are applied. The review-branch public storefront/passport call sites use the safe projection, and the owner call sites use the owner RPC. Do not split/reorder migrations 001 and 002.
+- Compared deployed and review-branch inventory Edge Function source: live `update-product-inventory` v3 still has `Access-Control-Allow-Origin: *`; PR branch source replaces this with the exact production origin and constrained Vercel preview origin allowlist, rejects other origins, and adds `Vary: Origin`. This hardening is not live until an approved Edge Function deployment.
+- Staff inventory remains a distinct pending workflow: live team list RPC is absent, staged `team_list_inventory()` is not yet installed, and live profiles contain only the single approved owner. No staff inventory UI or staff-role end-to-end test is claimed.
+- The Security Advisor's anonymous-policy warnings are not proof of public data exposure by themselves: several policies target the authenticated role and contain owner/customer/team predicates. Keep them for now; test anonymous-session semantics and each role before changing them. Leaked-password protection remains a dashboard-level recommended setting.
+- No database writes, Auth setting changes, Edge Function deployments, PR merge, or Vercel build occurred during this deeper audit.
