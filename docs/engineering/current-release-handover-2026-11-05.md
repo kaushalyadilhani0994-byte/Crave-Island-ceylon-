@@ -226,3 +226,8 @@ The former `202611010001_atomic_owner_product_passport_save.sql` path was remove
 - The atomic owner product/passport save migration originally checked manufacturing date ordering but did not reject a future manufacturing date, and could preserve an already-published passport while changing its best-before date to the past. This bypassed the equivalent validation in the separate passport-update RPC.
 - Fixed in review branch commit `66095805c4d3e631ce2aa81855b0bbd5519efc2e`: reject future manufacturing dates using Asia/Colombo local date; read the existing passport publication state and reject a past best-before date when that passport is already published. New product drafts remain unpublished as before.
 - This is a static code correction only. It still needs a disposable-database migration rehearsal and owner-authenticated create/edit/replay tests before release.
+
+
+## Latest CI status after review-branch documentation/code commits
+- GitHub status checks were refreshed after the latest review-branch commits. All four linked Vercel project checks failed with Vercel's explicit `build-rate-limit` response. This is an automatic preview-check retry caused by pushing to the review branch; it is not a production deployment.
+- No production alias was promoted or changed. Avoid further commits/build retries until the Vercel daily limit resets; bundle any remaining branch edits into one reviewed change.
