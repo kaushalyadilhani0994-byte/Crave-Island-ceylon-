@@ -231,3 +231,10 @@ The former `202611010001_atomic_owner_product_passport_save.sql` path was remove
 ## Latest CI status after review-branch documentation/code commits
 - GitHub status checks were refreshed after the latest review-branch commits. All four linked Vercel project checks failed with Vercel's explicit `build-rate-limit` response. This is an automatic preview-check retry caused by pushing to the review branch; it is not a production deployment.
 - No production alias was promoted or changed. Avoid further commits/build retries until the Vercel daily limit resets; bundle any remaining branch edits into one reviewed change.
+
+
+## Team inventory UI wiring — 2026-11-06
+- Added a compact mobile-responsive Team · Inventory workspace to `supabase-admin-orders.js` on the review branch (commit `95745bf2ad19e3100a935c3c93fa601e440b3282`).
+- Access is hidden unless the signed-in account has an approved `staff_profiles` record and owner or inventory read/update permission. Read uses the restricted `team_list_inventory()` RPC; writes call `update-product-inventory` and are independently checked by the Edge Function. Inventory editors can change stock quantity, low-stock threshold, tracking toggle and expiry date; read-only staff cannot edit.
+- JavaScript syntax parsing passed after insertion. This does not prove browser rendering, live RPC availability, Edge Function CORS, or staff role behavior.
+- The UI is not live yet: the six migrations are still unapplied, the production inventory Edge Function remains v3 with wildcard CORS, and there are no approved non-owner staff profiles. Do not apply the product-column SELECT restriction until the new RPC/UI path and roles are tested. Do not deploy the hardened Edge Function until Deno type-check and authenticated owner/staff tests pass.
