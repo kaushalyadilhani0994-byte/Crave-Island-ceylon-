@@ -91,6 +91,7 @@ declare
   v_ingredients text[];
   v_allergens text[];
   v_passport_published boolean := false;
+  v_existing_slug text;
   v_result jsonb;
 begin
   v_owner_id := auth.uid();
@@ -248,19 +249,22 @@ begin
     end if;
   end if;
 
-  select coalesce(pp.published, false)
-    into v_passport_published
+  select coalesce(pp.published, false), pp.public_slug
+    into v_passport_published, v_existing_slug
     from public.product_passports pp
    where pp.product_id = v_product_id::text;
   if not found then
     v_passport_published := false;
+    v_existing_slug := null;
   end if;
   if v_passport_published and v_expiry is not null
      and v_expiry < (now() at time zone 'Asia/Colombo')::date then
     raise exception 'A published passport cannot be saved with an expired best-before date' using errcode = '22023';
   end if;
 
-  v_slug := 'cic-' || lower(v_product_id::text);
+  -- Keep an already-issued public QR slug stable when a product is edited.
+  -- Replacing it would invalidate previously printed labels and saved links.
+  v_slug := coalesce(nullif(btrim(v_existing_slug), ''), 'cic-' || lower(v_product_id::text));
   v_qr_url := v_site_origin || '/passport.html?slug=' || v_slug;
 
   -- Preserve any existing origin, public story and publication state on edit.
