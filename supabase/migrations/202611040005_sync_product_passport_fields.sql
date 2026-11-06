@@ -114,8 +114,11 @@ begin
    for update;
 
   if found then
-    v_slug := v_passport.public_slug;
+    -- Older passport rows may have a missing/blank slug. Repair those once
+    -- with a deterministic value so existing QR links remain stable thereafter.
+    v_slug := coalesce(nullif(btrim(v_passport.public_slug), ''), 'cic-' || lower(p_product_id::text));
     update public.product_passports set
+      public_slug=v_slug,
       ingredients=v_ingredients,
       allergen_information=v_allergens,
       origin=v_origin_value,
