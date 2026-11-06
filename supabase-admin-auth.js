@@ -644,25 +644,41 @@
     finally{handlingPendingOwnerSession=false;}
   }
   async function wire(){
+    // Capture owner intent before the query parameter is cleaned up below.
+    // The modal can be injected after the first page scripts have already run.
+    const ownerAccessRequested = new URL(window.location.href).searchParams.get("owner-access") === "1";
+    let ownerAutoPromptOpened = false;
+    const shouldAutoOpenOwner = () => {
+      let deviceHint = false;
+      try { deviceHint = localStorage.getItem("cicOwnerDeviceHint") === "1"; } catch (_) {}
+      return ownerAccessRequested || deviceHint;
+    };
+    const maybeOpenOwnerPrompt = () => {
+      const modal = document.getElementById("adminAccessModal");
+      if (ownerAutoPromptOpened || !shouldAutoOpenOwner() ||
+          !modal || modal.dataset.cicRealOtp !== "true" ||
+          typeof window.openAdminAccess !== "function") return;
+      ownerAutoPromptOpened = true;
+      window.setTimeout(() => window.openAdminAccess(), 0);
+    };
     // Hide the customer-facing Admin nav immediately on startup, before any
     // persisted session or auth-state callback is processed.
     setOwnerNavVisible(false);
     install();
-    // The storefront may inject the Admin access modal after this script runs.
-    // Retry wiring when its DOM arrives; otherwise the visible buttons can remain
-    // connected to legacy handlers and no Supabase OTP request is ever sent.
+    // Keep observing until the dynamically injected login modal is actually
+    // wired. A fixed 20-second timeout could silently disable owner login on
+    // slower mobile connections; disconnect as soon as the modal is ready.
     if (!document.getElementById("adminAccessModal")?.dataset.cicRealOtp) {
       const authModalObserver = new MutationObserver(() => {
         const modal = document.getElementById("adminAccessModal");
+        install();
         if (modal?.dataset.cicRealOtp === "true") {
           authModalObserver.disconnect();
-          return;
+          maybeOpenOwnerPrompt();
         }
-        install();
-        if (modal?.dataset.cicRealOtp === "true") authModalObserver.disconnect();
       });
       authModalObserver.observe(document.documentElement, { childList: true, subtree: true });
-      window.setTimeout(() => authModalObserver.disconnect(), 20000);
+      window.addEventListener("pagehide", () => authModalObserver.disconnect(), { once: true });
     }
     window.openAdminAccess=async function(){
       // Do not invoke the legacy entry point: it can route an authenticated
@@ -685,6 +701,7 @@
       }catch(_){}
       showLogin();
     };
+    maybeOpenOwnerPrompt();
     const ownerEntryTargets=[document.querySelector(".hero-copy h2"),document.querySelector(".hero-copy"),document.querySelector("header .logo"),document.querySelector(".brand-logo"),document.querySelector("[data-brand-logo]")].filter((el,index,all)=>el&&all.indexOf(el)===index);
     ownerEntryTargets.forEach(target=>{
       if(target.dataset.cicOwnerTrigger)return;target.dataset.cicOwnerTrigger="1";
@@ -699,8 +716,6 @@
         // Reuse the existing Control Room when this browser already has a
         // verified owner session; only show the sign-in panel when needed.
         window.setTimeout(async()=>{
-          let verified=false;
-          try{verified=sessionStorage.getItem("cicOwnerOtpVerified")==="1";}catch(_){}
           const client=db();
           if(client){
             try{
@@ -712,7 +727,7 @@
               }
             }catch(_){}
           }
-          window.openAdminAccess();
+          maybeOpenOwnerPrompt();
         },350);
       }
     }catch(_){}
@@ -761,8 +776,8 @@
       // a fresh server-side approved-owner check.
       let ownerDevice=false;
       try{ownerDevice=localStorage.getItem("cicOwnerDeviceHint")==="1";}catch(_){}
-      if(ownerDevice&&!hasAuthCallback&&!new URL(window.location.href).searchParams.has("owner-access")){
-        window.setTimeout(()=>{if(typeof window.openAdminAccess==="function")window.openAdminAccess();},700);
+      if(ownerDevice&&!hasAuthCallback&&!ownerAccessRequested){
+        window.setTimeout(maybeOpenOwnerPrompt,700);
       }
     }
   }
