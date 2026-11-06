@@ -176,7 +176,7 @@
         status("This email is allowed for owner setup, but its Supabase owner profile is not yet approved. Complete the owner-profile approval before opening Admin.",true);
         return;
       }
-      try{localStorage.removeItem("cicOwnerSignInPending");sessionStorage.setItem("cicOwnerOtpVerified","1");}catch(_){}
+      try{localStorage.removeItem("cicOwnerSignInPending");localStorage.setItem("cicOwnerDeviceHint","1");sessionStorage.setItem("cicOwnerOtpVerified","1");}catch(_){}
       status("Owner verified. Opening the original CRAVE Control Room…");
       setOwnerNavVisible(true);
       if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
@@ -635,7 +635,7 @@
         status("This account is not marked as an approved CRAVE ISLAND CEYLON owner. Access was denied.",true);
         return;
       }
-      try{localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+      try{localStorage.removeItem("cicOwnerSignInPending");localStorage.setItem("cicOwnerDeviceHint","1");}catch(_){}
       setOwnerNavVisible(true);
       if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
       else {const modal=$("#adminAccessModal");if(modal)modal.style.display="none";}
@@ -723,7 +723,7 @@
         if(event==="SIGNED_OUT"){setOwnerNavVisible(false);try{sessionStorage.removeItem("cicOwnerOtpVerified");}catch(_){}}
         if(session&&session.user)window.setTimeout(async()=>{
           let otpVerified=false;try{otpVerified=sessionStorage.getItem("cicOwnerOtpVerified")==="1";}catch(_){}
-          if(await isApprovedOwner(session.user)){try{sessionStorage.setItem("cicOwnerOtpVerified","1");}catch(_){}setOwnerNavVisible(true);}
+          if(await isApprovedOwner(session.user)){try{sessionStorage.setItem("cicOwnerOtpVerified","1");localStorage.setItem("cicOwnerDeviceHint","1");}catch(_){}setOwnerNavVisible(true);}
           else setOwnerNavVisible(false);
         },250);
       });
@@ -754,6 +754,15 @@
           // an opportunity to restore the session. Keep the app path intact.
           try{history.replaceState(history.state,"",url.origin+url.pathname);}catch(_){}
         },500);
+      }
+      // On a browser previously verified as the owner device, restore the
+      // familiar Admin sign-in prompt on the home page when the session expired.
+      // This is only a UI hint: every login and every admin action still requires
+      // a fresh server-side approved-owner check.
+      let ownerDevice=false;
+      try{ownerDevice=localStorage.getItem("cicOwnerDeviceHint")==="1";}catch(_){}
+      if(ownerDevice&&!hasAuthCallback&&!new URL(window.location.href).searchParams.has("owner-access")){
+        window.setTimeout(()=>{if(typeof window.openAdminAccess==="function")window.openAdminAccess();},700);
       }
     }
   }
