@@ -64,6 +64,20 @@ button{border:0;border-radius:9px;background:var(--cocoa);color:var(--cream);pad
   function addText(parent,tag,className,text){
     const el=document.createElement(tag);if(className)el.className=className;el.textContent=escapeText(text);parent.appendChild(el);return el;
   }
+  const htmlEscape=(value)=>String(value==null?"":value).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+  const money=(value)=>"LKR "+Number(value||0).toLocaleString("en-LK",{minimumFractionDigits:2,maximumFractionDigits:2});
+  function printReceipt(order,lines){
+    const win=window.open("","_blank","width=720,height=820");
+    if(!win){msg("Allow pop-ups to print your receipt.");return;}
+    try{win.opener=null;}catch(_){}
+    const address=order.shipping_address&&typeof order.shipping_address==="object"
+      ? [order.shipping_address.line1,order.shipping_address.line2,order.shipping_address.city,order.shipping_address.district,order.shipping_address.postal_code,order.shipping_address.country].filter(Boolean).join(", ")
+      : String(order.shipping_address||"");
+    const rows=lines.map(item=>'<tr><td>'+htmlEscape(item.product_name)+'</td><td>'+Number(item.quantity)+'</td><td>'+money(item.unit_price)+'</td><td>'+money(item.line_total)+'</td></tr>').join("");
+    const issued=new Date(order.created_at).toLocaleString("en-LK",{dateStyle:"medium",timeStyle:"short"});
+    win.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Receipt '+htmlEscape(order.order_number)+'</title><style>@page{size:A4;margin:18mm}*{box-sizing:border-box}body{font:13px/1.5 Arial,sans-serif;color:#2c1a14;margin:0}.brand{text-align:center;border-bottom:2px solid #d4af37;padding-bottom:14px}.brand strong{font:700 23px Georgia,serif;letter-spacing:1px}.brand p{margin:4px 0 0;color:#75645a;font-size:11px;letter-spacing:2px}.title{display:flex;justify-content:space-between;gap:16px;margin:22px 0}.title h1{font:normal 26px Georgia,serif;margin:0}.muted{color:#75645a;font-size:11px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}.box{border:1px solid #e5dac8;border-radius:8px;padding:12px}.box h2{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#75645a;margin:0 0 7px}.box p{margin:2px 0;overflow-wrap:anywhere}table{width:100%;border-collapse:collapse;margin:18px 0}th,td{padding:9px 7px;border-bottom:1px solid #e5dac8;text-align:left}th{font-size:10px;text-transform:uppercase;color:#75645a}td:nth-child(n+2),th:nth-child(n+2){text-align:right}.totals{width:min(320px,100%);margin-left:auto}.totals div{display:flex;justify-content:space-between;padding:5px 0}.totals .grand{border-top:2px solid #d4af37;margin-top:6px;padding-top:10px;font-weight:700;font-size:16px}.footer{border-top:1px solid #e5dac8;margin-top:30px;padding-top:12px;text-align:center;color:#75645a;font-size:10px}@media screen{body{max-width:800px;margin:24px auto;padding:20px;box-shadow:0 2px 20px #0001}}</style></head><body><header class="brand"><strong>CRAVE ISLAND CEYLON</strong><p>CEYLON · CRAFTED WITH A STORY</p></header><div class="title"><div><h1>Order Receipt</h1><div class="muted">Order '+htmlEscape(order.order_number)+'</div></div><div style="text-align:right"><strong>'+htmlEscape(issued)+'</strong><div class="muted">Status: '+htmlEscape(order.order_status)+'</div></div></div><div class="grid"><section class="box"><h2>Customer</h2><p>'+htmlEscape(order.customer_name)+'</p><p>'+htmlEscape(order.phone)+'</p><p>'+htmlEscape(order.email)+'</p></section><section class="box"><h2>Delivery address</h2><p>'+htmlEscape(address)+'</p></section></div><table><thead><tr><th>Item</th><th>Qty</th><th>Unit price</th><th>Line total</th></tr></thead><tbody>'+rows+'</tbody></table><section class="totals"><div><span>Subtotal</span><strong>'+money(order.subtotal)+'</strong></div><div><span>Delivery fee</span><strong>'+money(order.delivery_fee)+'</strong></div><div class="grand"><span>Total</span><strong>'+money(order.total)+'</strong></div></section><section class="box" style="margin-top:22px"><h2>Payment</h2><p>'+htmlEscape(String(order.payment_method||"").replaceAll("_"," "))+' · '+htmlEscape(order.payment_status||"pending")+'</p></section><footer class="footer">This receipt reflects the order details stored by CRAVE ISLAND CEYLON. Keep it for your records.</footer><script>window.onload=()=>setTimeout(()=>window.print(),200);<\/script></body></html>');
+    win.document.close();
+  }
   function renderOrders(orders,items){
     const root=byId("orders");root.replaceChildren();
     if(!orders.length){addText(root,"div","panel","No orders are linked to this account yet.");return;}
@@ -81,8 +95,10 @@ button{border:0;border-radius:9px;background:var(--cocoa);color:var(--cream);pad
       });
       card.appendChild(list);
       const totals=document.createElement("div");totals.className="total";
-      addText(totals,"span","","Total");addText(totals,"span","","LKR "+Number(order.total||0).toLocaleString("en-LK",{minimumFractionDigits:2,maximumFractionDigits:2}));card.appendChild(totals);
+      addText(totals,"span","","Total");addText(totals,"span","",money(order.total));card.appendChild(totals);
       addText(card,"p","note","Payment: "+String(order.payment_method||"").replaceAll("_"," ")+" · Payment status: "+(order.payment_status||"pending"));
+      if(order.delivered_at)addText(card,"p","note","Delivered: "+new Date(order.delivered_at).toLocaleString("en-LK"));
+      const receipt=document.createElement("button");receipt.type="button";receipt.className="secondary";receipt.textContent="Print / Save receipt";receipt.addEventListener("click",()=>printReceipt(order,items[order.id]||[]));card.appendChild(receipt);
       root.appendChild(card);
     });
   }
@@ -91,11 +107,16 @@ button{border:0;border-radius:9px;background:var(--cocoa);color:var(--cream);pad
     try{
       const {data:{user},error:userError}=await client.auth.getUser();
       if(userError)throw userError;if(!user){showSignedIn(false);msg("Please sign in to see your orders.");return;}
-      const {data:orders,error}=await client.from("store_orders").select("id,order_number,created_at,order_status,payment_method,payment_status,total").eq("customer_id",user.id).order("created_at",{ascending:false});
+      let ordersResult=await client.from("store_orders").select("id,order_number,created_at,order_status,payment_method,payment_status,currency,subtotal,delivery_fee,total,customer_name,email,phone,shipping_address,delivered_at").eq("customer_id",user.id).order("created_at",{ascending:false});
+      if(ordersResult.error && (ordersResult.error.code==="42703" || ordersResult.error.code==="PGRST204" || /delivered_at.*(does not exist|schema cache)|column.*delivered_at/i.test([ordersResult.error.message,ordersResult.error.details].filter(Boolean).join(" ")))){
+        // Customer order history must remain readable while delivered_at is staged for release.
+        ordersResult=await client.from("store_orders").select("id,order_number,created_at,order_status,payment_method,payment_status,currency,subtotal,delivery_fee,total,customer_name,email,phone,shipping_address").eq("customer_id",user.id).order("created_at",{ascending:false});
+      }
+      const {data:orders,error}=ordersResult;
       if(error)throw error;
       const ids=(orders||[]).map(o=>o.id);const grouped={};
       if(ids.length){
-        const {data:rows,error:itemError}=await client.from("store_order_items").select("order_id,product_name,quantity,line_total").in("order_id",ids);
+        const {data:rows,error:itemError}=await client.from("store_order_items").select("order_id,product_name,quantity,unit_price,line_total").in("order_id",ids);
         if(itemError)throw itemError;(rows||[]).forEach(item=>(grouped[item.order_id]||(grouped[item.order_id]=[])).push(item));
       }
       renderOrders(orders||[],grouped);msg("Showing "+(orders||[]).length+" order(s) for your account.");

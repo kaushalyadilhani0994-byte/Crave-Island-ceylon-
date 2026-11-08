@@ -248,12 +248,12 @@
   // Load the live owner order panel only after the authenticated Supabase client is configured.
   const ownerOrdersScript = document.createElement("script");
   ownerOrdersScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerOrdersScript.src = "supabase-admin-orders.js?v=20261103-admin-control-room-restore";
+  ownerOrdersScript.src = "supabase-admin-orders.js?v=20261106-team-inventory-ui";
   ownerOrdersScript.defer = true;
   document.body.appendChild(ownerOrdersScript);
   const ownerProductsScript = document.createElement("script");
   ownerProductsScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerProductsScript.src = "supabase-admin-products.js?v=20261103-admin-control-room-restore";
+  ownerProductsScript.src = "supabase-admin-products.js?v=20261106-atomic-qr-save";
   ownerProductsScript.defer = true;
   document.body.appendChild(ownerProductsScript);
   const secureCheckoutScript = document.createElement("script");
@@ -264,13 +264,13 @@
 
   const ownerPassportsScript = document.createElement("script");
   ownerPassportsScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerPassportsScript.src = "supabase-admin-passports.js?v=20261103-admin-control-room-restore";
+  ownerPassportsScript.src = "supabase-admin-passports.js?v=20261106-passport-sync";
   ownerPassportsScript.defer = true;
   document.body.appendChild(ownerPassportsScript);
 
   const ownerAuthScript = document.createElement("script");
   ownerAuthScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerAuthScript.src = "supabase-admin-auth.js?v=20261103-admin-control-room-restore";
+  ownerAuthScript.src = "supabase-admin-auth.js?v=20261106-owner-access-review";
   ownerAuthScript.defer = true;
   document.body.appendChild(ownerAuthScript);
 

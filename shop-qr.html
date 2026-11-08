@@ -40,18 +40,33 @@ a.secondary,button.secondary{background:transparent;color:var(--cream)}
 (function(){
  const shopUrl=new URL("/",window.location.origin).href;
  const qrUrl="https://api.qrserver.com/v1/create-qr-code/?size=720x720&format=png&ecc=H&margin=18&data="+encodeURIComponent(shopUrl);
- const img=document.getElementById("shopQr");img.src=qrUrl;
+ const qrFallbackUrl="https://quickchart.io/qr?text="+encodeURIComponent(shopUrl)+"&size=720&margin=2";
+ let activeQrUrl=qrUrl;
+ const img=document.getElementById("shopQr");
+ let qrFallbackUsed=false;
+ img.onerror=function(){
+  if(!qrFallbackUsed){
+   qrFallbackUsed=true;
+   activeQrUrl=qrFallbackUrl;
+   img.src=activeQrUrl;
+  }else{
+   img.style.display="none";
+   const note=document.querySelector(".note");
+   if(note)note.textContent="QR image service is temporarily unavailable. Open the shop using the button below.";
+  }
+ };
+ img.src=qrUrl;
  document.getElementById("shopUrl").textContent=shopUrl;
  document.getElementById("openShop").href=shopUrl;
  document.getElementById("download").addEventListener("click",async function(){
   const btn=this;btn.disabled=true;btn.textContent="Preparing…";
   try{
-   const response=await fetch(qrUrl,{mode:"cors",cache:"no-store"});
+   const response=await fetch(activeQrUrl,{mode:"cors",cache:"no-store"});
    if(!response.ok)throw new Error("QR image unavailable");
    const blob=await response.blob();const objectUrl=URL.createObjectURL(blob);
-   const a=document.createElement("a");a.href=objectUrl;a.download="CRAVE-ISLAND-CEYLON-Shop-QR.png";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(objectUrl);
+   const a=document.createElement("a");a.href=objectUrl;a.download="CRAVE-ISLAND-CEYLON-Shop-QR.png";document.body.appendChild(a);a.click();a.remove();window.setTimeout(()=>URL.revokeObjectURL(objectUrl),10000);
    btn.textContent="Downloaded";
-  }catch(e){window.open(qrUrl,"_blank","noopener");btn.textContent="Open QR image";}
+  }catch(e){window.open(activeQrUrl,"_blank","noopener");btn.textContent="Open QR image";}
   finally{setTimeout(()=>{btn.disabled=false;if(btn.textContent==="Downloaded")btn.textContent="Download QR";},1800);}
  });
 })();
