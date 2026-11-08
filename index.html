@@ -466,7 +466,23 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
   new MutationObserver(()=>removeDuplicateOwnerShortcuts()).observe(document.body,{childList:true,subtree:true});
   const originalOpen=window.openModal;
   window.openModal=function(id){
-    if(blocked.has(id)){if(typeof window.toast==="function")window.toast("This feature is not available until its live service is connected.");return;}
+    if(blocked.has(id)){
+      // The original V18 Control Room is the authenticated owner's live
+      // workspace. The guard hides it for everyone until Supabase owner
+      // approval adds this class; allow only that verified session through.
+      if(id==="controlRoomModal"&&document.body.classList.contains("cic-owner-shortcuts-unified")){
+        const control=document.getElementById("controlRoomModal");
+        if(control){
+          control.hidden=false;
+          control.removeAttribute("aria-hidden");
+          control.style.removeProperty("display");
+        }
+        if(typeof originalOpen==="function")return originalOpen.apply(this,arguments);
+        return;
+      }
+      if(typeof window.toast==="function")window.toast("This feature is not available until its live service is connected.");
+      return;
+    }
     if(typeof originalOpen==="function")return originalOpen.apply(this,arguments);
   };
   ["prepareTeamInvite","saveOwnerImageDemo","clearOwnerImageDemo","downloadQR"].forEach(name=>{window[name]=function(){if(typeof window.toast==="function")window.toast("This feature is not connected to a live service yet.");};});
