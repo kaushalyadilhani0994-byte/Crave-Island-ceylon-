@@ -2,6 +2,12 @@
 (function () {
   "use strict";
   const client = () => window.CIC_SUPABASE && window.CIC_SUPABASE.client;
+  // Keep owner tools inside the Admin workspace; never cover the storefront hero.
+  const homeLayoutFix=document.createElement("style");
+  homeLayoutFix.id="cic-owner-tools-home-layout-fix";
+  homeLayoutFix.textContent="#cicOwnerOrdersButton,#cicTeamInventoryButton{display:none!important;visibility:hidden!important;pointer-events:none!important}\n.bottom{display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;grid-auto-flow:row!important;align-items:stretch!important;gap:2px!important;width:min(620px,calc(100% - 14px))!important;box-sizing:border-box!important}\n.bottom>.nav{display:grid!important;grid-column:auto!important;min-width:0!important;width:100%!important;max-width:100%!important;padding:6px 1px 5px!important;white-space:nowrap!important;overflow:hidden!important;justify-items:center!important;align-content:center!important}\n.bottom>.nav .nav-label{font-size:clamp(7px,2vw,9px)!important;white-space:nowrap!important;letter-spacing:-.35px!important}\n.bottom>.nav .nav-sub{font-size:clamp(5px,1.55vw,7px)!important;white-space:nowrap!important}\n@media(max-width:520px){.bottom{grid-template-columns:repeat(7,minmax(0,1fr))!important}.bottom>.nav{padding-left:0!important;padding-right:0!important}}";
+  document.head.appendChild(homeLayoutFix);
+
   const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const money = (v) => "LKR " + Number(v || 0).toLocaleString("en-LK", {maximumFractionDigits:2});
   const next = {pending:["confirmed","cancelled"],confirmed:["processing","cancelled"],processing:["shipped","cancelled"],shipped:["delivered"],delivered:[],cancelled:[]};
