@@ -279,7 +279,9 @@
       if(control){control.classList.add("open");control.style.display="flex";}
     }
     if(typeof window.showAdminView==="function")window.showAdminView("overview");
-    // Keep the original V18 Control Room clean; do not inject a second owner-tools card hub.
+    // Mount the live Supabase-backed owner tools inside the original V18 Control Room.
+    // Each destination keeps its own approved-owner/session checks and server-side RLS.
+    installUnifiedLiveTools();
   }
   function addOwnerMenuReturnButton(dashboard){
     const control=document.getElementById("controlRoomModal");
