@@ -29,8 +29,8 @@
   }
   function setOwnerNavVisible(visible) {
     const bottom = document.querySelector(".bottom");
-    // The current storefront can lack an Admin nav item entirely. Create it
-    // only after the server-side approved-owner check succeeds.
+    // The secure Admin sign-in entry remains available on the V18 storefront.
+    // The owner workspace itself is shown only after server-side approval.
     let adminButton = bottom && (
       bottom.querySelector("#cicOwnerAdminNavEntry") ||
       bottom.querySelector('[onclick*="openAdminAccess"]') ||
