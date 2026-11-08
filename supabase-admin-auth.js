@@ -59,13 +59,20 @@
       if (adminButton) adminButton.style.setProperty("display", "flex", "important");
       syncOwnerAdminShortcut(true);
     } else {
+      // Keep the familiar V18 Admin entry visible on the home screen so the
+      // owner can always reach the secure OTP prompt, including on a new
+      // browser/device where no local owner-device hint exists. This exposes
+      // only the sign-in entry: the owner workspace and all data remain hidden
+      // until the server confirms the approved owner session.
       document.body.classList.remove("cic-owner-shortcuts-unified");
       if (bottom) bottom.style.removeProperty("grid-template-columns");
-      // Dynamically created Admin entry is removed at sign-out. Customers
-      // therefore never see an Admin shortcut or owner workspace.
       const privateEntry = document.getElementById("cicOwnerAdminNavEntry");
       if (privateEntry) privateEntry.remove();
-      if (adminButton && adminButton.id !== "cicOwnerAdminNavEntry") adminButton.style.setProperty("display", "none", "important");
+      if (adminButton && adminButton.id !== "cicOwnerAdminNavEntry") {
+        adminButton.hidden = false;
+        adminButton.removeAttribute("aria-hidden");
+        adminButton.style.setProperty("display", "flex", "important");
+      }
       syncOwnerAdminShortcut(false);
     }
   }
