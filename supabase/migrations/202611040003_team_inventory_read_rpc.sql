@@ -1,5 +1,5 @@
 -- CRAVE ISLAND CEYLON
--- Read-only inventory projection for approved staff with inventory.read.
+-- Inventory projection for approved staff with inventory.read or inventory.update.
 -- This preserves the stock workflow after browser roles lose broad products SELECT.
 
 create or replace function public.team_list_inventory()
@@ -10,7 +10,10 @@ set search_path = ''
 as $function$
 begin
   if auth.uid() is null
-     or not private.has_staff_permission('inventory', 'read') then
+     or not (
+       private.has_staff_permission('inventory', 'read')
+       or private.has_staff_permission('inventory', 'update')
+     ) then
     raise exception 'approved_inventory_read_required' using errcode = '42501';
   end if;
 
@@ -39,4 +42,4 @@ revoke all on function public.team_list_inventory() from public, anon, authentic
 grant execute on function public.team_list_inventory() to authenticated;
 
 comment on function public.team_list_inventory() is
-  'Returns a limited inventory projection only to approved staff with inventory.read; full owner product data remains in owner_list_products().';
+  'Returns a limited inventory projection only to approved staff with inventory.read or inventory.update; full owner product data remains in owner_list_products().';
