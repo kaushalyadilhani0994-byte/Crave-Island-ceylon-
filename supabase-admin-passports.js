@@ -4,6 +4,26 @@
 const $=s=>document.querySelector(s);
 const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let db, passportLoadState="idle", passportSaving=false, ownerProducts=[];
+let qrLibraryPromise=null;
+function ensureQrLibrary(){
+ if(window.qrcode)return Promise.resolve();
+ if(!qrLibraryPromise)qrLibraryPromise=new Promise((resolve,reject)=>{
+  const script=document.createElement("script");
+  script.src="/vendor/qrcode-generator.js";
+  script.async=true;
+  script.onload=()=>window.qrcode?resolve():reject(new Error("Local QR library did not initialise."));
+  script.onerror=()=>reject(new Error("Local QR library could not be loaded."));
+  document.head.appendChild(script);
+ });
+ return qrLibraryPromise;
+}
+function makeQrDataUrl(value,cellSize){
+ const qr=window.qrcode(0,"H");
+ qr.addData(String(value),"Byte");
+ qr.make();
+ return qr.createDataURL(cellSize||8,2);
+}
+
 async function owner(){
 db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
 if(!db)return false;
@@ -91,6 +111,7 @@ if($("#cicPassPublished").checked&&product.is_active!==true){message("This produ
 const mfg=$("#cicPassMfg").value,best=$("#cicPassBest").value;
 if(mfg&&best&&mfg>best){message("Manufacturing date cannot be later than the expiry / best-before date.");return}
 const btn=$("#cicPassSave");
+if(row.published){try{await ensureQrLibrary()}catch(qrError){message("The local QR generator could not load. No passport changes were saved; refresh and retry.");return}}
 btn.textContent="Saving…";
 const row={
 manufacturing_date:mfg||null,
@@ -136,8 +157,9 @@ return;
 const saved=Array.isArray(data)?data[0]:data;
 if(!saved||!saved.qr_url){message("The server did not confirm the passport and QR save. Please retry.");return}
 const url=saved.qr_url;
+const qrImage=row.published?makeQrDataUrl(url,7):"";
 const result=$("#cicPassResult");
-result.innerHTML='<div class="msg">'+(row.published?"Passport saved and published.":"Passport saved as unpublished; public QR page will not reveal it yet.")+'<br><a href="'+esc(url)+'" target="_blank" rel="noopener">Open product passport</a><br><label>QR destination</label><input readonly value="'+esc(url)+'"><button type="button" id="cicPassCopy">Copy QR destination</button>'+(row.published?'<p><img alt="QR code for this product passport" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='+encodeURIComponent(url)+'"></p><button type="button" id="cicPassPrint">Print product QR label</button><p>Print label includes CRAVE ISLAND CEYLON with the QR code underneath.</p>':"")+'</div>';
+result.innerHTML='<div class="msg">'+(row.published?"Passport saved and published.":"Passport saved as unpublished; public QR page will not reveal it yet.")+'<br><a href="'+esc(url)+'" target="_blank" rel="noopener">Open product passport</a><br><label>QR destination</label><input readonly value="'+esc(url)+'"><button type="button" id="cicPassCopy">Copy QR destination</button>'+(row.published?'<p><img alt="QR code for this product passport" src="'+esc(qrImage)+'"></p><button type="button" id="cicPassPrint">Print product QR label</button><p>QR generated on this device. Product URL is not sent to an external QR service.</p>':"")+'</div>';
 $("#cicPassCopy").onclick=async()=>{try{await navigator.clipboard.writeText(url);message("QR destination copied.")}catch(e){message("Select and copy the QR destination from the field.")}};
 const printButton=$("#cicPassPrint");
 if(printButton)printButton.onclick=()=>{
@@ -146,7 +168,8 @@ const batch=row.batch_code||"";
 const netContent=row.net_content||"";
 const mfg=row.manufacturing_date||"";
 const best=row.best_before||"";
-const qr="https://api.qrserver.com/v1/create-qr-code/?size=360x360&data="+encodeURIComponent(url);
+let qr;
+try{qr=makeQrDataUrl(url,10)}catch(qrError){message("Could not generate the local QR image. Refresh and try again.");return}
 const win=window.open("","_blank","width=480,height=640");
 if(!win){message("Allow pop-ups to print the QR label.");return}
 try{win.opener=null;}catch(_){}
