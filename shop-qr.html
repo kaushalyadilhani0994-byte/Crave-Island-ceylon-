@@ -36,38 +36,28 @@ a.secondary,button.secondary{background:transparent;color:var(--cream)}
 <div class="url" id="shopUrl"></div>
 <div class="note">This is the shop promotion QR. Product-specific QR codes open their own published product passport.</div>
 </main>
+<script src="/vendor/qrcode-generator.js"></script>
 <script>
 (function(){
  const shopUrl=new URL("/",window.location.origin).href;
- const qrUrl="https://api.qrserver.com/v1/create-qr-code/?size=720x720&format=png&ecc=H&margin=18&data="+encodeURIComponent(shopUrl);
- const qrFallbackUrl="https://quickchart.io/qr?text="+encodeURIComponent(shopUrl)+"&size=720&margin=2";
- let activeQrUrl=qrUrl;
  const img=document.getElementById("shopQr");
- let qrFallbackUsed=false;
- img.onerror=function(){
-  if(!qrFallbackUsed){
-   qrFallbackUsed=true;
-   activeQrUrl=qrFallbackUrl;
-   img.src=activeQrUrl;
-  }else{
-   img.style.display="none";
-   const note=document.querySelector(".note");
-   if(note)note.textContent="QR image service is temporarily unavailable. Open the shop using the button below.";
-  }
- };
- img.src=qrUrl;
+ const note=document.querySelector(".note");
+ let qrDataUrl="";
+ try{
+  const qr=qrcode(0,"H");
+  qr.addData(shopUrl,"Byte");
+  qr.make();
+  qrDataUrl=qr.createDataURL(8,4);
+  img.src=qrDataUrl;
+ }catch(e){
+  img.style.display="none";
+  if(note)note.textContent="The shop QR could not be generated on this device. Use Open shop or refresh to retry.";
+ }
  document.getElementById("shopUrl").textContent=shopUrl;
  document.getElementById("openShop").href=shopUrl;
- document.getElementById("download").addEventListener("click",async function(){
-  const btn=this;btn.disabled=true;btn.textContent="Preparing…";
-  try{
-   const response=await fetch(activeQrUrl,{mode:"cors",cache:"no-store"});
-   if(!response.ok)throw new Error("QR image unavailable");
-   const blob=await response.blob();const objectUrl=URL.createObjectURL(blob);
-   const a=document.createElement("a");a.href=objectUrl;a.download="CRAVE-ISLAND-CEYLON-Shop-QR.png";document.body.appendChild(a);a.click();a.remove();window.setTimeout(()=>URL.revokeObjectURL(objectUrl),10000);
-   btn.textContent="Downloaded";
-  }catch(e){window.open(activeQrUrl,"_blank","noopener");btn.textContent="Open QR image";}
-  finally{setTimeout(()=>{btn.disabled=false;if(btn.textContent==="Downloaded")btn.textContent="Download QR";},1800);}
+ document.getElementById("download").addEventListener("click",function(){
+  if(!qrDataUrl){if(note)note.textContent="QR generation is unavailable. Refresh and try again.";return}
+  const a=document.createElement("a");a.href=qrDataUrl;a.download="CRAVE-ISLAND-CEYLON-Shop-QR.png";document.body.appendChild(a);a.click();a.remove();
  });
 })();
 </script>
