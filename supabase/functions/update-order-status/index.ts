@@ -40,29 +40,27 @@ Deno.serve(async (req: Request) => {
       return reply(400, { error: "Unsupported order status." });
     }
 
-    const { data: order, error } = await admin.from("store_orders")
-      .select("id,order_number,order_status").eq("id", orderId).maybeSingle();
-    if (error) return reply(500, { error: "Could not read order." });
-    if (!order) return reply(404, { error: "Order not found." });
 
-    const transitions: Record<string, string[]> = {
-      pending: ["confirmed", "cancelled"],
-      confirmed: ["processing", "cancelled"],
-      processing: ["shipped", "cancelled"],
-      shipped: ["delivered"],
-      delivered: [],
-      cancelled: [],
-    };
-    if (!(transitions[order.order_status] || []).includes(next)) {
-      return reply(409, { error: "Invalid status transition." });
+    const { data: result, error: updateError } = await admin.rpc("owner_update_store_order_status", {
+      p_order_id: orderId,
+      p_next_status: next,
+    });
+    if (updateError || !result || result.ok !== true) {
+      const reason = updateError?.message || "order_status_update_failed";
+      console.error("Atomic order status update failed", reason);
+      if (/ORDER_NOT_FOUND/i.test(reason)) return reply(404, { error: "Order not found." });
+      if (/ORDER_STATUS_TRANSITION_NOT_ALLOWED/i.test(reason)) return reply(409, { error: "Invalid status transition. Refresh the order and try again." });
+      return reply(500, { error: "Could not update order status securely." });
     }
-
-    const { data: updated, error: updateError } = await admin.from("store_orders")
-      .update({ order_status: next }).eq("id", orderId).eq("order_status", order.order_status)
-      .select("id,order_number,order_status,updated_at").maybeSingle();
-    if (updateError) return reply(500, { error: "Could not update order." });
-    if (!updated) return reply(409, { error: "Order changed; refresh and retry." });
-    return reply(200, { order: updated });
+    return reply(200, {
+      order: {
+        id: result.order_id,
+        order_number: result.order_number,
+        order_status: result.order_status,
+        delivered_at: result.delivered_at || null,
+      },
+      replayed: result.replayed === true,
+    });
   } catch (error) {
     console.error("update-order-status error", error instanceof Error ? error.message : "unknown");
     return reply(500, { error: "Unexpected server error." });
