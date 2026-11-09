@@ -264,7 +264,7 @@
 
   const ownerPassportsScript = document.createElement("script");
   ownerPassportsScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerPassportsScript.src = "supabase-admin-passports.js?v=20261106-passport-sync";
+  ownerPassportsScript.src = "supabase-admin-passports.js?v=20261109-local-qr-privacy";
   ownerPassportsScript.defer = true;
   document.body.appendChild(ownerPassportsScript);
 
