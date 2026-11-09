@@ -1,11 +1,14 @@
--- Reconcile the production atomic checkout RPC into the main migration history.\n-- All DDL is additive/idempotent; no customer/order/product rows are modified.\nalter table public.store_orders
-  add column if not exists idempotency_key uuid,
-  add column if not exists idempotency_payload_hash text,
-  add column if not exists stock_restocked_at timestamptz;
+-- Reconcile the production atomic checkout RPC into the main migration history.
 
-create unique index if not exists store_orders_customer_idempotency_key_uidx
-  on public.store_orders(customer_id, idempotency_key)
-  where idempotency_key is not null;
+-- Additive and idempotent DDL only; no customer/order/product rows are modified.
+
+alter table public.store_orders add column if not exists idempotency_key uuid;
+
+alter table public.store_orders add column if not exists idempotency_payload_hash text;
+
+alter table public.store_orders add column if not exists stock_restocked_at timestamptz;
+
+create unique index if not exists store_orders_customer_idempotency_key_uidx on public.store_orders(customer_id, idempotency_key) where idempotency_key is not null;
 
 create or replace function public.create_store_order_atomic(
   p_customer_id uuid,
@@ -206,4 +209,8 @@ end;
 $function$;
 
 revoke all on function public.create_store_order_atomic(uuid,uuid,jsonb) from public, anon, authenticated;
-grant execute on function public.create_store_order_atomic(uuid,uuid,jsonb) to service_role;\n
+grant execute on function public.create_store_order_atomic(uuid,uuid,jsonb) to service_role;
+
+revoke all on function public.create_store_order_atomic(uuid,uuid,jsonb) from public, anon, authenticated;
+
+grant execute on function public.create_store_order_atomic(uuid,uuid,jsonb) to service_role;
