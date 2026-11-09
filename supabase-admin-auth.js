@@ -22,6 +22,31 @@
   function isOwnerEmail(email) {
     return OWNER_EMAILS.includes(String(email||"").trim().toLowerCase());
   }
+  const OTP_RESEND_WAIT_MS = 25000;
+  function startOtpCooldown(button, until) {
+    if (!button) return;
+    const previous = Number(button.dataset.cicOtpTimer || 0);
+    if (previous) window.clearInterval(previous);
+    const tick = () => {
+      const remaining = until - Date.now();
+      if (remaining <= 0) {
+        const timer = Number(button.dataset.cicOtpTimer || 0);
+        if (timer) window.clearInterval(timer);
+        delete button.dataset.cicOtpTimer;
+        button.disabled = false;
+        button.textContent = "Send secure sign-in email";
+        try {
+          const saved = Number(localStorage.getItem("cicOwnerOtpNextSendAt") || 0);
+          if (saved <= Date.now()) localStorage.removeItem("cicOwnerOtpNextSendAt");
+        } catch (_) {}
+        return;
+      }
+      button.disabled = true;
+      button.textContent = "Resend in " + Math.ceil(remaining / 1000) + "s";
+    };
+    tick();
+    button.dataset.cicOtpTimer = String(window.setInterval(tick, 250));
+  }
   // Keep the original bottom-bar Admin entry; do not add a separate floating shortcut.
   function syncOwnerAdminShortcut(visible) {
     const shortcut = document.getElementById("cicOwnerAdminShortcut");
@@ -150,23 +175,43 @@
     if(!client)return status("Supabase is still connecting. Please wait and try again.",true);
     if(!isOwnerEmail(email))return status("This email is not on the owner's allowed email list.",true);
     const btn=$(".login-actions button");
+    let savedUntil=0;
+    try{savedUntil=Number(localStorage.getItem("cicOwnerOtpNextSendAt")||0);}catch(_){}
+    if(savedUntil>Date.now()){
+      startOtpCooldown(btn,savedUntil);
+      status("Please wait "+Math.ceil((savedUntil-Date.now())/1000)+" seconds before requesting another sign-in email.");
+      return;
+    }
+    if(btn&&btn.disabled)return;
     if(btn){btn.disabled=true;btn.textContent="Sending…";}
+    let cooldownUntil=0;
     try{
       const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:window.location.origin+window.location.pathname}});
       if(error){
-        // Surface Supabase's non-secret error code/message so delivery failures
-        // can be diagnosed instead of showing the same generic message every time.
         const detail=[error.code,error.message].filter(Boolean).join(": ").replace(/[\\r\\n]+/g," ").slice(0,220);
         console.warn("[CRAVE owner sign-in] OTP request rejected", {code:error.code||null,status:error.status||null});
-        status("Supabase could not send the owner sign-in email"+(detail?" ("+detail+")":".")+" Check the exact approved owner email, email rate limit, and Auth SMTP/Resend delivery settings. No login code was issued.",true);
-      } else {
-        status("Supabase accepted the owner sign-in email request. Check Inbox, Spam, Promotions and All Mail. If no message arrives within 2 minutes, do not keep resending; the Auth email delivery log needs checking. Owner approval is still required.");
+        if(error.code==="over_email_send_rate_limit"||error.status===429){
+          cooldownUntil=Date.now()+OTP_RESEND_WAIT_MS;
+          try{localStorage.setItem("cicOwnerOtpNextSendAt",String(cooldownUntil));}catch(_){}
+          status("Supabase is protecting this email from repeated requests. Please wait 25 seconds before trying again.",true);
+        }else{
+          status("Supabase could not send the owner sign-in email"+(detail?" ("+detail+")":".")+" Check the exact approved owner email, email rate limit, and Auth SMTP/Resend delivery settings. No login code was issued.",true);
+        }
+      }else{
+        cooldownUntil=Date.now()+OTP_RESEND_WAIT_MS;
+        try{localStorage.setItem("cicOwnerOtpNextSendAt",String(cooldownUntil));}catch(_){}
+        status("Supabase accepted the owner sign-in email request. Check Inbox, Spam, Promotions and All Mail. Wait 25 seconds before requesting another code. If no message arrives within 2 minutes, do not keep resending; check Auth email delivery. Owner approval is still required.");
       }
     }catch(e){
       console.warn("[CRAVE owner sign-in] OTP request connection failure", {name:e&&e.name||"Error"});
       status("Could not reach Supabase Auth to request the owner email. Check the connection and try again.",true);
     }
-    finally{if(btn){btn.disabled=false;btn.textContent="Send secure sign-in email";}}
+    finally{
+      if(btn){
+        if(cooldownUntil>Date.now())startOtpCooldown(btn,cooldownUntil);
+        else{btn.disabled=false;btn.textContent="Send secure sign-in email";}
+      }
+    }
   }
   async function verifyCode() {
     if(!requireOwnerRoleForCurrentOtp())return;
