@@ -114,7 +114,7 @@
     // Remove role previews, permission labels and the local-only invite form
     // from this modal. The verified owner enters the original Control Room
     // after Supabase Auth + staff_profiles approval succeed.
-    [".role-grid-v9", "#roleWorkspace", "#permissionList", ".invite-box"].forEach(selector=>{
+    [".role-grid-v9", "#roleWorkspace", "#permissionList", ".invite-box", ".access-note"].forEach(selector=>{
       const node=$(selector,modal);
       if(node)node.remove();
     });
@@ -130,10 +130,6 @@
     if(!$("#cicOwnerAuthStatus",modal)){
       const s=document.createElement("div");s.id="cicOwnerAuthStatus";s.hidden=true;s.setAttribute("role","status");s.setAttribute("aria-live","polite");actions.insertAdjacentElement("afterend",s);
     }
-    const intro=$(".muted-note",modal);
-    if(intro)intro.textContent="Enter an approved owner email and request a secure sign-in email. Depending on the Supabase email template, use the 6-digit code here or tap the sign-in link in the email. Only an approved owner account can open live tools.";
-    const note=$(".access-note",modal);
-    if(note)note.textContent="Secure email sign-in. A code or sign-in link may be delivered depending on the configured email template; database owner approval is always required.";
     modal.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target===email||e.target===otp)){e.preventDefault();e.target===email?sendCode():verifyCode();}});
   }
   function selectedAdminRole(){

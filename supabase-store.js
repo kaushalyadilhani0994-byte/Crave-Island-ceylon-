@@ -270,7 +270,7 @@
 
   const ownerAuthScript = document.createElement("script");
   ownerAuthScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerAuthScript.src = "supabase-admin-auth.js?v=20261109-otp-gate-cleanup";
+  ownerAuthScript.src = "supabase-admin-auth.js?v=20261109-otp-gate-cleanup-2";
   ownerAuthScript.defer = true;
   document.body.appendChild(ownerAuthScript);
 
