@@ -118,53 +118,53 @@ Deno.serve(async (req: Request) => {
       return respond(400, { error: "A product or its collection is no longer available. Refresh the catalogue and try again." });
     }
 
-    const productById = new Map(products.map((product) => [String(product.id), product]));
-    const orderItems = items.map((item) => {
-      const product = productById.get(item.product_id)!;
-      const price = Number(product.price);
-      if (!Number.isFinite(price) || price < 0 || product.currency !== "LKR") throw new Error("INVALID_PRICE");
-      return {
-        product_id: String(product.id),
-        product_name: product.name,
-        quantity: item.quantity,
-        unit_price: price,
-        line_total: Math.round(price * item.quantity * 100) / 100,
-      };
-    });
-    const subtotal = Math.round(orderItems.reduce((sum, item) => sum + item.line_total, 0) * 100) / 100;
-    if (!Number.isFinite(subtotal) || subtotal <= 0 || subtotal > 2000000) {
-      return respond(400, { error: "The order total is outside the allowed range." });
-    }
 
-    // Delivery is deliberately fixed at zero until the store's delivery rates are configured.
-    const deliveryFee = 0;
-    const orderNumber = "CIC-" + new Date().toISOString().slice(0, 10).replaceAll("-", "") + "-" + crypto.randomUUID().slice(0, 8).toUpperCase();
-    const { data: order, error: orderError } = await admin.from("store_orders").insert({
-      order_number: orderNumber,
-      customer_id: user.id,
+    const idempotencyKey = req.headers.get("Idempotency-Key") || "";
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idempotencyKey)) {
+      return respond(400, { error: "A valid checkout retry key is required. Refresh checkout and try again." });
+    }
+    const atomicPayload = {
       customer_name: customerName,
       email: user.email || null,
       phone,
-      shipping_address: { line1: addressLine, line2: cleanText(address?.line2, 180), city, district, postal_code: cleanText(address?.postal_code, 20), country: "Sri Lanka" },
-      currency: "LKR",
-      subtotal,
-      delivery_fee: deliveryFee,
-      total: subtotal + deliveryFee,
+      shipping_address: {
+        line1: addressLine,
+        line2: cleanText(address?.line2, 180),
+        city,
+        district,
+        postal_code: cleanText(address?.postal_code, 20),
+      },
       payment_method: paymentMethod,
-      payment_status: "pending",
-      order_status: "pending",
       customer_note: note || null,
-    }).select("id,order_number,subtotal,delivery_fee,total,payment_method,payment_status,order_status,created_at").single();
-    if (orderError || !order) {
-      console.error("Order insert failed", orderError?.message);
-      return respond(500, { error: "We could not save your order. Please try again." });
+      items,
+    };
+    // One database transaction owns product locks, price/stock checks, order
+    // and line inserts, stock decrement, and idempotent retry handling.
+    const { data: atomicResult, error: atomicError } = await admin.rpc("create_store_order_atomic", {
+      p_customer_id: user.id,
+      p_idempotency_key: idempotencyKey,
+      p_payload: atomicPayload,
+    });
+    if (atomicError || !atomicResult || typeof atomicResult !== "object") {
+      const reason = atomicError?.message || "atomic_order_failed";
+      console.error("Atomic order creation failed", reason);
+      if (/INSUFFICIENT_STOCK/i.test(reason)) return respond(409, { error: "There is not enough stock for one or more products. Refresh the catalogue and try again." });
+      if (/PRODUCT_UNAVAILABLE|PRODUCT_EXPIRED/i.test(reason)) return respond(409, { error: "A product or its collection is no longer available. Refresh the catalogue and try again." });
+      if (/IDEMPOTENCY_KEY_REUSED/i.test(reason)) return respond(409, { error: "Checkout details changed during a retry. Please review the basket and submit again." });
+      if (/INVALID_PRODUCT_PRICE|Invalid order|Invalid product|Only cash on delivery/i.test(reason)) return respond(400, { error: "The order details could not be validated. Review your basket and delivery details." });
+      return respond(500, { error: "We could not save your order securely. Please retry once." });
     }
-
-    const { error: itemsError } = await admin.from("store_order_items").insert(orderItems.map((item) => ({ ...item, order_id: order.id })));
-    if (itemsError) {
-      console.error("Order item insert failed", itemsError.message);
-      await admin.from("store_orders").delete().eq("id", order.id);
-      return respond(500, { error: "We could not save all order items. No order was kept; please try again." });
+    const order = atomicResult.order;
+    const orderItems = Array.isArray(atomicResult.items) ? atomicResult.items : [];
+    if (!order || !order.id || !order.order_number) {
+      console.error("Atomic order RPC returned an incomplete result");
+      return respond(500, { error: "The order result could not be confirmed. Please check My Orders before retrying." });
+    }
+    const subtotal = Number(order.subtotal);
+    const deliveryFee = Number(order.delivery_fee);
+    const replayed = atomicResult.replayed === true;
+    if (replayed) {
+      return respond(200, { order, items: orderItems, replayed: true, notifications: { google_sheets_configured: false, whatsapp_owner_configured: false } });
     }
 
     // Optional external notifications. Order creation must succeed even if an external provider is not configured or is temporarily unavailable.
@@ -255,7 +255,7 @@ Deno.serve(async (req: Request) => {
     // These integrations are deliberately best-effort; never lose a saved order because a notification provider is down.
     await Promise.all(notificationTasks);
 
-    return respond(201, { order, items: orderItems, notifications: {
+    return respond(201, { order, items: orderItems, replayed: false, notifications: {
       google_sheets_configured: Boolean(sheetsUrl && sheetsSecret),
       whatsapp_owner_configured: Boolean(waToken && waPhoneId && waAdmin && waTemplate),
     } });
