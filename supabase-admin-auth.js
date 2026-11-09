@@ -693,24 +693,30 @@
       window.addEventListener("pagehide", () => authModalObserver.disconnect(), { once: true });
     }
     window.openAdminAccess=async function(){
-      // Do not invoke the legacy entry point: it can route an authenticated
-      // owner into the newer dashboard instead of the original V18 Control Room.
+      // Every explicit Admin entry must pass through the email OTP step.
+      // End a persisted session first so a previous device session cannot
+      // silently bypass the owner's requested email verification.
       const showLogin=()=>{
         setOwnerNavVisible(false);
         if(typeof window.openModal==="function")window.openModal("adminAccessModal");
         else {const m=$("#adminAccessModal");if(m)m.style.display="";}
+        const email=$("#adminEmail");
+        if(email&&!email.value)email.value=OWNER_EMAILS[0];
         const s=$("#cicOwnerAuthStatus");if(s)s.hidden=true;
       };
       const client=db();
       if(!client){showLogin();return;}
       try{
         const {data,error}=await client.auth.getSession();
-        if(!error&&data&&data.session&&await isApprovedOwner(data.session.user)){
-          setOwnerNavVisible(true);
-          await openOriginalControlRoom();
-          return;
+        if(error){status("Could not check the saved owner session. Refresh and try again.",true);return;}
+        if(data&&data.session){
+          const {error:signOutError}=await client.auth.signOut();
+          if(signOutError){status("Could not safely end the previous Admin session. Please refresh and try again.",true);return;}
         }
-      }catch(_){}
+      }catch(_){
+        status("Could not prepare secure owner sign-in. Please refresh and try again.",true);
+        return;
+      }
       showLogin();
     };
     maybeOpenOwnerPrompt();
