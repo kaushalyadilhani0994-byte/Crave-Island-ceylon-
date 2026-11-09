@@ -241,7 +241,7 @@
     } catch (e) {
       const failureMessage = e && e.message ? e.message : "Order could not be saved. Please retry.";
       // Deterministic validation/stock rejections mean no order was committed; allow a corrected basket.
-      if (/not enough stock|stock changed|passed its recorded expiry|no longer available|product price or currency needs to be corrected/i.test(failureMessage)) {
+      if (/not enough stock|stock changed|passed its recorded expiry|no longer available|product price or currency needs to be corrected|some checkout details or basket items are invalid|order details could not be validated/i.test(failureMessage)) {
         try { sessionStorage.removeItem(storageKey); } catch (_) {}
       }
       message(failureMessage, true);
