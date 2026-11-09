@@ -253,7 +253,7 @@
   document.body.appendChild(ownerOrdersScript);
   const ownerProductsScript = document.createElement("script");
   ownerProductsScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerProductsScript.src = "supabase-admin-products.js?v=20261106-atomic-qr-save";
+  ownerProductsScript.src = "supabase-admin-products.js?v=20261110-expiry-date-validation-1";
   ownerProductsScript.defer = true;
   document.body.appendChild(ownerProductsScript);
   const secureCheckoutScript = document.createElement("script");
@@ -270,7 +270,7 @@
 
   const ownerAuthScript = document.createElement("script");
   ownerAuthScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerAuthScript.src = "supabase-admin-auth.js?v=20261109-otp-resend-cooldown-1";
+  ownerAuthScript.src = "supabase-admin-auth.js?v=20261110-fresh-otp-session-restore-1";
   ownerAuthScript.defer = true;
   document.body.appendChild(ownerAuthScript);
 
