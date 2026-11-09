@@ -731,21 +731,11 @@
       if(ownerUrl.searchParams.get("owner-access")==="1"){
         ownerUrl.searchParams.delete("owner-access");
         history.replaceState(history.state,"",ownerUrl.pathname+ownerUrl.search+ownerUrl.hash);
-        // Reuse the existing Control Room when this browser already has a
-        // verified owner session; only show the sign-in panel when needed.
-        window.setTimeout(async()=>{
-          const client=db();
-          if(client){
-            try{
-              const {data}=await client.auth.getSession();
-              if(data&&data.session&&await isApprovedOwner(data.session.user)){
-                setOwnerNavVisible(true);
-                openOriginalControlRoom();
-                return;
-              }
-            }catch(_){}
-          }
-          maybeOpenOwnerPrompt();
+        // Owner deep links must follow the same fresh email OTP path as
+        // tapping Admin; do not reuse a persisted session to bypass email check.
+        window.setTimeout(()=>{
+          if(typeof window.openAdminAccess==="function")window.openAdminAccess();
+          else maybeOpenOwnerPrompt();
         },350);
       }
     }catch(_){}
