@@ -215,16 +215,44 @@
       customer_note: document.getElementById("cicCheckoutNote").value.trim(),
       items
     };
+    // Reuse the same key after a network timeout so the server can replay the saved order.
+    if (!window.crypto || !window.crypto.subtle || typeof window.crypto.randomUUID !== "function") {
+      return message("Secure checkout is unavailable in this browser. Please open the store in an updated browser over HTTPS.", true);
+    }
+    let fingerprint;
+    try {
+      const fingerprintBytes = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(payload)));
+      fingerprint = Array.from(new Uint8Array(fingerprintBytes), b => b.toString(16).padStart(2, "0")).join("");
+    } catch (_) {
+      return message("Secure checkout could not prepare a safe retry token. Please refresh and try again.", true);
+    }
+    const storageKey = "cic_order_retry_" + user.id;
+    let retry = null;
+    try { retry = JSON.parse(sessionStorage.getItem(storageKey) || "null"); } catch (_) {}
+    if (retry && /^[0-9a-f-]{36}$/i.test(retry.key || "") && retry.fingerprint !== fingerprint) {
+      return message("A previous checkout attempt may still have been saved. Retry with the same details first, or check My Orders before starting another order.", true);
+    }
+    if (!retry || !/^[0-9a-f-]{36}$/i.test(retry.key || "")) {
+      retry = { fingerprint, key: window.crypto.randomUUID() };
+      try {
+        sessionStorage.setItem(storageKey, JSON.stringify(retry));
+        const savedRetry = JSON.parse(sessionStorage.getItem(storageKey) || "null");
+        if (!savedRetry || savedRetry.key !== retry.key || savedRetry.fingerprint !== fingerprint) throw new Error("storage_unavailable");
+      } catch (_) {
+        return message("Secure retry protection is unavailable in this browser session. Please enable session storage and try again; no order was submitted.", true);
+      }
+    }
     busy = true;
     const btn = document.getElementById("cicCheckoutPlace"); btn.disabled = true; btn.textContent = "Saving order securely…";
     message("Checking live product prices and saving your order…");
     try {
-      const idempotencyKey = await checkoutIdempotencyKey(payload);\n      const {data, error} = await db.functions.invoke("create-store-order", {body:payload, headers:{"Idempotency-Key":idempotencyKey}});
+      const {data, error} = await db.functions.invoke("create-store-order", {body:payload, headers: {"Idempotency-Key": retry.key}});
       if (error || !data || data.error || !data.order) {
         const reason = data && data.error ? data.error : (error && error.message ? error.message : "Please try again.");
         throw new Error(reason);
       }
-      const order = data.order;\n      try { sessionStorage.removeItem("cicCheckoutIdempotencyV1"); } catch (_) {}
+      const order = data.order;
+      try { sessionStorage.removeItem(storageKey); } catch (_) {}
       // Keep a convenience invoice snapshot only after the server confirms the order.
       // The database remains the source of truth; a local-storage failure must not undo an order.
       // Do not persist customer names, contact details, addresses, or order lines in browser localStorage.
@@ -236,7 +264,12 @@
       try { if (typeof window.clearCart === "function") window.clearCart(); else { localStorage.removeItem("crave_cart_v4"); localStorage.removeItem("crave_cart"); } } catch (_) {}
       try { if (typeof window.renderCart === "function") window.renderCart(); } catch (_) {}
     } catch (e) {
-      message(e && e.message ? e.message : "Order could not be saved. Please retry.", true);
+      const failureMessage = e && e.message ? e.message : "Order could not be saved. Please retry.";
+      // Deterministic validation/stock rejections mean no order was committed; allow a corrected basket.
+      if (/not enough stock|stock changed|passed its recorded expiry|no longer available|product price or currency needs to be corrected/i.test(failureMessage)) {
+        try { sessionStorage.removeItem(storageKey); } catch (_) {}
+      }
+      message(failureMessage, true);
     } finally {
       busy = false; btn.disabled = false; btn.textContent = "Place order securely";
     }
