@@ -262,7 +262,7 @@
         let target=null;
         for(const selector of def.selectors){target=document.querySelector(selector);if(target)break;}
         if(!target&&def.textMatch){
-          target=Array.from(document.querySelectorAll("button")).find(el=>def.textMatch.test(el.textContent||""));
+          target=Array.from(document.querySelectorAll("button")).find(el=>!el.hasAttribute("data-cic-live-node")&&def.textMatch.test(el.textContent||""));
         }
         const status=control.querySelector('[data-cic-live-status="'+kind+'"]');
         if(target){
