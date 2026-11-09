@@ -260,13 +260,31 @@
     }
   }
   async function openOriginalControlRoom(){
-    // Restore the original compact V18 owner dashboard. The dashboard performs
-    // its own fresh approved-owner check and launches the live Supabase tools.
-    const control=document.getElementById("controlRoomModal");
-    if(control){control.classList.remove("open");control.style.display="none";}
-    const hub=document.getElementById("cicOwnerToolsHub");
-    if(hub)hub.remove();
-    await openOwnerDashboard();
+    // Preserve the original V18 Control Room as the main owner workspace.
+    // Verify the current server-side owner session immediately before opening it.
+    const client=db();
+    if(!client){setOwnerNavVisible(false);status("Owner verification is unavailable. Please sign in again.",true);return;}
+    try{
+      const {data,error}=await client.auth.getUser();
+      if(error||!data||!data.user||!(await isApprovedOwner(data.user))){
+        setOwnerNavVisible(false);
+        status("Owner access denied. Sign in with an approved owner account.",true);
+        return;
+      }
+    }catch(_){setOwnerNavVisible(false);status("Owner verification failed. Please sign in again.",true);return;}
+    const extra=document.getElementById("cicOwnerDashboard");
+    if(extra)extra.remove();
+    setOwnerNavVisible(true);
+    if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
+    if(typeof window.openModal==="function")window.openModal("controlRoomModal");
+    else{
+      const control=document.getElementById("controlRoomModal");
+      if(control){control.classList.add("open");control.style.display="flex";}
+    }
+    if(typeof window.showAdminView==="function")window.showAdminView("overview");
+    // Mount the existing live modules inside the original Control Room without
+    // replacing its original categories, tabs, cards, or navigation.
+    installUnifiedLiveTools();
   }
   function addOwnerMenuReturnButton(dashboard){
     const control=document.getElementById("controlRoomModal");
