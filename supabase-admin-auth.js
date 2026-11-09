@@ -849,8 +849,13 @@
         if(event==="SIGNED_OUT"){setOwnerNavVisible(false);try{sessionStorage.removeItem("cicOwnerOtpVerified");}catch(_){}}
         if(session&&session.user)window.setTimeout(async()=>{
           let otpVerified=false;try{otpVerified=sessionStorage.getItem("cicOwnerOtpVerified")==="1";}catch(_){}
-          if(await isApprovedOwner(session.user)){try{sessionStorage.setItem("cicOwnerOtpVerified","1");localStorage.setItem("cicOwnerDeviceHint","1");}catch(_){}setOwnerNavVisible(true);}
-          else setOwnerNavVisible(false);
+          // A restored Supabase session is not proof of a fresh OTP in this tab.
+          // Only the explicit OTP verification or verified email-link callback may
+          // set cicOwnerOtpVerified and reveal the owner workspace.
+          if(otpVerified && await isApprovedOwner(session.user)){
+            try{localStorage.setItem("cicOwnerDeviceHint","1");}catch(_){}
+            setOwnerNavVisible(true);
+          }else setOwnerNavVisible(false);
         },250);
       });
       const url=new URL(window.location.href);
