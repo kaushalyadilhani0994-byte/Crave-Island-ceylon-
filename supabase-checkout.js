@@ -163,6 +163,32 @@
       message(unavailable ? "Password safety check is temporarily unavailable. Please try again shortly." : "Could not create the account. Check your email and try again.", true);
     } finally { btn.disabled = false; }
   }
+
+  async function checkoutIdempotencyKey(payload) {
+    if (!window.crypto || typeof window.crypto.randomUUID !== "function" || !window.crypto.subtle) {
+      throw new Error("Secure retry protection is unavailable on this browser. Please refresh and try again.");
+    }
+    const canonical = JSON.stringify(payload);
+    const digest = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
+    const payloadHash = Array.from(new Uint8Array(digest), x => x.toString(16).padStart(2, "0")).join("");
+    const storageKey = "cicCheckoutIdempotencyV1";
+    let previous = null;
+    try {
+      previous = JSON.parse(sessionStorage.getItem(storageKey) || "null");
+    } catch (_) {
+      throw new Error("Secure checkout retry storage is unavailable. Please try again in a normal browser tab.");
+    }
+    if (previous && previous.payloadHash === payloadHash && /^[0-9a-f-]{36}$/i.test(previous.key || "")) {
+      return previous.key;
+    }
+    const key = window.crypto.randomUUID();
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify({ key, payloadHash }));
+    } catch (_) {
+      throw new Error("Secure checkout retry storage is unavailable. Please try again in a normal browser tab.");
+    }
+    return key;
+  }
   async function placeOrder(event) {
     event.preventDefault();
     if (busy) return;
@@ -193,12 +219,12 @@
     const btn = document.getElementById("cicCheckoutPlace"); btn.disabled = true; btn.textContent = "Saving order securely…";
     message("Checking live product prices and saving your order…");
     try {
-      const {data, error} = await db.functions.invoke("create-store-order", {body:payload});
+      const idempotencyKey = await checkoutIdempotencyKey(payload);\n      const {data, error} = await db.functions.invoke("create-store-order", {body:payload, headers:{"Idempotency-Key":idempotencyKey}});
       if (error || !data || data.error || !data.order) {
         const reason = data && data.error ? data.error : (error && error.message ? error.message : "Please try again.");
         throw new Error(reason);
       }
-      const order = data.order;
+      const order = data.order;\n      try { sessionStorage.removeItem("cicCheckoutIdempotencyV1"); } catch (_) {}
       // Keep a convenience invoice snapshot only after the server confirms the order.
       // The database remains the source of truth; a local-storage failure must not undo an order.
       // Do not persist customer names, contact details, addresses, or order lines in browser localStorage.
