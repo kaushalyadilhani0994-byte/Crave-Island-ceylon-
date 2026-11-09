@@ -110,8 +110,16 @@
     const actions=modal&&$(".login-actions",modal);
     if(!modal||!email||!otp||!actions||modal.dataset.cicRealOtp==="true")return;
     modal.dataset.cicRealOtp="true";
-    // Preserve the original V18 role selector and role descriptions.
-    // Authentication and database approval checks still gate every admin action.
+    // The OTP screen is an authentication gate, not a role dashboard.
+    // Remove role previews, permission labels and the local-only invite form
+    // from this modal. The verified owner enters the original Control Room
+    // after Supabase Auth + staff_profiles approval succeed.
+    [".role-grid-v9", "#roleWorkspace", "#permissionList", ".invite-box"].forEach(selector=>{
+      const node=$(selector,modal);
+      if(node)node.remove();
+    });
+    const intro=$(".muted-note",modal);
+    if(intro)intro.textContent="Sign in with the approved Main Admin email. Request the secure email, then enter its 6-digit code. The original Control Room opens only after Supabase verifies your account and owner approval.";
     email.placeholder="Approved owner email";
     email.autocomplete="email";
     otp.type="text"; otp.inputMode="numeric"; otp.maxLength=6; otp.pattern="[0-9]{6}"; otp.autocomplete="one-time-code"; otp.placeholder="Enter code if the email contains one";
