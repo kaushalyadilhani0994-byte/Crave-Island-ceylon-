@@ -197,65 +197,118 @@
     if(!control)return;
     document.body.classList.add("cic-owner-shortcuts-unified");
 
-    // Keep the original Control Room as the single owner workspace.
-    // Live modules retain their own session/RLS checks; only their launch
-    // buttons are relocated here so they no longer float over the storefront.
-    let hub=document.getElementById("cicOwnerToolsHub");
-    if(!hub){
-      hub=document.createElement("section");
-      hub.id="cicOwnerToolsHub";
-      hub.setAttribute("aria-label","Owner tools");
-      hub.innerHTML='<h4>Live owner tools</h4><p>Manage your live store from this Control Room.</p><div class="cic-owner-tool-grid"><button type="button" data-cic-launch="catalogue">Catalogue & products</button><button type="button" data-cic-launch="orders">Orders & fulfilment</button><button type="button" data-cic-launch="passports">QR product passports</button><button type="button" data-cic-launch="alerts">Owner alerts</button></div><div class="cic-owner-tool-status" role="status" aria-live="polite"></div>';
-      const note=control.querySelector(".muted-note");
-      const tabs=control.querySelector(".admin-tabs");
-      if(note)note.insertAdjacentElement("afterend",hub);
-      else if(tabs)tabs.insertAdjacentElement("afterend",hub);
-      else control.querySelector(".sheet")?.prepend(hub);
-      hub.addEventListener("click",function(event){
-        const button=event.target.closest("[data-cic-launch]");
-        if(!button)return;
-        const kind=button.dataset.cicLaunch;
-        const selectors={
-          catalogue:["#cicOwnerCatalogueButton"],
-          orders:["#cicOwnerOrdersButton"],
-          passports:["#cicPassportButton"],
-          alerts:["#cicOwnerAlertsButton","#cicOwnerAlertButton","#cicAlertsButton"]
-        };
-        let target=null;
-        for(const selector of (selectors[kind]||[])){target=document.querySelector(selector);if(target)break;}
-        if(!target&&kind==="alerts"){
-          target=Array.from(document.querySelectorAll("button")).find(el=>/owner\s*alerts/i.test(el.textContent||""));
-        }
-        const status=hub.querySelector(".cic-owner-tool-status");
-        if(target){target.click();if(status)status.textContent="Opened "+button.textContent.trim()+".";}
-        else if(status)status.textContent="This tool is still connecting. Close and reopen Control Room in a moment.";
-      });
+    // Keep the original V18 Control Room as the only Admin layout.
+    // Remove the duplicate standalone Live Owner Tools panel and place each
+    // real owner-tool launcher inside its matching original category.
+    const duplicate=document.getElementById("cicOwnerToolsHub");
+    if(duplicate)duplicate.remove();
+    const oldStyle=document.getElementById("cic-owner-tools-hub-style");
+    if(oldStyle)oldStyle.remove();
+
+    const styleId="cic-live-node-actions-style";
+    if(!document.getElementById(styleId)){
       const style=document.createElement("style");
-      style.id="cic-owner-tools-hub-style";
-      style.textContent="#controlRoomModal .health-bar{display:none!important}#cicOwnerToolsHub{margin:12px 0;padding:14px;border:1px solid #d4af37;border-radius:14px;background:#fffaf1;color:#2c1a14}#cicOwnerToolsHub h4{font:400 21px Georgia,serif;margin:0 0 4px}#cicOwnerToolsHub p{font-size:11px;color:#78675c;margin:0 0 10px}#cicOwnerToolsHub .cic-owner-tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}#cicOwnerToolsHub button{border:1px solid #d4af37;background:#2c1a14;color:#fffaf1;border-radius:10px;padding:11px 9px;font-size:12px;font-weight:700}#cicOwnerToolsHub .cic-owner-tool-status{font-size:10px;color:#66564d;margin-top:8px;min-height:12px}#cicOwnerToolsHub button:focus-visible{outline:3px solid #d4af37;outline-offset:2px}@media(max-width:380px){#cicOwnerToolsHub .cic-owner-tool-grid{grid-template-columns:1fr}}";
+      style.id=styleId;
+      style.textContent="#controlRoomModal .cic-live-node-action{display:inline-flex;align-items:center;justify-content:center;margin:9px 8px 2px 0;padding:9px 13px;min-height:38px;border:1px solid #d4af37;border-radius:9px;background:#2c1a14;color:#fff8e7;font:700 12px system-ui;cursor:pointer}#controlRoomModal .cic-live-node-action:focus-visible{outline:3px solid #d4af37;outline-offset:2px}#controlRoomModal .cic-live-node-status{display:block;min-height:14px;margin-top:5px;font:11px system-ui;color:#66564d}";
       document.head.appendChild(style);
     }
 
-    const relocate=function(){
-      const known=[
-        ["#cicOwnerCatalogueButton","catalogue"],
-        ["#cicOwnerOrdersButton","orders"],
-        ["#cicPassportButton","passports"]
-      ];
-      known.forEach(([selector,kind])=>{
-        const button=document.querySelector(selector);
-        if(button){
-          button.hidden=true;
-          button.style.setProperty("display","none","important");
-          button.setAttribute("aria-hidden","true");
+    const definitions=[
+      {key:"catalogue",title:"Catalogue & Products",label:"Open live Catalogue & Stock",selectors:["#cicOwnerCatalogueButton"]},
+      {key:"orders",title:"Orders & Customers",label:"Open live Orders & Fulfilment",selectors:["#cicOwnerOrdersButton"]},
+      {key:"passports",title:"Certificates & QR",label:"Open live QR Product Passports",selectors:["#cicPassportButton"]},
+      {key:"alerts",title:"Security & Audit",label:"Open live Owner Alerts",selectors:["#cicOwnerAlertsButton","#cicOwnerAlertButton","#cicAlertsButton"],textMatch:/owner\s*alerts/i}
+    ];
+
+    definitions.forEach(def=>{
+      const node=Array.from(control.querySelectorAll("details.admin-node")).find(item=>
+        (item.querySelector("summary")?.textContent||"").trim().toLowerCase()===def.title.toLowerCase()
+      );
+      if(!node)return;
+      const body=node.querySelector(".node-body");
+      if(!body)return;
+      // The old local/demo launchers in these four sections must not compete
+      // with the real Supabase-backed owner tools.
+      const preview=body.querySelector(".node-open");
+      if(preview){preview.hidden=true;preview.style.setProperty("display","none","important");}
+      let action=body.querySelector('[data-cic-live-node="'+def.key+'"]');
+      if(!action){
+        action=document.createElement("button");
+        action.type="button";
+        action.className="cic-live-node-action";
+        action.dataset.cicLiveNode=def.key;
+        action.textContent=def.label;
+        body.appendChild(action);
+      }
+      let status=body.querySelector('[data-cic-live-status="'+def.key+'"]');
+      if(!status){
+        status=document.createElement("span");
+        status.className="cic-live-node-status";
+        status.dataset.cicLiveStatus=def.key;
+        status.setAttribute("role","status");
+        status.setAttribute("aria-live","polite");
+        action.insertAdjacentElement("afterend",status);
+      }
+    });
+
+    if(!control.dataset.cicLiveNodeHandler){
+      control.dataset.cicLiveNodeHandler="1";
+      control.addEventListener("click",function(event){
+        const action=event.target.closest("[data-cic-live-node]");
+        if(!action)return;
+        const kind=action.dataset.cicLiveNode;
+        const def=definitions.find(item=>item.key===kind);
+        if(!def)return;
+        let target=null;
+        for(const selector of def.selectors){target=document.querySelector(selector);if(target)break;}
+        if(!target&&def.textMatch){
+          target=Array.from(document.querySelectorAll("button")).find(el=>def.textMatch.test(el.textContent||""));
+        }
+        const status=control.querySelector('[data-cic-live-status="'+kind+'"]');
+        if(target){
+          target.click();
+          if(status)status.textContent="Live owner tool opened.";
+        }else if(status){
+          status.textContent="This live tool is still loading. Close and reopen Admin, then try again.";
         }
       });
-      const alerts=Array.from(document.querySelectorAll("button")).find(el=>/owner\s*alerts/i.test(el.textContent||"")&&!hub.contains(el));
-      if(alerts){alerts.hidden=true;alerts.style.setProperty("display","none","important");alerts.setAttribute("aria-hidden","true");}
+    }
+
+    // Owner modules mount asynchronously. Re-run the small, idempotent
+    // placement routine when their launch buttons appear.
+    const relocate=()=>{
+      definitions.forEach(def=>{
+        for(const selector of def.selectors){
+          const button=document.querySelector(selector);
+          if(button){
+            button.hidden=true;
+            button.style.setProperty("display","none","important");
+            button.setAttribute("aria-hidden","true");
+          }
+        }
+        if(def.textMatch){
+          const button=Array.from(document.querySelectorAll("button")).find(el=>def.textMatch.test(el.textContent||"")&&!control.contains(el));
+          if(button){button.hidden=true;button.style.setProperty("display","none","important");button.setAttribute("aria-hidden","true");}
+        }
+      });
     };
     relocate();
     if(!window.__cicOwnerToolsObserver){
-      window.__cicOwnerToolsObserver=new MutationObserver(()=>relocate());
+      window.__cicOwnerToolsObserver=new MutationObserver(()=>{
+        relocate();
+        if(control.classList.contains("open")||control.style.display==="flex"){
+          definitions.forEach(def=>{
+            const node=Array.from(control.querySelectorAll("details.admin-node")).find(item=>(item.querySelector("summary")?.textContent||"").trim().toLowerCase()===def.title.toLowerCase());
+            const body=node&&node.querySelector(".node-body");
+            if(body&&!body.querySelector('[data-cic-live-node="'+def.key+'"]')){
+              const action=document.createElement("button");
+              action.type="button";action.className="cic-live-node-action";action.dataset.cicLiveNode=def.key;action.textContent=def.label;body.appendChild(action);
+              const status=document.createElement("span");status.className="cic-live-node-status";status.dataset.cicLiveStatus=def.key;status.setAttribute("role","status");status.setAttribute("aria-live","polite");action.insertAdjacentElement("afterend",status);
+              const preview=body.querySelector(".node-open");if(preview){preview.hidden=true;preview.style.setProperty("display","none","important");}
+            }
+          });
+        }
+      });
       window.__cicOwnerToolsObserver.observe(document.body,{childList:true,subtree:true});
     }
   }
