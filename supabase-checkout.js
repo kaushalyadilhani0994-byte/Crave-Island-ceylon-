@@ -164,31 +164,6 @@
     } finally { btn.disabled = false; }
   }
 
-  async function checkoutIdempotencyKey(payload) {
-    if (!window.crypto || typeof window.crypto.randomUUID !== "function" || !window.crypto.subtle) {
-      throw new Error("Secure retry protection is unavailable on this browser. Please refresh and try again.");
-    }
-    const canonical = JSON.stringify(payload);
-    const digest = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
-    const payloadHash = Array.from(new Uint8Array(digest), x => x.toString(16).padStart(2, "0")).join("");
-    const storageKey = "cicCheckoutIdempotencyV1";
-    let previous = null;
-    try {
-      previous = JSON.parse(sessionStorage.getItem(storageKey) || "null");
-    } catch (_) {
-      throw new Error("Secure checkout retry storage is unavailable. Please try again in a normal browser tab.");
-    }
-    if (previous && previous.payloadHash === payloadHash && /^[0-9a-f-]{36}$/i.test(previous.key || "")) {
-      return previous.key;
-    }
-    const key = window.crypto.randomUUID();
-    try {
-      sessionStorage.setItem(storageKey, JSON.stringify({ key, payloadHash }));
-    } catch (_) {
-      throw new Error("Secure checkout retry storage is unavailable. Please try again in a normal browser tab.");
-    }
-    return key;
-  }
   async function placeOrder(event) {
     event.preventDefault();
     if (busy) return;
