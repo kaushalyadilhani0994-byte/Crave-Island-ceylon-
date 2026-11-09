@@ -199,7 +199,8 @@
   function installUnifiedLiveTools(){
     const control=document.getElementById("controlRoomModal");
     if(!control)return;
-    document.body.classList.add("cic-owner-shortcuts-unified");
+    // Installing live-tool buttons must never grant owner access. The verified
+    // OTP flow alone may add cic-owner-shortcuts-unified to the document body.
 
     // Keep the original V18 Control Room as the only Admin layout.
     // Remove the duplicate standalone Live Owner Tools panel and place each
