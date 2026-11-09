@@ -111,7 +111,6 @@ if($("#cicPassPublished").checked&&product.is_active!==true){message("This produ
 const mfg=$("#cicPassMfg").value,best=$("#cicPassBest").value;
 if(mfg&&best&&mfg>best){message("Manufacturing date cannot be later than the expiry / best-before date.");return}
 const btn=$("#cicPassSave");
-if(row.published){try{await ensureQrLibrary()}catch(qrError){message("The local QR generator could not load. No passport changes were saved; refresh and retry.");return}}
 btn.textContent="Saving…";
 const row={
 manufacturing_date:mfg||null,
@@ -125,6 +124,7 @@ storage_instructions:$("#cicPassStorage").value.trim()||null,
 public_story:$("#cicPassStory").value.trim()||null,
 published:$("#cicPassPublished").checked
 };
+if(row.published){try{await ensureQrLibrary()}catch(qrError){message("The local QR generator could not load. No passport changes were saved; refresh and retry.");btn.textContent="Save product passport";return}}
 let data,error;
 try {
 const response=await db.rpc("owner_update_product_passport",{
