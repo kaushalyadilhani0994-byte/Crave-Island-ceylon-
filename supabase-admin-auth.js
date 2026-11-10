@@ -22,7 +22,7 @@
   function isOwnerEmail(email) {
     return OWNER_EMAILS.includes(String(email||"").trim().toLowerCase());
   }
-  const OTP_RESEND_WAIT_MS = 25000;
+  const OTP_RESEND_WAIT_MS = 60000;
   function startOtpCooldown(button, until) {
     if (!button) return;
     const previous = Number(button.dataset.cicOtpTimer || 0);
@@ -193,14 +193,14 @@
         if(error.code==="over_email_send_rate_limit"||error.status===429){
           cooldownUntil=Date.now()+OTP_RESEND_WAIT_MS;
           try{localStorage.setItem("cicOwnerOtpNextSendAt",String(cooldownUntil));}catch(_){}
-          status("Supabase is protecting this email from repeated requests. Please wait 25 seconds before trying again.",true);
+          status("Supabase is protecting this email from repeated requests. Please wait 60 seconds before trying again.",true);
         }else{
           status("Supabase could not send the owner sign-in email"+(detail?" ("+detail+")":".")+" Check the exact approved owner email, email rate limit, and Auth SMTP/Resend delivery settings. No login code was issued.",true);
         }
       }else{
         cooldownUntil=Date.now()+OTP_RESEND_WAIT_MS;
         try{localStorage.setItem("cicOwnerOtpNextSendAt",String(cooldownUntil));}catch(_){}
-        status("Supabase accepted the owner sign-in email request. Check Inbox, Spam, Promotions and All Mail. Wait 25 seconds before requesting another code. If no message arrives within 2 minutes, do not keep resending; check Auth email delivery. Owner approval is still required.");
+        status("Supabase accepted the owner sign-in email request. Check Inbox, Spam, Promotions and All Mail. Wait 60 seconds before requesting another code. If no message arrives within 2 minutes, do not keep resending; check Auth email delivery. Owner approval is still required.");
       }
     }catch(e){
       console.warn("[CRAVE owner sign-in] OTP request connection failure", {name:e&&e.name||"Error"});
