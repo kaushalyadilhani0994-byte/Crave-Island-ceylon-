@@ -221,22 +221,28 @@ main{display:block!important;position:relative!important;margin:0!important;padd
 <div class="cic-admin-welcome"><div><span class="cic-admin-kicker">CRAVE ISLAND CEYLON · OWNER WORKSPACE</span><h4>Good to see you, Main Admin</h4><p>One secure place to manage your store, products, orders and product passports.</p></div><span class="cic-admin-secure">● Owner verified</span></div>
 <div class="admin-tabs cic-admin-tabs" role="tablist" aria-label="Admin sections">
 <button class="active" onclick="showAdminView('overview',this)">Overview</button>
-<button onclick="showAdminView('catalog',this)">Catalogue & Stock</button>
-<button onclick="showAdminView('orders',this)">Orders</button>
+<button onclick="cicOpenLiveNode('catalogue',this)">Catalogue & Stock</button>
+<button onclick="cicOpenLiveNode('orders',this)">Orders</button>
 <button onclick="cicOpenPassportAdmin(this)">QR Passports</button>
 <button onclick="showAdminView('team',this)">Team & Roles</button>
 <button onclick="showAdminView('security',this)">Security & Alerts</button>
 <button onclick="showAdminView('brand',this)">Store Settings</button>
 <button onclick="showAdminView('automation',this)">Automation</button>
 </div>
+<div id="v7AdminMap" class="admin-map" aria-hidden="true">
+<details class="admin-node"><summary>Catalogue & Products</summary><div class="node-body"><button class="node-open" type="button">Legacy catalogue preview</button></div></details>
+<details class="admin-node"><summary>Orders & Customers</summary><div class="node-body"><button class="node-open" type="button">Legacy orders preview</button></div></details>
+<details class="admin-node"><summary>Certificates & QR</summary><div class="node-body"><button class="node-open" type="button">Legacy QR preview</button></div></details>
+<details class="admin-node"><summary>Security & Audit</summary><div class="node-body"><button class="node-open" type="button">Legacy alerts preview</button></div></details>
+</div>
 <div class="cic-admin-status"><span><i class="cic-live-dot"></i> Live Supabase-backed sections</span><span>Catalogue · Stock · Orders · QR · Owner alerts</span></div>
 <div id="admin-overview" class="admin-view active">
 <div class="cic-admin-grid">
-<button class="cic-admin-tile" onclick="showAdminView('catalog')"><span class="cic-admin-icon">▦</span><b>Catalogue & Stock</b><small>Add products, update prices, batches, expiry dates and stock levels.</small><em>Open catalogue →</em></button>
-<button class="cic-admin-tile" onclick="showAdminView('orders')"><span class="cic-admin-icon">▤</span><b>Orders & Fulfilment</b><small>Review customer orders, payment status and fulfilment progress.</small><em>Open orders →</em></button>
-<button class="cic-admin-tile" onclick="cicOpenPassportAdmin()"><span class="cic-admin-icon">▧</span><b>QR Product Passports</b><small>Manage verified batch information, publish passports and print QR labels.</small><em>Open QR passports →</em></button>
+<button class="cic-admin-tile" onclick="cicOpenLiveNode('catalogue')"><span class="cic-admin-icon">▦</span><b>Catalogue & Stock</b><small>Add products, update prices, batches, expiry dates and stock levels.</small><em>Open catalogue →</em></button>
+<button class="cic-admin-tile" onclick="cicOpenLiveNode('orders')"><span class="cic-admin-icon">▤</span><b>Orders & Fulfilment</b><small>Review customer orders, payment status and fulfilment progress.</small><em>Open orders →</em></button>
+<button class="cic-admin-tile" onclick="cicOpenLiveNode('passports')"><span class="cic-admin-icon">▧</span><b>QR Product Passports</b><small>Manage verified batch information, publish passports and print QR labels.</small><em>Open QR passports →</em></button>
 <button class="cic-admin-tile" onclick="showAdminView('team')"><span class="cic-admin-icon">♙</span><b>Team & Roles</b><small>Review owner-approved team access and assigned permissions.</small><em>Open team access →</em></button>
-<button class="cic-admin-tile" onclick="showAdminView('security')"><span class="cic-admin-icon">◇</span><b>Security & Owner Alerts</b><small>Review security guidance, owner alerts and operational warnings.</small><em>Open security →</em></button>
+<button class="cic-admin-tile" onclick="cicOpenLiveNode('alerts')"><span class="cic-admin-icon">◇</span><b>Security & Owner Alerts</b><small>Review security guidance, owner alerts and operational warnings.</small><em>Open security →</em></button>
 <button class="cic-admin-tile" onclick="showAdminView('brand')"><span class="cic-admin-icon">⚙</span><b>Store Settings</b><small>Business details and settings currently available in this workspace.</small><em>Open settings →</em></button>
 </div>
 <div class="cic-admin-footnote"><b>Workspace status</b><span>Live tools are connected where indicated. Payment gateway, invoice automation and separate staff workspaces still require their own implementation and verification.</span></div>
@@ -537,13 +543,17 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
 @media(max-width:350px){#controlRoomModal .cic-admin-grid{grid-template-columns:1fr}#controlRoomModal .cic-admin-tile{min-height:125px}}
 </style>
 <script>
-window.cicOpenPassportAdmin=function(button){
+window.cicOpenLiveNode=function(kind,button){
   document.querySelectorAll('#controlRoomModal .cic-admin-tabs button').forEach(el=>el.classList.remove('active'));
   if(button)button.classList.add('active');
-  const passportButton=document.getElementById('cicPassportButton');
-  if(passportButton&&!passportButton.hidden){passportButton.click();return;}
-  if(typeof window.toast==='function')window.toast('Please sign in with the approved owner account to open QR Passports.');
+  const node=document.querySelector('#controlRoomModal [data-cic-live-node="'+kind+'"]');
+  if(node){node.click();return;}
+  const fallback={catalogue:'cicOwnerCatalogueButton',orders:'cicOwnerOrdersButton',passports:'cicPassportButton',alerts:'cicOwnerAlertsButton'};
+  const target=document.getElementById(fallback[kind]||'');
+  if(target&&!target.hidden){target.click();return;}
+  if(typeof window.toast==='function')window.toast('This live admin tool is still loading. Close and reopen Admin, then try again.');
 };
+window.cicOpenPassportAdmin=function(button){window.cicOpenLiveNode('passports',button);};
 </script>
 
 </body>
