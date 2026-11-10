@@ -78,7 +78,7 @@
         bottom.appendChild(adminButton);
       }
       if (bottom) {
-        const count = Math.max(1, Array.from(bottom.querySelectorAll(".nav")).filter(el => !el.classList.contains("nav-qr-passport") && getComputedStyle(el).display !== "none").length);
+        const count = Math.max(1, Array.from(bottom.querySelectorAll(".nav")).filter(el => getComputedStyle(el).display !== "none").length);
         bottom.style.setProperty("grid-template-columns", "repeat(" + count + ",minmax(0,1fr))", "important");
       }
       if (adminButton) adminButton.style.setProperty("display", "flex", "important");
