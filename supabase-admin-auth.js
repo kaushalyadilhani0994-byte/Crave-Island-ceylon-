@@ -543,7 +543,7 @@
       }
       if(!data.length){list.textContent="No team profiles yet. Use the invitation form above to add your first staff member.";return;}
       const actionLabels={read:"View",create:"Add",update:"Edit",delete:"Delete",approve:"Approve",export:"Export"};
-      const roleOptions=[["supervisor","Supervisor"],["staff","Staff"],["media","Media"],["accounts","Accounts"],["star_club","Loyalty / Star Club"]];
+      const roleOptions=[["supervisor","Supervisor"],["staff","Staff"],["media","Media"],["accounts","Accounts"]];
       list.innerHTML=data.map(member=>{
         const permissions=member.permissions&&typeof member.permissions==="object"&&!Array.isArray(member.permissions)?member.permissions:{};
         const badges=Object.entries(permissions).flatMap(([moduleName,actions])=>{
