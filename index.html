@@ -218,25 +218,28 @@ main{display:block!important;position:relative!important;margin:0!important;padd
 
 <div class="modal" id="controlRoomModal"><div class="sheet"><div class="sheet-head"><h3>CRAVE Control Room</h3><button class="close" onclick="closeModal('controlRoomModal')">×</button></div>
 <p class="muted-note">Owner-only workspace. Open live Catalogue & Stock, Orders, QR Product Passports and Owner Alerts from their matching sections below. Other legacy sections are retained as reference panels until their live editors are connected.</p>
-<div class="admin-tabs">
-<button class="active" onclick="showAdminView('overview',this)">Overview</button><button onclick="showAdminView('catalog',this)">Catalog</button><button onclick="showAdminView('orders',this)">Orders</button><button onclick="showAdminView('brand',this)">Brand</button><button onclick="showAdminView('automation',this)">Automation</button><button onclick="showAdminView('security',this)">Security</button>
+<div class="cic-admin-welcome"><div><span class="cic-admin-kicker">CRAVE ISLAND CEYLON · OWNER WORKSPACE</span><h4>Good to see you, Main Admin</h4><p>One secure place to manage your store, products, orders and product passports.</p></div><span class="cic-admin-secure">● Owner verified</span></div>
+<div class="admin-tabs cic-admin-tabs" role="tablist" aria-label="Admin sections">
+<button class="active" onclick="showAdminView('overview',this)">Overview</button>
+<button onclick="showAdminView('catalog',this)">Catalogue & Stock</button>
+<button onclick="showAdminView('orders',this)">Orders</button>
+<button onclick="cicOpenPassportAdmin(this)">QR Passports</button>
+<button onclick="showAdminView('team',this)">Team & Roles</button>
+<button onclick="showAdminView('security',this)">Security & Alerts</button>
+<button onclick="showAdminView('brand',this)">Store Settings</button>
+<button onclick="showAdminView('automation',this)">Automation</button>
 </div>
-<div id="v7AdminMap" class="admin-map">
-  <details class="admin-node"><summary>Store Settings</summary><div class="node-body"><p>Brand, contact, delivery and checkout rules.</p><div class="node-items"><div class="node-item"><b>Brand identity</b><span>Name, tagline, logo, opening</span></div><div class="node-item"><b>Business contact</b><span>WhatsApp, email, support</span></div><div class="node-item"><b>Delivery</b><span>Zones, fees, COD rules</span></div></div><button class="secondary-btn node-open" onclick="showAdminView('brand')">Open settings</button></div></details>
-  <details class="admin-node"><summary>Catalogue & Products</summary><div class="node-body"><p>Add and manage items without touching HTML in the production system.</p><div class="node-items"><div class="node-item"><b>Products</b><span>Name, price, photos, variants</span></div><div class="node-item"><b>Categories</b><span>Collections and visibility</span></div><div class="node-item"><b>Stock</b><span>Quantity and low-stock rules</span></div></div><button class="secondary-btn node-open" onclick="showAdminView('catalog')">Open catalogue</button></div></details>
-  <details class="admin-node"><summary>Orders & Customers</summary><div class="node-body"><div class="node-items"><div class="node-item"><b>Orders</b><span>Status, fulfilment, cancellation</span></div><div class="node-item"><b>Customer details</b><span>Delivery + contact</span></div><div class="node-item"><b>Invoices</b><span>Bill history and re-order</span></div></div><button class="secondary-btn node-open" onclick="showAdminView('orders')">Open orders</button></div></details>
-  <details class="admin-node"><summary>Gift Hampers</summary><div class="node-body"><p>Gift mode groups selected products into one hamper order. Normal shopping stays normal.</p><div class="node-items"><div class="node-item"><b>Hamper builder</b><span>Choose products + quantities</span></div><div class="node-item"><b>Gift note</b><span>Optional message / occasion</span></div></div><button class="secondary-btn node-open" onclick="openModal('hamperModal')">Open hamper builder</button></div></details>
-  <details class="admin-node"><summary>Media & Social</summary><div class="node-body"><div class="node-items"><div class="node-item"><b>Media Clips</b><span>Reels, voice, photos, films</span></div><div class="node-item"><b>Social channels</b><span>Connect through backend</span></div><div class="node-item"><b>Customer feedback</b><span>Approved testimonials / media</span></div></div><button class="secondary-btn node-open" onclick="openModal('socialModal')">Open Social Control Centre</button><button class="gold-outline" onclick="openModal('mediaModal')">Open Media Lounge</button></div></details>
-  <details class="admin-node"><summary>Loyalty, Star Points & Scratch Cards</summary><div class="node-body"><div class="node-items"><div class="node-item"><b>Star Points</b><span>Rules, awards, expiry</span></div><div class="node-item"><b>Scratch Cards</b><span>Campaigns and rewards</span></div><div class="node-item"><b>Vouchers</b><span>Codes, dates, limits</span></div></div><button class="secondary-btn node-open" onclick="openModal('loyaltyModal')">Open loyalty</button></div></details>
-  <details class="admin-node"><summary>Certificates & QR</summary><div class="node-body"><div class="node-items"><div class="node-item"><b>Product passport</b><span>Ingredients, batch, story</span></div><div class="node-item"><b>Certificates</b><span>Upload + expiry reminder</span></div><div class="node-item"><b>QR codes</b><span>Generate / download</span></div></div><button class="secondary-btn node-open" onclick="openModal('qrModal')">Open QR centre</button></div></details>
-  <details class="admin-node"><summary>Invoices, Payments & Bank Transfer</summary><div class="node-body"><div class="node-items"><div class="node-item"><b>Online payment</b><span>Gateway configuration</span></div><div class="node-item"><b>Bank transfer</b><span>Verified business account</span></div><div class="node-item"><b>COD</b><span>Area / order limits</span></div></div><button class="secondary-btn node-open" onclick="showAdminView('brand')">Open payment settings</button></div></details>
-  <details class="admin-node"><summary>Automations</summary><div class="node-body"><div class="node-items"><div class="node-item"><b>Invoice</b><span>After verified order</span></div><div class="node-item"><b>Feedback</b><span>2 days after delivery</span></div><div class="node-item"><b>Follow-up</b><span>Loyalty / media invite</span></div></div><button class="secondary-btn node-open" onclick="showAdminView('automation')">Open automation</button></div></details>
-  <details class="admin-node"><summary>Team & Roles</summary><div class="node-body"><div class="node-items"><div class="node-item"><b>Main Admin</b><span>Everything + team + security</span></div><div class="node-item"><b>Supervisor</b><span>Operations + stock + orders</span></div><div class="node-item"><b>Staff</b><span>Assigned tasks only</span></div><div class="node-item"><b>Media</b><span>Content + social only</span></div><div class="node-item"><b>Accounts</b><span>Invoices + payments only</span></div></div><button class="secondary-btn node-open" onclick="showAdminView('team')">Open team access</button></div></details>
-  <details class="admin-node"><summary>Security & Audit</summary><div class="node-body"><div class="node-items"><div class="node-item"><b>Warnings</b><span>Blocked / unusual action</span></div><div class="node-item"><b>Audit log</b><span>Who changed what</span></div><div class="node-item"><b>MFA</b><span>Required for owner/admin</span></div></div><button class="secondary-btn node-open" onclick="showAdminView('security')">Open security</button></div></details>
-</div>
-<div class="health-bar"><div class="health-top"><span>ADMIN MODULE STATUS</span><span>LIVE / IN PROGRESS</span></div><div class="health-note">Live owner tools: Catalogue &amp; Stock · Orders &amp; Fulfilment · QR Product Passports · Owner Alerts. Separate Supervisor, Staff, Media and Accounts workspaces, plus invoice/payment tools, are not yet enabled. This panel does not claim those features are complete.</div></div>
+<div class="cic-admin-status"><span><i class="cic-live-dot"></i> Live Supabase-backed sections</span><span>Catalogue · Stock · Orders · QR · Owner alerts</span></div>
 <div id="admin-overview" class="admin-view active">
-<div class="automation"><h4>Owner Control Room</h4><p>Use the matching sections above to manage the live Supabase-backed tools. Catalogue &amp; Stock manages product records and inventory. Orders &amp; Customers opens live order fulfilment. Certificates &amp; QR opens product passports. Security &amp; Audit opens owner alerts.</p><p><strong>Not enabled yet:</strong> separate Supervisor, Staff, Media and Accounts workspaces; live invoice/payment management; automated loyalty and customer follow-up journeys. The old local/demo counts and sample journey have been removed so they cannot be mistaken for real business records.</p></div>
+<div class="cic-admin-grid">
+<button class="cic-admin-tile" onclick="showAdminView('catalog')"><span class="cic-admin-icon">▦</span><b>Catalogue & Stock</b><small>Add products, update prices, batches, expiry dates and stock levels.</small><em>Open catalogue →</em></button>
+<button class="cic-admin-tile" onclick="showAdminView('orders')"><span class="cic-admin-icon">▤</span><b>Orders & Fulfilment</b><small>Review customer orders, payment status and fulfilment progress.</small><em>Open orders →</em></button>
+<button class="cic-admin-tile" onclick="cicOpenPassportAdmin()"><span class="cic-admin-icon">▧</span><b>QR Product Passports</b><small>Manage verified batch information, publish passports and print QR labels.</small><em>Open QR passports →</em></button>
+<button class="cic-admin-tile" onclick="showAdminView('team')"><span class="cic-admin-icon">♙</span><b>Team & Roles</b><small>Review owner-approved team access and assigned permissions.</small><em>Open team access →</em></button>
+<button class="cic-admin-tile" onclick="showAdminView('security')"><span class="cic-admin-icon">◇</span><b>Security & Owner Alerts</b><small>Review security guidance, owner alerts and operational warnings.</small><em>Open security →</em></button>
+<button class="cic-admin-tile" onclick="showAdminView('brand')"><span class="cic-admin-icon">⚙</span><b>Store Settings</b><small>Business details and settings currently available in this workspace.</small><em>Open settings →</em></button>
+</div>
+<div class="cic-admin-footnote"><b>Workspace status</b><span>Live tools are connected where indicated. Payment gateway, invoice automation and separate staff workspaces still require their own implementation and verification.</span></div>
 </div>
 <div id="admin-catalog" class="admin-view">
 <div class="section-tight"><h4 style="font:400 21px Georgia,serif;margin:12px 0 5px">Quick Product Add</h4><div class="form-grid"><div class="field"><label>Product name</label><input id="adminPName"></div><div class="field"><label>Price (LKR)</label><input id="adminPPrice" inputmode="numeric"></div><div class="field"><label>Category</label><input id="adminPCat" placeholder="Homemade Chocolates"></div><div class="field"><label>Image URL</label><input id="adminPImg" placeholder="https://..."></div><div class="field full"><label>Description</label><textarea id="adminPDesc"></textarea></div></div><div class="tiny-actions"><button class="goldbtn" onclick="adminAddProduct()">Add Product</button><button class="secondary-btn" onclick="adminExportData()">Export Settings</button></div><div class="admin-note">For production, image uploads should go to Supabase Storage and product records to the products table.</div></div>
@@ -483,5 +486,65 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
   hideLegacyControls();
 })();
 </script>
+<style id="cic-owner-control-room-polish">
+#controlRoomModal .sheet{width:min(980px,100%);max-height:92dvh;padding:clamp(13px,3vw,24px);border:1px solid #d4af3780;background:linear-gradient(180deg,#fffdf8,#f7f0e7)}
+#controlRoomModal .sheet-head{position:sticky;top:-1px;z-index:5;margin:-2px -2px 10px;padding:3px 2px 11px;background:#fffdf8ed;backdrop-filter:blur(12px);border-bottom:1px solid #e7ddd4}
+#controlRoomModal .sheet-head h3{font:400 clamp(23px,5vw,31px) Georgia,serif;letter-spacing:.1px}
+#controlRoomModal .close{flex:0 0 36px}
+#controlRoomModal .muted-note{display:none}
+#controlRoomModal #v7AdminMap{display:none!important}
+#controlRoomModal .health-bar{display:none!important}
+#controlRoomModal .cic-admin-welcome{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px;border:1px solid #d4af3755;border-radius:16px;background:radial-gradient(circle at 95% 0,#72502a 0,#382116 48%,#1b100b 100%);color:#fff;margin:7px 0 12px}
+#controlRoomModal .cic-admin-kicker{font-size:9px;letter-spacing:1.8px;font-weight:800;color:#efd27b}
+#controlRoomModal .cic-admin-welcome h4{font:400 clamp(21px,5vw,27px) Georgia,serif;margin:6px 0 4px;color:#fff}
+#controlRoomModal .cic-admin-welcome p{font-size:11px;line-height:1.5;margin:0;color:#eaded5}
+#controlRoomModal .cic-admin-secure{white-space:nowrap;border:1px solid #b6d7a8;border-radius:999px;padding:7px 10px;color:#e3f5d8;font-size:9px;font-weight:800}
+#controlRoomModal .cic-admin-tabs{display:flex;gap:7px;overflow-x:auto;scrollbar-width:thin;padding:5px 1px 9px;margin:0 0 7px;position:sticky;top:49px;z-index:4;background:#fffaf2ed;backdrop-filter:blur(10px)}
+#controlRoomModal .cic-admin-tabs button{flex:0 0 auto;border:1px solid #dfd1c3;background:#fff;border-radius:999px;padding:9px 12px;font-size:10px;font-weight:800;color:#4b3528;white-space:nowrap}
+#controlRoomModal .cic-admin-tabs button.active{background:#2c1a14;color:#efd27b;border-color:#d4af37;box-shadow:0 3px 10px #2c1a141c}
+#controlRoomModal .cic-admin-status{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:9px 11px;border:1px solid #e4d9cb;border-radius:11px;background:#fff;font-size:9px;color:#6c5b4f;margin:0 0 12px}
+#controlRoomModal .cic-admin-status>span:first-child{font-weight:800;color:#2c1a14}
+#controlRoomModal .cic-live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#29965b;margin-right:6px;box-shadow:0 0 0 3px #29965b20}
+#controlRoomModal .cic-admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:8px}
+#controlRoomModal .cic-admin-tile{display:flex;flex-direction:column;align-items:flex-start;min-height:154px;text-align:left;border:1px solid #e5d9ca;border-radius:15px;background:linear-gradient(155deg,#fff,#fbf5ec);padding:14px;color:#2c1a14;box-shadow:0 4px 14px #2c1a1408;transition:transform .15s,border-color .15s}
+#controlRoomModal .cic-admin-tile:active{transform:scale(.985);border-color:#d4af37}
+#controlRoomModal .cic-admin-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:#2c1a14;color:#efd27b;font-size:19px;margin-bottom:10px}
+#controlRoomModal .cic-admin-tile b{font:400 18px Georgia,serif}
+#controlRoomModal .cic-admin-tile small{font-size:10px;line-height:1.5;color:#78685c;margin-top:5px}
+#controlRoomModal .cic-admin-tile em{font-style:normal;font-size:9px;font-weight:800;color:#8a651c;margin-top:auto;padding-top:12px}
+#controlRoomModal .cic-admin-footnote{display:grid;gap:4px;margin-top:12px;padding:12px;border-radius:12px;background:#f1e9de;border:1px solid #e3d6c7;font-size:10px;line-height:1.5;color:#6d5c50}
+#controlRoomModal .cic-admin-footnote b{color:#2c1a14}
+#controlRoomModal .admin-view{padding-top:5px}
+#controlRoomModal .section-tight,#controlRoomModal .security-panel,#controlRoomModal .activity-panel{border-radius:14px}
+#controlRoomModal .form-grid{gap:10px}
+#controlRoomModal .field input,#controlRoomModal .field textarea,#controlRoomModal .wide-input{min-height:42px;font-size:12px}
+#controlRoomModal .admin-note{font-size:10px;line-height:1.55}
+#controlRoomModal .table-row{font-size:10px;overflow-wrap:anywhere}
+#controlRoomModal button:focus-visible,#controlRoomModal input:focus-visible,#controlRoomModal select:focus-visible,#controlRoomModal textarea:focus-visible{outline:3px solid #d4af37;outline-offset:2px}
+@media(max-width:520px){
+#controlRoomModal{padding:4px!important}
+#controlRoomModal .sheet{max-height:94dvh;padding:12px;border-radius:19px 19px 10px 10px}
+#controlRoomModal .cic-admin-welcome{align-items:flex-start;flex-direction:column;padding:13px}
+#controlRoomModal .cic-admin-secure{align-self:flex-start}
+#controlRoomModal .cic-admin-tabs{top:47px}
+#controlRoomModal .cic-admin-tabs button{padding:9px 11px;font-size:9px}
+#controlRoomModal .cic-admin-grid{gap:8px}
+#controlRoomModal .cic-admin-tile{min-height:166px;padding:11px}
+#controlRoomModal .cic-admin-tile b{font-size:16px}
+#controlRoomModal .cic-admin-tile small{font-size:9px}
+#controlRoomModal .cic-admin-status{font-size:8px}
+}
+@media(max-width:350px){#controlRoomModal .cic-admin-grid{grid-template-columns:1fr}#controlRoomModal .cic-admin-tile{min-height:125px}}
+</style>
+<script>
+window.cicOpenPassportAdmin=function(button){
+  document.querySelectorAll('#controlRoomModal .cic-admin-tabs button').forEach(el=>el.classList.remove('active'));
+  if(button)button.classList.add('active');
+  const passportButton=document.getElementById('cicPassportButton');
+  if(passportButton&&!passportButton.hidden){passportButton.click();return;}
+  if(typeof window.toast==='function')window.toast('Please sign in with the approved owner account to open QR Passports.');
+};
+</script>
+
 </body>
 </html>
