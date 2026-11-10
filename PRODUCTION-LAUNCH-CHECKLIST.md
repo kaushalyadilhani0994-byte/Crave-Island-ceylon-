@@ -1,6 +1,6 @@
 # CRAVE ISLAND CEYLON — Production Launch Checklist
 
-Last reviewed: 2026-10-25 (public storefront messaging pass)
+Last reviewed: 2026-11-10 (deep infrastructure and policy recheck)
 
 This checklist distinguishes verified infrastructure from business settings that still need the owner's real information. Do not publish invented product, ingredient, allergen, price, payment, or delivery details.
 
@@ -179,3 +179,8 @@ This section records the latest source, database, advisor, Edge Function and sch
 
 ### Safe release rule
 Do not mark the application fully launch-ready until the real product data, delivery/payment policies, staff workspaces, owner/customer/staff browser tests and QR physical scan test have passed. Preserve the V18 customer-facing layout and existing owner Control Room; do not replace them with a demo or marketplace design.
+
+### Direct policy recheck — 2026-11-10 (additional)
+- [x] Re-read live `pg_policies` for `public`, `storage`, and `cron`. Customer profile/order policies, staff profile policies, admin-alert policies, owner/team write policies, and storage upload/read policies are explicitly scoped to `authenticated`; public catalogue reads are limited to active categories/products, and public passport reads require a published passport linked to an active product.
+- [x] Confirmed the cron extension policies are declared for PostgreSQL `public` role but constrain rows to `username = CURRENT_USER`. The cron schema has no user-facing schema access in the previously verified grants. Keep this as an extension-level advisor warning to monitor; do not remove extension-managed policies blindly.
+- [ ] Leaked-password protection remains the one explicit Auth security-advisor warning that needs an Authentication dashboard setting; it is not exposed by the connected database operations. Enable it if available on the current plan, then rerun the advisor.
