@@ -51,7 +51,7 @@ Deno.serve(async (req: Request) => {
     const permissions = staff.permissions && typeof staff.permissions === "object"
       ? staff.permissions as Record<string, unknown> : {};
     const inventoryActions = Array.isArray(permissions.inventory) ? permissions.inventory : [];
-    const isPrimaryOwner = String(authData.user.email || "").trim().toLowerCase() === "kaushalyadilhani0994@gmail.com";
+    const isPrimaryOwner = staff.role === "owner" && String(authData.user.email || "").trim().toLowerCase() === "kaushalyadilhani0994@gmail.com";
     if (!isPrimaryOwner && !inventoryActions.includes("update")) {
       return reply(403, { error: "Inventory update permission is required." }, origin);
     }
