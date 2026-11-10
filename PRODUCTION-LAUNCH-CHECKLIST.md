@@ -136,3 +136,46 @@ This is a source/database audit, not a browser-level launch sign-off. Existing b
 - [ ] Customer post-delivery feedback automation (two days after delivery) and customer receipt delivery still require end-to-end verification/implementation.
 - [ ] Do not activate or publish any real product until verified product data is entered and the owner explicitly approves it.
 
+
+
+---
+
+## Deep audit update — 2026-11-10 (supersedes older status notes above)
+
+This section records the latest source, database, advisor, Edge Function and scheduled-job checks. It does not claim real-device or live customer transaction testing.
+
+### Changes completed in this audit
+- [x] PR #48 removed the retired Loyalty / Star Club choice from the Team Access editor.
+- [x] PR #49 removed the retired Star Club permission from the new Media role preset while retaining legacy permission-key compatibility.
+- [x] PR #50 was merged. Supabase migration `20261110023310_restrict_retired_team_role_and_owner_inventory_guard` is applied. The team-access RPC now permits only Supervisor, Staff, Media and Accounts as assignable roles; it still recognizes the legacy `star_club` permission module for historical records.
+- [x] Updated `update-product-inventory` Edge Function is ACTIVE at version 6 with JWT verification enabled. The primary-owner bypass now requires both the primary owner email and `role = owner`; other approved team members need `inventory.update`.
+- [x] PR #51 was merged. Supabase migration `20261110023427_resolve_stock_alert_when_tracking_disabled` is applied. If inventory tracking is switched off, the existing low/out-of-stock alert for that product is now resolved instead of remaining open indefinitely.
+- [x] Re-read the live database function definitions to confirm both changes are present.
+- [x] Rechecked the five active Edge Functions: `create-store-order` v15 (JWT on), `update-order-status` v8 (JWT on), `owner-alert-notify` v12 (JWT off by design; request body paths validate either the signed-in owner or the private cron secret), `owner-invite-team-member` v3 (JWT on), and `update-product-inventory` v6 (JWT on).
+- [x] Scheduled jobs are active: daily owner report at 20:00 Sri Lanka time, expiry sweep at 00:15 Sri Lanka time, and urgent alert dispatcher every minute. Recent daily report/expiry runs and the most recent urgent dispatcher runs show database job status `succeeded`. This confirms the scheduled job executed, not that Telegram delivery reached the owner.
+- [x] Last 24-hour Supabase function-edge request log query returned 1,438 records with zero 5xx responses and zero event messages containing “error”. This does not cover browser/client-side errors.
+- [x] Re-read storage policies: both `product-images` and `category-images` buckets are private; current upload/read policies are owner-only.
+
+### Current data state — unchanged
+- [x] Products: 1 total, 0 active. The existing record is an inactive prototype and must not be activated or published as a real item.
+- [x] Product passports: 1 total, 0 published.
+- [x] Store orders: 0.
+- [x] Staff profiles: 1 approved owner profile only; no real Supervisor, Staff, Media or Accounts users exist yet.
+- [x] No products, customer accounts, test orders, staff accounts or public passports were created during this audit.
+
+### Remaining implementation and launch blockers
+- [ ] **Staff sign-in and role workspaces:** no verified separate staff sign-in/workspace flow for Supervisor, Staff, Media and Accounts. The inventory RPC/UI exists, but there is no real staff account to validate it. The Accounts role preset currently has no accounting/invoice/payment tables or working accounts workspace; the Staff preset references tasks but there is no task table/workspace; the Media preset has no media-library workspace, and current storage upload/read policies are owner-only.
+- [ ] **Leaked-password protection:** Supabase Auth advisor still reports this disabled. Enable it in Authentication password-security settings if the project plan supports it; otherwise keep the client-side HIBP signup check as a partial safeguard, not an equivalent replacement.
+- [ ] **Advisor warnings:** the advisor reports multiple permissive policies and anonymous-access warnings. Direct `pg_policies` inspection shows the business-table staff/owner/customer policies target `authenticated`; the explicit `anon` reads are intended for active public categories/products and published passports. Do not remove policies based on the advisor summary alone. Internal private tables and the cron config intentionally have no user-facing RLS policies; service-role/definer paths are used.
+- [ ] **Customer checkout:** COD is the only supported payment method. Delivery fee remains LKR 0 and checkout itself tells customers that delivery rates are not configured. Configure actual delivery zones/fees and customer-facing delivery, cancellation, returns/refunds, privacy and support details before public sales.
+- [ ] **Payment/accounting:** no payment gateway or bank-transfer verification is implemented. No invoice/accounting tables or finance workspace were found. Do not show bank/card payment as available.
+- [ ] **Product launch data:** enter verified real product name, category, price, photo, ingredients, allergens, batch, MFG/expiry, storage and stock. Owner must review and activate each product explicitly.
+- [ ] **QR validation:** local QR generation and passport code exist, but no real label has been scanned/print-tested in this audit. Test a published active product, unpublished passport, unknown slug, and inactive product.
+- [ ] **Real account tests:** create/invite staff only when the owner supplies the intended work email addresses; verify each role can access only its assigned module and cannot access Admin, other roles, or customer data outside its scope. Test owner OTP, sign-out, session expiry and mobile Back navigation.
+- [ ] **Notifications:** confirm Telegram secrets and actual delivery with the owner's consent. Job-run success alone is not proof of Telegram message delivery. Verify optional WhatsApp/Google Sheets integrations only if the owner intends to use them.
+- [ ] **Performance:** unused indexes are not automatically a defect on a near-empty database. Review multiple permissive policies after role tests; do not drop indexes or combine policies without evidence and regression tests.
+- [ ] **Vercel config:** build output still warns that legacy `builds` in `vercel.json` overrides project Build Settings. Do not remove this config without validating the static-site output strategy.
+- [ ] **Production browser test:** complete mobile visual checks, owner OTP/Admin open/back/sign-out, catalogue add/edit, order/stock update, QR print/scan, public-vs-owner isolation and a controlled customer checkout test. A Vercel READY state or zero server errors is not an end-to-end sign-off.
+
+### Safe release rule
+Do not mark the application fully launch-ready until the real product data, delivery/payment policies, staff workspaces, owner/customer/staff browser tests and QR physical scan test have passed. Preserve the V18 customer-facing layout and existing owner Control Room; do not replace them with a demo or marketplace design.
