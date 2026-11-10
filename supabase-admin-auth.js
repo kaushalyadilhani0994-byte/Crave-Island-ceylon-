@@ -517,7 +517,7 @@
     const presets={
       supervisor:{catalogue:["read","create","update"],inventory:["read","update"],orders:["read","update"],dispatch:["read","update"],reports:["read"],tasks:["read","update"]},
       staff:{catalogue:["read"],inventory:["read"],tasks:["read","update"]},
-      media:{media:["read","create","update"],star_club:["read","create","update"],certificates:["read"],reports:["read"]},
+      media:{media:["read","create","update"],certificates:["read"],reports:["read"]},
       accounts:{accounts:["read","create","update","export"],reports:["read","export"]},
       star_club:{star_club:["read","create","update"],reports:["read"]}
     };
