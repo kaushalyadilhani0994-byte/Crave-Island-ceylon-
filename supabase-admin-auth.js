@@ -796,9 +796,6 @@
       window.addEventListener("pagehide", () => authModalObserver.disconnect(), { once: true });
     }
     window.openAdminAccess=async function(){
-      // Every explicit Admin entry must pass through the email OTP step.
-      // End a persisted session first so a previous device session cannot
-      // silently bypass the owner's requested email verification.
       const showLogin=()=>{
         setOwnerNavVisible(false);
         if(typeof window.openModal==="function")window.openModal("adminAccessModal");
@@ -812,7 +809,19 @@
       try{
         const {data,error}=await client.auth.getSession();
         if(error){status("Could not check the saved owner session. Refresh and try again.",true);return;}
-        if(data&&data.session){
+        const session=data&&data.session?data.session:null;
+        let otpVerified=false;
+        try{otpVerified=sessionStorage.getItem("cicOwnerOtpVerified")==="1";}catch(_){}
+        // Reuse the already OTP-verified owner session in this tab. Returning
+        // from the Control Room to the storefront must not send another code.
+        // A restored session in a new tab/device still requires fresh OTP.
+        if(session&&session.user&&otpVerified&&await isApprovedOwner(session.user)){
+          setOwnerNavVisible(true);
+          if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
+          openOriginalControlRoom();
+          return;
+        }
+        if(session){
           const {error:signOutError}=await client.auth.signOut();
           if(signOutError){status("Could not safely end the previous Admin session. Please refresh and try again.",true);return;}
         }
