@@ -108,18 +108,14 @@
     return !error&&!!data&&data.role==="owner"&&data.approved===true;
   }
   function install() {
-    // The public bottom-bar QR is the shop promotion QR. Intercept the legacy
-    // qrModal action so this entry no longer opens the old QR destination.
-    if(!document.documentElement.dataset.cicShopQrNavBound){
-      document.documentElement.dataset.cicShopQrNavBound="1";
-      document.addEventListener("click",function(event){
-        const qrEntry=event.target&&event.target.closest?event.target.closest(".bottom .nav-qr-passport"):null;
-        if(!qrEntry)return;
-        event.preventDefault();
-        event.stopPropagation();
-        if(typeof event.stopImmediatePropagation==="function")event.stopImmediatePropagation();
-        window.location.assign("/shop-qr.html");
-      },true);
+    // Product QR passports belong inside the authenticated owner Admin workspace.
+    // Keep the public shop QR available at /shop-qr.html, but do not expose a QR
+    // launcher in customer navigation that could be mistaken for a product passport.
+    if(!document.getElementById("cic-hide-public-qr-nav")){
+      const navStyle=document.createElement("style");
+      navStyle.id="cic-hide-public-qr-nav";
+      navStyle.textContent=".bottom .nav-qr-passport{display:none!important;visibility:hidden!important;pointer-events:none!important}@media(max-width:520px){.bottom{grid-template-columns:repeat(6,minmax(0,1fr))!important}}";
+      document.head.appendChild(navStyle);
     }
     const modal=$("#adminAccessModal"), email=$("#adminEmail"), otp=$("#adminOtp");
     // Hide owner QR tooling from customer navigation; direct printed passport URLs stay public.
