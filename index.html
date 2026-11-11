@@ -544,14 +544,30 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
 </style>
 <script>
 window.cicOpenLiveNode=function(kind,button){
+  const control=document.getElementById('controlRoomModal');
+  if(!control||!document.body.classList.contains('cic-owner-shortcuts-unified')){
+    if(typeof window.toast==='function')window.toast('Please sign in with the approved Main Admin account first.');
+    return;
+  }
   document.querySelectorAll('#controlRoomModal .cic-admin-tabs button').forEach(el=>el.classList.remove('active'));
   if(button)button.classList.add('active');
-  const node=document.querySelector('#controlRoomModal [data-cic-live-node="'+kind+'"]');
-  if(node){node.click();return;}
   const fallback={catalogue:'cicOwnerCatalogueButton',orders:'cicOwnerOrdersButton',passports:'cicPassportButton',alerts:'cicOwnerAlertsButton'};
-  const target=document.getElementById(fallback[kind]||'');
-  if(target&&!target.hidden){target.click();return;}
-  if(typeof window.toast==='function')window.toast('This live admin tool is still loading. Close and reopen Admin, then try again.');
+  const openTarget=()=>{
+    const target=document.getElementById(fallback[kind]||'');
+    // These launchers are intentionally visually hidden after being moved into
+    // the Control Room. HTMLElement.click() still invokes their real handlers.
+    if(target){target.click();return true;}
+    return false;
+  };
+  if(openTarget())return;
+  let attempts=0;
+  const retry=()=>{
+    if(openTarget())return;
+    attempts++;
+    if(attempts<20){window.setTimeout(retry,250);return;}
+    if(typeof window.toast==='function')window.toast('The '+kind+' tool did not finish loading. Refresh the page and sign in again.');
+  };
+  window.setTimeout(retry,250);
 };
 window.cicOpenPassportAdmin=function(button){window.cicOpenLiveNode('passports',button);};
 </script>
