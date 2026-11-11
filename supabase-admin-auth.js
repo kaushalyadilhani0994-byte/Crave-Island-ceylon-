@@ -6,6 +6,7 @@
   const $ = (selector, root=document) => root.querySelector(selector);
   const db = () => window.CIC_SUPABASE && window.CIC_SUPABASE.client;
   let handlingPendingOwnerSession = false;
+  let sendingOwnerCode = false;
   function status(message, bad=false) {
     const el=$("#cicOwnerAuthStatus");
     if(!el)return;
@@ -184,7 +185,8 @@
       status("Please wait "+Math.ceil((savedUntil-Date.now())/1000)+" seconds before requesting another sign-in email.");
       return;
     }
-    if(btn&&btn.disabled)return;
+    if(sendingOwnerCode || (btn&&btn.disabled))return;
+    sendingOwnerCode=true;
     if(btn){btn.disabled=true;btn.textContent="Sending…";}
     let cooldownUntil=0;
     try{
@@ -209,6 +211,7 @@
       status("Could not reach Supabase Auth to request the owner email. Check the connection and try again.",true);
     }
     finally{
+      sendingOwnerCode=false;
       if(btn){
         if(cooldownUntil>Date.now())startOtpCooldown(btn,cooldownUntil);
         else{btn.disabled=false;btn.textContent="Send secure sign-in email";}
@@ -317,12 +320,27 @@
           target=Array.from(document.querySelectorAll("button")).find(el=>!el.hasAttribute("data-cic-live-node")&&def.textMatch.test(el.textContent||""));
         }
         const status=control.querySelector('[data-cic-live-status="'+kind+'"]');
-        if(target){
-          target.click();
-          if(status)status.textContent="Live owner tool opened.";
-        }else if(status){
-          status.textContent="This live tool is still loading. Close and reopen Admin, then try again.";
+        if(kind==="passports"){
+          // The passport module is loaded asynchronously after the Supabase client.
+          // Wait for its real owner-gated launcher instead of silently failing.
+          (async()=>{
+            for(let attempt=0;attempt<40;attempt++){
+              target=document.querySelector("#cicPassportButton");
+              if(target)break;
+              if(status)status.textContent="Loading secure QR Product Passport…";
+              await new Promise(resolve=>setTimeout(resolve,250));
+            }
+            if(!target){if(status)status.textContent="QR Product Passport could not load. Refresh once and reopen Admin.";return;}
+            target.hidden=false;
+            target.style.setProperty("display","inline-flex","important");
+            target.click();
+            target.hidden=true;
+            target.style.setProperty("display","none","important");
+            if(status)status.textContent="QR Product Passport opened. Add or edit a verified product passport."; 
+          })();
+          return;
         }
+        if(target){target.click();if(status)status.textContent="Live owner tool opened.";}else if(status){status.textContent="This live tool is still loading. Close and reopen Admin, then try again.";}
       });
     }
 
@@ -763,7 +781,8 @@
   async function wire(){
     // Capture owner intent before the query parameter is cleaned up below.
     // The modal can be injected after the first page scripts have already run.
-    const ownerAccessRequested = new URL(window.location.href).searchParams.get("owner-access") === "1";
+    const ownerParams = new URL(window.location.href).searchParams;
+    const ownerAccessRequested = ownerParams.get("owner-access") === "1" || ownerParams.get("owner") === "1";
     let ownerAutoPromptOpened = false;
     const shouldAutoOpenOwner = () => {
       let deviceHint = false;
@@ -842,8 +861,9 @@
     });
     try{
       const ownerUrl=new URL(window.location.href);
-      if(ownerUrl.searchParams.get("owner-access")==="1"){
+      if(ownerUrl.searchParams.get("owner-access")==="1"||ownerUrl.searchParams.get("owner")==="1"){
         ownerUrl.searchParams.delete("owner-access");
+        ownerUrl.searchParams.delete("owner");
         history.replaceState(history.state,"",ownerUrl.pathname+ownerUrl.search+ownerUrl.hash);
         // Owner deep links must follow the same fresh email OTP path as
         // tapping Admin; do not reuse a persisted session to bypass email check.
