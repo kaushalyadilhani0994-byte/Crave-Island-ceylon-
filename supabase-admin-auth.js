@@ -114,7 +114,7 @@
     if(!document.getElementById("cic-hide-public-qr-nav")){
       const navStyle=document.createElement("style");
       navStyle.id="cic-hide-public-qr-nav";
-      navStyle.textContent=".bottom .nav-qr-passport{display:none!important;visibility:hidden!important;pointer-events:none!important}@media(max-width:520px){.bottom{grid-template-columns:repeat(6,minmax(0,1fr))!important}}";
+      navStyle.textContent=".bottom > .nav.nav-qr-passport{display:none!important;visibility:hidden!important;pointer-events:none!important}@media(max-width:520px){.bottom{grid-template-columns:repeat(6,minmax(0,1fr))!important}}";
       document.head.appendChild(navStyle);
     }
     const modal=$("#adminAccessModal"), email=$("#adminEmail"), otp=$("#adminOtp");
