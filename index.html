@@ -218,54 +218,73 @@ main{display:block!important;position:relative!important;margin:0!important;padd
 
 <div class="modal" id="controlRoomModal"><div class="sheet"><div class="sheet-head"><h3>CRAVE Control Room</h3><button class="close" onclick="closeModal('controlRoomModal')">×</button></div>
 <p class="muted-note">Owner-only workspace. Open live Catalogue & Stock, Orders, QR Product Passports and Owner Alerts from their matching sections below. Other legacy sections are retained as reference panels until their live editors are connected.</p>
-<div class="cic-admin-welcome"><div><span class="cic-admin-kicker">CRAVE ISLAND CEYLON · OWNER WORKSPACE</span><h4>Good to see you, Main Admin</h4><p>One secure place to manage your store, products, orders and product passports.</p></div><span class="cic-admin-secure">● Owner verified</span></div>
-<div class="admin-tabs cic-admin-tabs" role="tablist" aria-label="Admin sections">
-<button class="active" onclick="showAdminView('overview',this)">Overview</button>
-<button onclick="cicOpenLiveNode('catalogue',this)">Catalogue & Stock</button>
-<button onclick="cicOpenLiveNode('orders',this)">Orders</button>
-<button onclick="cicOpenPassportAdmin(this)">QR Passports</button>
-<button onclick="showAdminView('team',this)">Team & Roles</button>
-<button onclick="showAdminView('security',this)">Security & Alerts</button>
-<button onclick="showAdminView('brand',this)">Store Settings</button>
-<button onclick="showAdminView('automation',this)">Automation</button>
+<div class="admin-tabs">
+<button class="active" onclick="showAdminView('overview',this)">Overview</button><button onclick="showAdminView('catalog',this)">Catalog</button><button onclick="showAdminView('orders',this)">Orders</button><button onclick="showAdminView('brand',this)">Brand</button><button onclick="showAdminView('automation',this)">Automation</button><button onclick="showAdminView('security',this)">Security</button>
 </div>
-<div id="v7AdminMap" class="admin-map" aria-hidden="true">
-<details class="admin-node"><summary>Catalogue & Products</summary><div class="node-body"><button class="node-open" type="button">Legacy catalogue preview</button></div></details>
-<details class="admin-node"><summary>Orders & Customers</summary><div class="node-body"><button class="node-open" type="button">Legacy orders preview</button></div></details>
-<details class="admin-node"><summary>Certificates & QR</summary><div class="node-body"><button class="node-open" type="button">Legacy QR preview</button></div></details>
-<details class="admin-node"><summary>Security & Audit</summary><div class="node-body"><button class="node-open" type="button">Legacy alerts preview</button></div></details>
+<div id="v7AdminMap" class="admin-map">
+  <details class="admin-node"><summary>Store Settings</summary><div class="node-body"><p>Brand, contact, delivery and checkout rules.</p><div class="node-items"><div class="node-item"><b>Brand identity</b><span>Name, tagline, logo, opening</span></div><div class="node-item"><b>Business contact</b><span>WhatsApp, email, support</span></div><div class="node-item"><b>Delivery</b><span>Zones, fees, COD rules</span></div></div><button class="secondary-btn node-open" onclick="showAdminView('brand')">Open settings</button></div></details>
+  <details class="admin-node"><summary>Catalogue & Products</summary><div class="node-body"><p>Add and manage items without touching HTML in the production system.</p><div class="node-items"><div class="node-item"><b>Products</b><span>Name, price, photos, variants</span></div><div class="node-item"><b>Categories</b><span>Collections and visibility</span></div><div class="node-item"><b>Stock</b><span>Quantity and low-stock rules</span></div></div><button class="secondary-btn node-open" onclick="showAdminView('catalog')">Open catalogue</button></div></details>
+  <details class="admin-node"><summary>Orders & Customers</summary><div class="node-body"><div class="node-items"><div class="node-item"><b>Orders</b><span>Status, fulfilment, cancellation</span></div><div class="node-item"><b>Customer details</b><span>Delivery + contact</span></div><div class="node-item"><b>Invoices</b><span>Bill history and re-order</span></div></div><button class="secondary-btn node-open" onclick="showAdminView('orders')">Open orders</button></div></details>
+  <details class="admin-node"><summary>Gift Hampers</summary><div class="node-body"><p>Gift mode groups selected products into one hamper order. Normal shopping stays normal.</p><div class="node-items"><div class="node-item"><b>Hamper builder</b><span>Choose products + quantities</span></div><div class="node-item"><b>Gift note</b><span>Optional message / occasion</span></div></div><button class="secondary-btn node-open" onclick="openModal('hamperModal')">Open hamper builder</button></div></details>
+  <details class="admin-node"><summary>Media & Social</summary><div class="node-body"><div class="node-items"><div class="node-item"><b>Media Clips</b><span>Reels, voice, photos, films</span></div><div class="node-item"><b>Social channels</b><span>Connect through backend</span></div><div class="node-item"><b>Customer feedback</b><span>Approved testimonials / media</span></div></div><button class="secondary-btn node-open" onclick="openModal('socialModal')">Open Social Control Centre</button><button class="gold-outline" onclick="openModal('mediaModal')">Open Media Lounge</button></div></details>
+  <details class="admin-node"><summary>Loyalty, Star Points & Scratch Cards</summary><div class="node-body"><div class="node-items"><div class="node-item"><b>Star Points</b><span>Rules, awards, expiry</span></div><div class="node-item"><b>Scratch Cards</b><span>Campaigns and rewards</span></div><div class="node-item"><b>Vouchers</b><span>Codes, dates, limits</span></div></div><button class="secondary-btn node-open" onclick="openModal('loyaltyModal')">Open loyalty</button></div></details>
+  <details class="admin-node"><summary>Certificates & QR</summary><div class="node-body"><div class="node-items"><div class="node-item"><b>Product passport</b><span>Ingredients, batch, story</span></div><div class="node-item"><b>Certificates</b><span>Upload + expiry reminder</span></div><div class="node-item"><b>QR codes</b><span>Generate / download</span></div></div><button class="secondary-btn node-open" onclick="openModal('qrModal')">Open QR centre</button></div></details>
+  <details class="admin-node"><summary>Invoices, Payments & Bank Transfer</summary><div class="node-body"><div class="node-items"><div class="node-item"><b>Online payment</b><span>Gateway configuration</span></div><div class="node-item"><b>Bank transfer</b><span>Verified business account</span></div><div class="node-item"><b>COD</b><span>Area / order limits</span></div></div><button class="secondary-btn node-open" onclick="showAdminView('brand')">Open payment settings</button></div></details>
+  <details class="admin-node"><summary>Automations</summary><div class="node-body"><div class="node-items"><div class="node-item"><b>Invoice</b><span>After verified order</span></div><div class="node-item"><b>Feedback</b><span>2 days after delivery</span></div><div class="node-item"><b>Follow-up</b><span>Loyalty / media invite</span></div></div><button class="secondary-btn node-open" onclick="showAdminView('automation')">Open automation</button></div></details>
+  <details class="admin-node"><summary>Team & Roles</summary><div class="node-body"><div class="node-items"><div class="node-item"><b>Main Admin</b><span>Everything + team + security</span></div><div class="node-item"><b>Supervisor</b><span>Operations + stock + orders</span></div><div class="node-item"><b>Staff</b><span>Assigned tasks only</span></div><div class="node-item"><b>Media</b><span>Content + social only</span></div><div class="node-item"><b>Accounts</b><span>Invoices + payments only</span></div></div><button class="secondary-btn node-open" onclick="showAdminView('team')">Open team access</button></div></details>
+  <details class="admin-node"><summary>Security & Audit</summary><div class="node-body"><div class="node-items"><div class="node-item"><b>Warnings</b><span>Blocked / unusual action</span></div><div class="node-item"><b>Audit log</b><span>Who changed what</span></div><div class="node-item"><b>MFA</b><span>Required for owner/admin</span></div></div><button class="secondary-btn node-open" onclick="showAdminView('security')">Open security</button></div></details>
 </div>
-<div class="cic-admin-status"><span><i class="cic-live-dot"></i> Live Supabase-backed sections</span><span>Catalogue · Stock · Orders · QR · Owner alerts</span></div>
+<div class="health-bar"><div class="health-top"><span>ADMIN MODULE STATUS</span><span>LIVE / IN PROGRESS</span></div><div class="health-note">Live owner tools: Catalogue &amp; Stock · Orders &amp; Fulfilment · QR Product Passports · Owner Alerts. Separate Supervisor, Staff, Media and Accounts workspaces, plus invoice/payment tools, are not yet enabled. This panel does not claim those features are complete.</div></div>
 <div id="admin-overview" class="admin-view active">
-<div class="cic-admin-grid">
-<button class="cic-admin-tile" onclick="cicOpenLiveNode('catalogue')"><span class="cic-admin-icon">▦</span><b>Catalogue & Stock</b><small>Add products, update prices, batches, expiry dates and stock levels.</small><em>Open catalogue →</em></button>
-<button class="cic-admin-tile" onclick="cicOpenLiveNode('orders')"><span class="cic-admin-icon">▤</span><b>Orders & Fulfilment</b><small>Review customer orders, payment status and fulfilment progress.</small><em>Open orders →</em></button>
-<button class="cic-admin-tile" onclick="cicOpenLiveNode('passports')"><span class="cic-admin-icon">▧</span><b>QR Product Passports</b><small>Manage verified batch information, publish passports and print QR labels.</small><em>Open QR passports →</em></button>
-<button class="cic-admin-tile" onclick="showAdminView('team')"><span class="cic-admin-icon">♙</span><b>Team & Roles</b><small>Review owner-approved team access and assigned permissions.</small><em>Open team access →</em></button>
-<button class="cic-admin-tile" onclick="cicOpenLiveNode('alerts')"><span class="cic-admin-icon">◇</span><b>Security & Owner Alerts</b><small>Review security guidance, owner alerts and operational warnings.</small><em>Open security →</em></button>
-<button class="cic-admin-tile" onclick="showAdminView('brand')"><span class="cic-admin-icon">⚙</span><b>Store Settings</b><small>Business details and settings currently available in this workspace.</small><em>Open settings →</em></button>
-</div>
-<div class="cic-admin-footnote"><b>Workspace status</b><span>Live tools are connected where indicated. Payment gateway, invoice automation and separate staff workspaces still require their own implementation and verification.</span></div>
+<div class="automation"><h4>Owner Control Room</h4><p>Use the matching sections above to manage the live Supabase-backed tools. Catalogue &amp; Stock manages product records and inventory. Orders &amp; Customers opens live order fulfilment. Certificates &amp; QR opens product passports. Security &amp; Audit opens owner alerts.</p><p><strong>Not enabled yet:</strong> separate Supervisor, Staff, Media and Accounts workspaces; live invoice/payment management; automated loyalty and customer follow-up journeys. The old local/demo counts and sample journey have been removed so they cannot be mistaken for real business records.</p></div>
 </div>
 <div id="admin-catalog" class="admin-view">
-<div class="security-panel"><h4>Catalogue & Stock · Live module</h4><p>This legacy quick-add form and device-only image preview are not connected to the production catalogue. Use the live Catalogue & Stock tool to create products, update stock, record batch/expiry details and save through the approved-owner Supabase functions.</p><div class="tiny-actions"><button class="goldbtn" type="button" onclick="cicOpenLiveNode('catalogue')">Open live Catalogue & Stock</button></div></div>
+<div class="section-tight"><h4 style="font:400 21px Georgia,serif;margin:12px 0 5px">Quick Product Add</h4><div class="form-grid"><div class="field"><label>Product name</label><input id="adminPName"></div><div class="field"><label>Price (LKR)</label><input id="adminPPrice" inputmode="numeric"></div><div class="field"><label>Category</label><input id="adminPCat" placeholder="Homemade Chocolates"></div><div class="field"><label>Image URL</label><input id="adminPImg" placeholder="https://..."></div><div class="field full"><label>Description</label><textarea id="adminPDesc"></textarea></div></div><div class="tiny-actions"><button class="goldbtn" onclick="adminAddProduct()">Add Product</button><button class="secondary-btn" onclick="adminExportData()">Export Settings</button></div><div class="admin-note">For production, image uploads should go to Supabase Storage and product records to the products table.</div></div>
+<div class="table-like" id="adminProductTable"></div>
+<div class="owner-image-panel"><h4>Category & Feature Image Studio</h4><p>Owner can preview a replacement image for a category or feature. Pick a category, choose an image, and preview before saving. This browser demo saves the preview on this device only; production images must be uploaded to protected storage with owner-only server permissions.</p><div class="owner-image-row"><div><label for="imageTarget">Where should the image appear?</label><select id="imageTarget"><option value="Beverage & Juices">Beverage & Juices</option><option value="Traditional Foods">Traditional Foods</option><option value="Desserts & Sweets">Desserts & Sweets</option><option value="Bakery & Baking">Bakery & Baking</option><option value="Biscuits & Cookies">Biscuits & Cookies</option><option value="Homemade Chocolates">Homemade Chocolates</option><option value="Short Eats & Snacks">Short Eats & Snacks</option><option value="Nuts Atelier">Nuts Atelier</option><option value="Ready To Cook">Ready To Cook</option><option value="Ready To Eat">Ready To Eat</option><option value="Island Dehydrates">Island Dehydrates</option><option value="Seasonal Festival Limited">Seasonal Festival Limited</option><option value="Ceylon Native Atelier">Ceylon Native Atelier</option><option value="Gift & Hampers">Gift & Hampers</option><option value="Pantry & Natural">Pantry & Natural</option><option value="Media Lounge">Media Lounge</option><option value="Loyalty">Loyalty</option><option value="Scratch Cards">Scratch Cards</option></select></div><div><label for="imageFile">Choose replacement photo</label><input id="imageFile" type="file" accept="image/*" onchange="previewOwnerImage(this)"></div></div><img id="ownerImagePreview" class="owner-preview" alt="Selected image preview" hidden><div class="tiny-actions"><button class="goldbtn" onclick="saveOwnerImageDemo()">Save Preview on This Device</button><button class="secondary-btn" onclick="clearOwnerImageDemo()">Clear Preview</button></div><div class="demo-warning">Owner-only access must be enforced by the real login/backend. A browser-only demo cannot securely stop another person from editing this panel.</div></div>
 </div>
 <div id="admin-orders" class="admin-view">
-<div class="security-panel"><h4>Orders & Fulfilment · Live module</h4><p>This legacy order table is not connected to live customer orders. Use the live Orders tool to review Supabase orders, payment state and permitted status transitions. No demo orders are shown here.</p><div class="tiny-actions"><button class="goldbtn" type="button" onclick="cicOpenLiveNode('orders')">Open live Orders & Fulfilment</button></div></div>
+<div class="tiny-actions"><button class="secondary-btn" onclick="adminRefreshOrders()">Refresh</button><button class="secondary-btn" onclick="adminExportOrders()">Export Orders</button></div><div class="table-like" id="adminOrderTable"></div><p class="admin-note">A real deployment should keep order/customer data in Supabase, protected by RLS. LocalStorage is only for this visual/demo build.</p>
 </div>
 <div id="admin-brand" class="admin-view">
-<div class="security-panel"><h4>Store Settings · Not connected</h4><p>The previous settings form stored values in this browser only and was not the source of truth for checkout. It has been disabled to avoid showing or changing unverified business, bank or payment instructions. A secure Supabase-backed settings editor must be connected before these details can be edited here.</p></div>
+<div class="settings-list">
+<div class="setting-row"><div><b>Business WhatsApp</b><span>Customer order/support number</span></div><input class="wide-input" id="setWhatsApp" value="94710400159"></div>
+<div class="setting-row"><div><b>Bank</b><span>Customer transfer destination</span></div><input class="wide-input" id="setBank" value="Bank of Ceylon"></div>
+<div class="setting-row"><div><b>Branch</b><span>Transfer reference</span></div><input class="wide-input" id="setBranch" value="Diyatalawa"></div>
+<div class="setting-row"><div><b>Account name</b><span>Shown on transfer instructions</span></div><input class="wide-input" id="setAccountName" value="Kaushalya Dilhani"></div>
+<div class="setting-row"><div><b>Account number</b><span>Shown only in payment instructions</span></div><input class="wide-input" id="setAccountNo" value="96835730"></div>
+<div class="setting-row"><div><b>Feedback delay</b><span>Days after delivery</span></div><input class="wide-input" id="setFeedbackDays" value="2" inputmode="numeric"></div>
+<div class="setting-row"><div><b>Star Points</b><span>Points per LKR 100</span></div><input class="wide-input" id="setPointsRate" value="1" inputmode="numeric"></div>
+</div>
+<div class="tiny-actions"><button class="goldbtn" onclick="adminSaveSettings()">Save Settings</button><button class="secondary-btn" onclick="adminResetSettings()">Reset Demo</button></div>
 </div>
 <div id="admin-automation" class="admin-view">
-<div class="security-panel"><h4>Automation status</h4><ul><li>Daily owner report schedule: active at 8:00 PM Sri Lanka time.</li><li>Urgent owner-alert dispatcher schedule: active; runs every minute.</li><li>Product expiry sweep: active daily.</li><li>Telegram delivery: requires a real delivery test; schedule activation alone does not prove a message was received.</li><li>Invoice automation, feedback reminders, loyalty awards and social sync: not connected as live workflows.</li></ul></div>
+<div class="settings-list"><div class="setting-row"><div><b>Invoice after order</b><span>Create invoice record automatically</span></div><label class="switcher"><input id="autoInvoice" type="checkbox" checked><span class="slider"></span></label></div><div class="setting-row"><div><b>Feedback reminder</b><span>Send after configured delay</span></div><label class="switcher"><input id="autoFeedback" type="checkbox" checked><span class="slider"></span></label></div><div class="setting-row"><div><b>Star Points award</b><span>Only after verified payment/delivery</span></div><label class="switcher"><input id="autoPoints" type="checkbox" checked><span class="slider"></span></label></div><div class="setting-row"><div><b>Social sync</b><span>Use backend/API or automation webhook</span></div><label class="switcher"><input id="autoSocial" type="checkbox"><span class="slider"></span></label></div></div>
+<div class="automation"><h4>Production automation</h4><p>Supabase Database Webhooks can trigger server-side integrations when orders change, while Supabase Cron can run the 2-day follow-up job. Keep secrets in server-side environment/Vault, never in this HTML.</p></div>
 </div>
 <div id="admin-team" class="admin-view">
-<div class="security-panel"><h4>Team & Roles · Owner only at present</h4><p>Only the approved Main Admin account is currently enabled. Supervisor, Staff, Media and Accounts workspaces are not yet provisioned as separate secure sign-in roles. The former invitation controls were browser-only demo controls and have been removed so they cannot be mistaken for real invitations.</p><ul><li>Main Admin: approved owner access.</li><li>Supervisor: not enabled.</li><li>Staff: not enabled.</li><li>Media: not enabled.</li><li>Accounts: not enabled.</li></ul><p>Team invitations must be created by a trusted backend and enforced by database permissions before this section is enabled.</p></div>
+<h4 style="font:400 21px Georgia,serif;margin:12px 0 5px">Team Access</h4>
+<p class="muted-note">Owner decides exactly which areas a supervisor or staff member can see. The demo records the invitation locally; production invitations must be sent from a trusted backend.</p>
+<div class="permission-grid">
+<button id="role-owner" class="role-card active" onclick="v7SelectRole('owner')"><b>Owner</b><span>Full control + security approval</span></button>
+<button id="role-supervisor" class="role-card" onclick="v7SelectRole('supervisor')"><b>Supervisor</b><span>Assigned operational areas</span></button>
+<button id="role-staff" class="role-card" onclick="v7SelectRole('staff')"><b>Staff</b><span>Task-level access only</span></button>
+</div>
+<div class="invite-box"><b style="font-size:11px">Invite a team member</b><div class="form-grid" style="margin-top:8px"><div class="field"><label>Email</label><input id="v7InviteEmail" type="email" placeholder="person@example.com"></div><div class="field"><label>Role</label><select id="v7InviteRole"><option value="supervisor">Supervisor</option><option value="staff">Staff</option></select></div><div class="field full"><label>Allowed areas</label><input id="v7InviteScope" class="wide-input" placeholder="Stock, Orders, Media — choose only what they need"></div></div><div class="tiny-actions"><button class="goldbtn" onclick="v7SendInvite()">Send Owner-approved Invite</button><button class="secondary-btn" onclick="v7ShowPendingInvites()">View Pending</button></div><div id="v7InviteStatus" class="invite-status"></div></div>
+<div style="margin-top:10px"><b style="font-size:10px">Permission preview</b><div id="v7PermissionPreview" class="table-like"></div></div>
 </div>
 <div id="admin-security" class="admin-view">
-<div class="security-panel"><h4>Security & Owner Alerts</h4><ul><li>Owner OTP sign-in is restricted to the approved primary email and approved owner profile.</li><li>Database RLS and owner-only functions protect sensitive product and inventory fields.</li><li>Order creation uses an atomic server-side flow with duplicate-request protection.</li><li>Payment gateway processing is not yet confirmed as connected; do not mark an order paid without verified payment evidence.</li><li>Supabase leaked-password protection remains an owner-side setting to enable in Auth security.</li><li>Separate staff permissions and a production audit journal are not yet enabled.</li></ul><div class="tiny-actions"><button class="goldbtn" type="button" onclick="cicOpenLiveNode('alerts')">Open live Owner Alerts</button></div></div>
-<div class="warning-box"><b>Owner safety:</b> Only the approved Main Admin is enabled. Do not invite staff or publish products until their permissions and verified product data are ready.</div>
-<div class="security-panel" style="margin-top:12px"><h4>Audit journal · Not connected</h4><p>The previous activity journal was browser-local and could be edited on the device. It has been removed. A trustworthy audit journal must be written by protected server-side functions and read through owner-only permissions.</p></div>
+<div class="security-panel"><h4>Security architecture</h4><ul><li>Supabase Auth for admin/customer identity.</li><li>Role-based access + Row Level Security for products, orders, customers and media.</li><li>Payment gateway secrets only on server-side Edge Functions.</li><li>Verify payment callbacks before marking an order paid.</li><li>Audit log for admin changes, deletes and exports.</li><li>Rate limiting, input validation and webhook signature verification.</li><li>Never store card numbers, CVV, banking passwords or OTPs.</li></ul></div>
+<div class="warning-box"><b>Owner safety rule:</b> if a user tries to open or change an area outside their assigned permission, the production system should block the action, create an audit event, and show the Owner a warning for review.</div>
+<div class="activity-panel" style="margin-top:14px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:12px">
+<h4 style="font:400 20px Georgia,serif;margin:0 0 5px">Daily Activity Journal</h4>
+<p class="muted-note">Local demo journal for this browser only. Production must write these events to a protected server-side audit table so they cannot be edited by staff.</p>
+<div class="form-grid"><div class="field"><label>Activity date</label><input id="activityDate" type="date"></div><div class="field"><label>Search events</label><input id="activitySearch" placeholder="product, error, invite…"></div></div>
+<div class="tiny-actions"><button class="goldbtn" onclick="cicRenderDailyJournal()">Filter activity</button><button class="secondary-btn" onclick="cicExportDailyJournal()">Export daily report</button><button class="secondary-btn" onclick="cicExportAllJournal()">Export all logs</button></div>
+<div id="dailyActivitySummary" class="warning-box">Daily activity will appear here when demo actions are recorded.</div><div id="dailyActivityList" class="audit-list"></div>
+</div>
+<div style="margin-top:10px"><b style="font-size:10px">Recent security events</b><div id="v7AuditList" class="audit-list"></div></div>
+<div class="admin-note">No static HTML can honestly guarantee “1000% security”. Production should enforce permissions in the database with RLS, use MFA for privileged accounts, and keep secret keys only on trusted server-side components.</div>
 </div>
 </div></div>
 
@@ -402,7 +421,7 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
 <div id="cicSupabaseStatus" role="status" aria-live="polite" hidden style="position:fixed;left:12px;right:12px;bottom:12px;z-index:99999;padding:10px 14px;border-radius:10px;background:#2C1A14;color:#FFF8E7;border:1px solid #D4AF37;font:12px/1.4 system-ui;box-shadow:0 4px 24px #0003"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase/client-config.js"></script>
-<script src="supabase-store.js?v=20261111-private-customer-nav-1"></script>
+<script src="supabase-store.js?v=20261110-team-invite-role-alignment-1"></script>
 
 <script>
 /* Production guard: block browser-only admin, rewards, social/media and legacy QR demos. Live catalogue, secure checkout, owner auth and passport routes remain available. */
@@ -464,85 +483,5 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
   hideLegacyControls();
 })();
 </script>
-<style id="cic-owner-control-room-polish">
-#controlRoomModal .sheet{width:min(980px,100%);max-height:92dvh;padding:clamp(13px,3vw,24px);border:1px solid #d4af3780;background:linear-gradient(180deg,#fffdf8,#f7f0e7)}
-#controlRoomModal .sheet-head{position:sticky;top:-1px;z-index:5;margin:-2px -2px 10px;padding:3px 2px 11px;background:#fffdf8ed;backdrop-filter:blur(12px);border-bottom:1px solid #e7ddd4}
-#controlRoomModal .sheet-head h3{font:400 clamp(23px,5vw,31px) Georgia,serif;letter-spacing:.1px}
-#controlRoomModal .close{flex:0 0 36px}
-#controlRoomModal .muted-note{display:none}
-#controlRoomModal #v7AdminMap{display:none!important}
-#controlRoomModal .health-bar{display:none!important}
-#controlRoomModal .cic-admin-welcome{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px;border:1px solid #d4af3755;border-radius:16px;background:radial-gradient(circle at 95% 0,#72502a 0,#382116 48%,#1b100b 100%);color:#fff;margin:7px 0 12px}
-#controlRoomModal .cic-admin-kicker{font-size:9px;letter-spacing:1.8px;font-weight:800;color:#efd27b}
-#controlRoomModal .cic-admin-welcome h4{font:400 clamp(21px,5vw,27px) Georgia,serif;margin:6px 0 4px;color:#fff}
-#controlRoomModal .cic-admin-welcome p{font-size:11px;line-height:1.5;margin:0;color:#eaded5}
-#controlRoomModal .cic-admin-secure{white-space:nowrap;border:1px solid #b6d7a8;border-radius:999px;padding:7px 10px;color:#e3f5d8;font-size:9px;font-weight:800}
-#controlRoomModal .cic-admin-tabs{display:flex;gap:7px;overflow-x:auto;scrollbar-width:thin;padding:5px 1px 9px;margin:0 0 7px;position:sticky;top:49px;z-index:4;background:#fffaf2ed;backdrop-filter:blur(10px)}
-#controlRoomModal .cic-admin-tabs button{flex:0 0 auto;border:1px solid #dfd1c3;background:#fff;border-radius:999px;padding:9px 12px;font-size:10px;font-weight:800;color:#4b3528;white-space:nowrap}
-#controlRoomModal .cic-admin-tabs button.active{background:#2c1a14;color:#efd27b;border-color:#d4af37;box-shadow:0 3px 10px #2c1a141c}
-#controlRoomModal .cic-admin-status{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:9px 11px;border:1px solid #e4d9cb;border-radius:11px;background:#fff;font-size:9px;color:#6c5b4f;margin:0 0 12px}
-#controlRoomModal .cic-admin-status>span:first-child{font-weight:800;color:#2c1a14}
-#controlRoomModal .cic-live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#29965b;margin-right:6px;box-shadow:0 0 0 3px #29965b20}
-#controlRoomModal .cic-admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:8px}
-#controlRoomModal .cic-admin-tile{display:flex;flex-direction:column;align-items:flex-start;min-height:154px;text-align:left;border:1px solid #e5d9ca;border-radius:15px;background:linear-gradient(155deg,#fff,#fbf5ec);padding:14px;color:#2c1a14;box-shadow:0 4px 14px #2c1a1408;transition:transform .15s,border-color .15s}
-#controlRoomModal .cic-admin-tile:active{transform:scale(.985);border-color:#d4af37}
-#controlRoomModal .cic-admin-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:#2c1a14;color:#efd27b;font-size:19px;margin-bottom:10px}
-#controlRoomModal .cic-admin-tile b{font:400 18px Georgia,serif}
-#controlRoomModal .cic-admin-tile small{font-size:10px;line-height:1.5;color:#78685c;margin-top:5px}
-#controlRoomModal .cic-admin-tile em{font-style:normal;font-size:9px;font-weight:800;color:#8a651c;margin-top:auto;padding-top:12px}
-#controlRoomModal .cic-admin-footnote{display:grid;gap:4px;margin-top:12px;padding:12px;border-radius:12px;background:#f1e9de;border:1px solid #e3d6c7;font-size:10px;line-height:1.5;color:#6d5c50}
-#controlRoomModal .cic-admin-footnote b{color:#2c1a14}
-#controlRoomModal .admin-view{padding-top:5px}
-#controlRoomModal .section-tight,#controlRoomModal .security-panel,#controlRoomModal .activity-panel{border-radius:14px}
-#controlRoomModal .form-grid{gap:10px}
-#controlRoomModal .field input,#controlRoomModal .field textarea,#controlRoomModal .wide-input{min-height:42px;font-size:12px}
-#controlRoomModal .admin-note{font-size:10px;line-height:1.55}
-#controlRoomModal .table-row{font-size:10px;overflow-wrap:anywhere}
-#controlRoomModal button:focus-visible,#controlRoomModal input:focus-visible,#controlRoomModal select:focus-visible,#controlRoomModal textarea:focus-visible{outline:3px solid #d4af37;outline-offset:2px}
-@media(max-width:520px){
-#controlRoomModal{padding:4px!important}
-#controlRoomModal .sheet{max-height:94dvh;padding:12px;border-radius:19px 19px 10px 10px}
-#controlRoomModal .cic-admin-welcome{align-items:flex-start;flex-direction:column;padding:13px}
-#controlRoomModal .cic-admin-secure{align-self:flex-start}
-#controlRoomModal .cic-admin-tabs{top:47px}
-#controlRoomModal .cic-admin-tabs button{padding:9px 11px;font-size:9px}
-#controlRoomModal .cic-admin-grid{gap:8px}
-#controlRoomModal .cic-admin-tile{min-height:166px;padding:11px}
-#controlRoomModal .cic-admin-tile b{font-size:16px}
-#controlRoomModal .cic-admin-tile small{font-size:9px}
-#controlRoomModal .cic-admin-status{font-size:8px}
-}
-@media(max-width:350px){#controlRoomModal .cic-admin-grid{grid-template-columns:1fr}#controlRoomModal .cic-admin-tile{min-height:125px}}
-</style>
-<script>
-window.cicOpenLiveNode=function(kind,button){
-  const control=document.getElementById('controlRoomModal');
-  if(!control||!document.body.classList.contains('cic-owner-shortcuts-unified')){
-    if(typeof window.toast==='function')window.toast('Please sign in with the approved Main Admin account first.');
-    return;
-  }
-  document.querySelectorAll('#controlRoomModal .cic-admin-tabs button').forEach(el=>el.classList.remove('active'));
-  if(button)button.classList.add('active');
-  const fallback={catalogue:'cicOwnerCatalogueButton',orders:'cicOwnerOrdersButton',passports:'cicPassportButton',alerts:'cicOwnerAlertsButton'};
-  const openTarget=()=>{
-    const target=document.getElementById(fallback[kind]||'');
-    // These launchers are intentionally visually hidden after being moved into
-    // the Control Room. HTMLElement.click() still invokes their real handlers.
-    if(target){target.click();return true;}
-    return false;
-  };
-  if(openTarget())return;
-  let attempts=0;
-  const retry=()=>{
-    if(openTarget())return;
-    attempts++;
-    if(attempts<20){window.setTimeout(retry,250);return;}
-    if(typeof window.toast==='function')window.toast('The '+kind+' tool did not finish loading. Refresh the page and sign in again.');
-  };
-  window.setTimeout(retry,250);
-};
-window.cicOpenPassportAdmin=function(button){window.cicOpenLiveNode('passports',button);};
-</script>
-
 </body>
 </html>
