@@ -783,8 +783,16 @@
     // The modal can be injected after the first page scripts have already run.
     const ownerParams = new URL(window.location.href).searchParams;
     const ownerAccessRequested = ownerParams.get("owner-access") === "1" || ownerParams.get("owner") === "1";
+    // A Supabase email-link callback must finish restoring and verifying its
+    // session before any remembered-device prompt can call openAdminAccess().
+    // Otherwise that prompt sees no tab OTP marker yet and signs the new
+    // callback session out before the callback handler can approve it.
+    const authCallbackInProgress = ownerParams.has("code") || ownerParams.has("error") ||
+      ownerParams.has("error_description") || window.location.hash.includes("access_token=") ||
+      window.location.hash.includes("refresh_token=");
     let ownerAutoPromptOpened = false;
     const shouldAutoOpenOwner = () => {
+      if (authCallbackInProgress) return false;
       let deviceHint = false;
       try { deviceHint = localStorage.getItem("cicOwnerDeviceHint") === "1"; } catch (_) {}
       return ownerAccessRequested || deviceHint;
@@ -890,7 +898,7 @@
         },250);
       });
       const url=new URL(window.location.href);
-      const hasAuthCallback=url.searchParams.has("code")||url.hash.includes("access_token=")||url.hash.includes("refresh_token=")||url.searchParams.has("error_description")||url.searchParams.has("error");
+      const hasAuthCallback=authCallbackInProgress;
       if(hasAuthCallback){
         // Supabase's email-link callback may be the step that establishes the
         // owner's persisted session. Never sign out before that session is
