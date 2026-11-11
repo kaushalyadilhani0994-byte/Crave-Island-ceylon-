@@ -77,11 +77,15 @@
         });
         bottom.appendChild(adminButton);
       }
+      if (adminButton) {
+        adminButton.hidden = false;
+        adminButton.removeAttribute("aria-hidden");
+        adminButton.style.setProperty("display", "flex", "important");
+      }
       if (bottom) {
         const count = Math.max(1, Array.from(bottom.querySelectorAll(".nav")).filter(el => getComputedStyle(el).display !== "none").length);
         bottom.style.setProperty("grid-template-columns", "repeat(" + count + ",minmax(0,1fr))", "important");
       }
-      if (adminButton) adminButton.style.setProperty("display", "flex", "important");
       syncOwnerAdminShortcut(true);
     } else {
       // Keep the familiar V18 Admin entry visible on the home screen so the
@@ -94,9 +98,9 @@
       const privateEntry = document.getElementById("cicOwnerAdminNavEntry");
       if (privateEntry) privateEntry.remove();
       if (adminButton && adminButton.id !== "cicOwnerAdminNavEntry") {
-        adminButton.hidden = false;
-        adminButton.removeAttribute("aria-hidden");
-        adminButton.style.setProperty("display", "flex", "important");
+        adminButton.hidden = true;
+        adminButton.setAttribute("aria-hidden", "true");
+        adminButton.style.setProperty("display", "none", "important");
       }
       syncOwnerAdminShortcut(false);
     }
@@ -114,7 +118,7 @@
     if(!document.getElementById("cic-hide-public-qr-nav")){
       const navStyle=document.createElement("style");
       navStyle.id="cic-hide-public-qr-nav";
-      navStyle.textContent=".bottom > .nav.nav-qr-passport{display:none!important;visibility:hidden!important;pointer-events:none!important}@media(max-width:520px){.bottom{grid-template-columns:repeat(6,minmax(0,1fr))!important}}";
+      navStyle.textContent=".bottom > .nav.nav-qr-passport{display:none!important;visibility:hidden!important;pointer-events:none!important}@media(max-width:520px){.bottom{grid-template-columns:repeat(5,minmax(0,1fr))!important}}";
       document.head.appendChild(navStyle);
     }
     const modal=$("#adminAccessModal"), email=$("#adminEmail"), otp=$("#adminOtp");
