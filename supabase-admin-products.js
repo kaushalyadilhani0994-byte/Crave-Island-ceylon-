@@ -353,6 +353,14 @@
   function init() {
     if(!window.CIC_SUPABASE_CONFIG||!window.CIC_SUPABASE_CONFIG.anonKey)return;
     mount();
+    window.CIC_OPEN_OWNER_CATALOGUE=async function(section){
+      if(!await checkAccess()){say("Sign in using the approved owner account to manage the catalogue.",true);return false;}
+      const modal=$("#cicOwnerCatalogue");if(!modal)return false;
+      modal.style.display="flex";await loadAll();
+      const target=section==="categories"?$("#cicCategoryForm"):section==="products"?$("#cicProductForm"):null;
+      if(target)target.scrollIntoView({behavior:"smooth",block:"start"});
+      return true;
+    };
     const update=async()=>{const ok=await checkAccess(); const b=$("#cicOwnerCatalogueButton"); if(b)b.hidden=!ok;};
     update();
     const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
