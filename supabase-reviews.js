@@ -135,7 +135,7 @@
     if(ok&&document.getElementById("admin-overview")){mountAdmin();adminMounted=true;}
     else if(existing){existing.remove();adminMounted=false;}
   }
-  const watch=new MutationObserver(()=>{if(!adminMounted)syncAdminCard();});
+  const watch=new MutationObserver(()=>{if(!adminMounted&&document.body.classList.contains("cic-owner-shortcuts-unified"))syncAdminCard();});
   if(document.body)watch.observe(document.body,{childList:true,subtree:true});
   const client=db();if(client)client.auth.onAuthStateChange(()=>setTimeout(syncAdminCard,0));
   syncAdminCard();
