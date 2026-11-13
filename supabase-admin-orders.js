@@ -18,7 +18,7 @@
     const {data:staff,error:se}=await db.from("staff_profiles").select("role,approved,permissions").eq("id",session.user.id).maybeSingle();
     if(se||!staff||staff.approved!==true) return {error:"This section is only available to an approved CRAVE team account."};
     const permissions=staff.permissions&&typeof staff.permissions==="object"?staff.permissions:{};
-    const isOwner=staff.role==="owner";
+    const isOwner=staff.role==="owner"&&String(session.user.email||"").trim().toLowerCase()==="kaushalyadilhani0994@gmail.com";
     const canOrders=Array.isArray(permissions.orders)&&permissions.orders.includes("read");
     const canDispatch=Array.isArray(permissions.dispatch)&&permissions.dispatch.includes("read");
     if(!isOwner&&!canOrders&&!canDispatch) return {error:"Your account does not have permission to view orders."};
