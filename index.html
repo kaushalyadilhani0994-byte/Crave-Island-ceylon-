@@ -185,12 +185,12 @@ main{display:block!important;position:relative!important;margin:0!important;padd
       <button class="active" onclick="tabHome(this)">All</button><button onclick="jump('featured',this)">New In</button><button onclick="jump('categories',this)">Categories</button><button onclick="jump('story',this)">Heritage</button>
     </div>
     <div class="utility-wrap"><div class="utility-rail">
-      <button class="utility" onclick="openModal('socialModal')">◎ <b>Social</b></button>
+      <button class="utility" onclick="openModal('reviewsModal')">★ <b>Reviews</b></button>
+      <button class="utility" onclick="openModal('socialModal')">◎ <b>Social Media</b></button>
       <button class="utility" onclick="openModal('mediaModal')">▶ Media Clips</button>
       <button class="utility" onclick="openModal('loyaltyModal')">✦ Loyalty</button>
       <button class="utility" onclick="openModal('scratchModal')">▧ Scratch Card</button>
       <button class="utility" onclick="openModal('certModal')">◇ Certificates</button>
-      <button class="utility" onclick="openModal('reviewsModal')">★ Reviews</button>
     </div></div>
   </header>
   <main>
@@ -447,7 +447,9 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
       const action=el.getAttribute("onclick")||"";
       const opensDisabled=[...blocked].some(id=>action.includes("openModal('"+id+"')")||action.includes('openModal("'+id+'")'));
       const legacyAction=/downloadQR\s*\(|saveOwnerImageDemo\s*\(|clearOwnerImageDemo\s*\(|v7SendInvite\s*\(|prepareTeamInvite\s*\(|previewOwnerImage\s*\(/.test(action);
-      if(opensDisabled||legacyAction){el.hidden=true;el.setAttribute("aria-hidden","true");el.style.display="none";}
+      /* Keep customer utility shortcuts visible in their original rail. Their modal remains safely blocked until its live service is ready. */
+      const utilityShortcut=el.classList.contains("utility");
+      if((opensDisabled&&!utilityShortcut)||legacyAction){el.hidden=true;el.setAttribute("aria-hidden","true");el.style.display="none";}
     });
   }
   /* Hide duplicate floating owner shortcuts; the secure Admin entry remains in the main bottom navigation. */
