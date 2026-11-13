@@ -121,8 +121,12 @@
       navStyle.textContent=".bottom .nav-qr-passport{display:none!important;visibility:hidden!important;pointer-events:none!important}";
       document.head.appendChild(navStyle);
     }
-    const actions=modal&&$(".login-actions",modal);
-    if(!modal||!email||!otp||!actions||modal.dataset.cicRealOtp==="true")return;
+    const modal=document.getElementById("adminAccessModal");
+    if(!modal)return;
+    const email=$("#adminEmail",modal);
+    const otp=$("#adminOtp",modal);
+    const actions=$(".login-actions",modal);
+    if(!email||!otp||!actions||modal.dataset.cicRealOtp==="true")return;
     modal.dataset.cicRealOtp="true";
     // The OTP screen is an authentication gate, not a role dashboard.
     // Remove role previews, permission labels and the local-only invite form
