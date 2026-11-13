@@ -180,6 +180,30 @@ win.document.close();
 
 message("Passport saved successfully.");
 }
-function init(){if(!window.CIC_SUPABASE_CONFIG?.anonKey||!window.CIC_SUPABASE?.client)return;mount();const update=async()=>{const b=$("#cicPassportButton");if(b)b.hidden=!(await owner())};update();db=window.CIC_SUPABASE.client;db.auth.onAuthStateChange(()=>setTimeout(update,200))}
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(init,500));else setTimeout(init,500);
+function init(){
+ const config=window.CIC_SUPABASE_CONFIG;
+ const client=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
+ if(!config?.anonKey||!client)return false;
+ db=client;
+ mount();
+ const update=async()=>{
+  const button=$("#cicPassportButton");
+  if(!button)return false;
+  try{button.hidden=!(await owner());return true}
+  catch(error){console.warn("[CRAVE QR] Owner visibility check failed:",error);button.hidden=true;return false}
+ };
+ // Supabase may still be restoring its persisted OTP session when this module loads.
+ // Recheck after INITIAL_SESSION and for a short bounded window; never grant access locally.
+ update();
+ db.auth.onAuthStateChange(()=>{setTimeout(update,0);setTimeout(update,350)});
+ [300,900,1800,3500,6000].forEach(delay=>setTimeout(update,delay));
+ return true;
+}
+function boot(attempt){
+ if(init())return;
+ if(attempt<20)setTimeout(()=>boot(attempt+1),250);
+ else console.warn("[CRAVE QR] Supabase client was not ready; QR module could not initialise.");
+}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(()=>boot(0),100),{once:true});
+else setTimeout(()=>boot(0),100);
 })();
