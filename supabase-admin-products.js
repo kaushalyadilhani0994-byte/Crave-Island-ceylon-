@@ -87,7 +87,7 @@
     const {data:{session},error}=await client.auth.getSession();
     if(error||!session){allowed=false;return false;}
     const {data:staff,error:staffError}=await client.from("staff_profiles").select("role,approved").eq("id",session.user.id).maybeSingle();
-    allowed=!staffError&&!!staff&&staff.role==="owner"&&staff.approved===true;
+    allowed=!staffError&&!!staff&&staff.role==="owner"&&staff.approved===true&&String(session.user.email||"").trim().toLowerCase()==="kaushalyadilhani0994@gmail.com";
     return allowed;
   }
 
