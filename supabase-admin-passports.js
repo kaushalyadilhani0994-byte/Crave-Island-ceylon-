@@ -96,7 +96,7 @@ async function showExistingQr(product,passport){
  const slug=String(passport?.public_slug||"").trim();
  let url=/^https:\/\//i.test(stored)?stored:(slug?new URL("/passport.html?slug="+encodeURIComponent(slug),location.origin).href:"");
  if(!url){
-  if(stored)result.innerHTML="<div class=\"msg\"><b>Saved QR reference</b><br>"+esc(stored)+"<br><small>This older value is a reference code, not a complete scan link. It has been preserved.</small></div>";
+  result.innerHTML="<div class=\"msg\"><b>No scannable product QR exists yet</b><br>"+(stored?"Existing QR reference (preserved): "+esc(stored)+"<br>":"")+"This product does not yet have a public passport link. Complete the verified passport details below and press <b>Save product passport</b>. The secure owner save will create the passport URL and its QR code. Keep the passport unpublished until the product information is approved.</div>";
   return;
  }
  const isPublished=passport?.published===true;
