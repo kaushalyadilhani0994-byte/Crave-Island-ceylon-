@@ -30,7 +30,7 @@ if(!db)return false;
 const {data:{session},error}=await db.auth.getSession();
 if(error||!session)return false;
 const {data,error:e}=await db.from("staff_profiles").select("role,approved").eq("id",session.user.id).maybeSingle();
-return !e&&data&&data.role==="owner"&&data.approved===true;
+return !e&&data&&data.role==="owner"&&data.approved===true&&String(session.user.email||"").trim().toLowerCase()==="kaushalyadilhani0994@gmail.com";
 }
 function mount(){
 if($("#cicPassportAdmin"))return;
