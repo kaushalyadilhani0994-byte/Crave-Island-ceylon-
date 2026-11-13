@@ -146,7 +146,7 @@ storage_instructions:$("#cicPassStorage").value.trim()||null,
 public_story:$("#cicPassStory").value.trim()||null,
 published:$("#cicPassPublished").checked
 };
-if(row.published){try{await ensureQrLibrary()}catch(qrError){message("The local QR generator could not load. No passport changes were saved; refresh and retry.");btn.textContent="Save product passport";return}}
+try{await ensureQrLibrary()}catch(qrError){message("The local QR generator could not load. No passport changes were saved; refresh and retry.");btn.textContent="Save product passport";return}
 let data,error;
 try {
 const response=await db.rpc("owner_update_product_passport",{
@@ -179,9 +179,9 @@ return;
 const saved=Array.isArray(data)?data[0]:data;
 if(!saved||!saved.qr_url){message("The server did not confirm the passport and QR save. Please retry.");return}
 const url=saved.qr_url;
-const qrImage=row.published?makeQrDataUrl(url,7):"";
+const qrImage=makeQrDataUrl(url,7);
 const result=$("#cicPassResult");
-result.innerHTML='<div class="msg">'+(row.published?"Passport saved and published.":"Passport saved as unpublished; public QR page will not reveal it yet.")+'<br><a href="'+esc(url)+'" target="_blank" rel="noopener">Open product passport</a><br><label>QR destination</label><input readonly value="'+esc(url)+'"><button type="button" id="cicPassCopy">Copy QR destination</button>'+(row.published?'<p><img alt="QR code for this product passport" src="'+esc(qrImage)+'"></p><button type="button" id="cicPassPrint">Print product QR label</button><p>QR generated on this device. Product URL is not sent to an external QR service.</p>':"")+'</div>';
+result.innerHTML='<div class="msg">'+(row.published?"Passport saved and published.":"Passport saved as unpublished; public QR page will not reveal it yet.")+'<br><a href="'+esc(url)+'" target="_blank" rel="noopener">Open product passport</a><br><label>QR destination</label><input readonly value="'+esc(url)+'"><button type="button" id="cicPassCopy">Copy QR destination</button>'+'<p><img alt="QR code for this product passport" src="'+esc(qrImage)+'"></p><button type="button" id="cicPassPrint">Print product QR label</button><p>'+(row.published?"Published passport QR.":"QR saved; passport is unpublished, so public scans will not show details yet.")+' QR generated on this device.</p>'+'</div>';
 $("#cicPassCopy").onclick=async()=>{try{await navigator.clipboard.writeText(url);message("QR destination copied.")}catch(e){message("Select and copy the QR destination from the field.")}};
 const printButton=$("#cicPassPrint");
 if(printButton)printButton.onclick=()=>{
@@ -208,6 +208,11 @@ function init(){
  if(!config?.anonKey||!client)return false;
  db=client;
  mount();
+ window.CIC_OPEN_PRODUCT_QR=async function(){
+  if(!await owner()){message("Sign in with the approved owner account to manage product QR passports.");return false;}
+  const modal=$("#cicPassportAdmin");if(!modal)return false;
+  modal.style.display="flex";await loadProducts();return true;
+ };
  const update=async()=>{
   const button=$("#cicPassportButton");
   if(!button)return false;
