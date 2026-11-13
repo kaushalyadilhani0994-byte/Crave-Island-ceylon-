@@ -95,12 +95,12 @@
       // until the server confirms the approved owner session.
       document.body.classList.remove("cic-owner-shortcuts-unified");
       if (bottom) bottom.style.removeProperty("grid-template-columns");
-      const privateEntry = document.getElementById("cicOwnerAdminNavEntry");
-      if (privateEntry) privateEntry.remove();
-      if (adminButton && adminButton.id !== "cicOwnerAdminNavEntry") {
-        adminButton.hidden = true;
-        adminButton.setAttribute("aria-hidden", "true");
-        adminButton.style.setProperty("display", "none", "important");
+      // Keep the V18 Admin sign-in entry visible; only the OTP gate is public.
+      // The Control Room remains protected by approved-owner verification.
+      if (adminButton) {
+        adminButton.hidden = false;
+        adminButton.removeAttribute("aria-hidden");
+        adminButton.style.setProperty("display", "flex", "important");
       }
       syncOwnerAdminShortcut(false);
     }
@@ -118,7 +118,7 @@
     if(!document.getElementById("cic-hide-public-qr-nav")){
       const navStyle=document.createElement("style");
       navStyle.id="cic-hide-public-qr-nav";
-      navStyle.textContent=".bottom > .nav.nav-qr-passport{display:none!important;visibility:hidden!important;pointer-events:none!important}@media(max-width:520px){.bottom{grid-template-columns:repeat(5,minmax(0,1fr))!important}}";
+      navStyle.textContent=".bottom .nav-qr-passport{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}@media(max-width:520px){.bottom{grid-template-columns:repeat(7,minmax(0,1fr))!important}}";
       document.head.appendChild(navStyle);
     }
     const modal=$("#adminAccessModal"), email=$("#adminEmail"), otp=$("#adminOtp");
