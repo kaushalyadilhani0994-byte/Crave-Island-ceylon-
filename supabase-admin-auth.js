@@ -112,26 +112,15 @@
     return !error&&!!data&&data.role==="owner"&&data.approved===true;
   }
   function install() {
-    // Product QR passports belong inside the authenticated owner Admin workspace.
-    // Keep the public shop QR available at /shop-qr.html, but do not expose a QR
-    // launcher in customer navigation that could be mistaken for a product passport.
-    if(!document.getElementById("cic-hide-public-qr-nav")){
+    // Product QR passport management is inside the approved-owner Control Room.
+    // Keep customer navigation free of the QR admin launcher; printed passport
+    // URLs and the separate public shop QR page remain directly accessible.
+    if(!document.getElementById("cic-customer-qr-nav-hidden")){
       const navStyle=document.createElement("style");
-      navStyle.id="cic-hide-public-qr-nav";
-      navStyle.textContent=".bottom .nav-qr-passport{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}@media(max-width:520px){.bottom{grid-template-columns:repeat(7,minmax(0,1fr))!important}}";
+      navStyle.id="cic-customer-qr-nav-hidden";
+      navStyle.textContent=".bottom .nav-qr-passport{display:none!important;visibility:hidden!important;pointer-events:none!important}";
       document.head.appendChild(navStyle);
     }
-    const modal=$("#adminAccessModal"), email=$("#adminEmail"), otp=$("#adminOtp");
-    // Hide owner QR tooling from customer navigation; direct printed passport URLs stay public.
-    if(!document.getElementById("cic-hide-customer-qr-tools")){
-      const privateNavStyle=document.createElement("style");
-      privateNavStyle.id="cic-hide-customer-qr-tools";
-      privateNavStyle.textContent=".bottom .nav-qr-passport{display:grid!important;visibility:visible!important;pointer-events:auto!important}@media(max-width:520px){.bottom{grid-template-columns:repeat(7,minmax(0,1fr))!important}}";
-      document.head.appendChild(privateNavStyle);
-    }
-
-    // Restore the public QR Passport destination in the mobile bar; Admin remains owner-only.
-    if(!document.getElementById("cic-nav-qr-visibility-fix")){const st=document.createElement("style");st.id="cic-nav-qr-visibility-fix";st.textContent=".bottom .nav-qr-passport{display:grid!important;visibility:visible!important;pointer-events:auto!important}.bottom .nav-qr-passport .nav-label{font-size:clamp(10px,2.7vw,12px);letter-spacing:-.3px}.bottom .nav-settings svg{stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}@media(max-width:520px){.bottom{display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:2px!important;padding:7px 5px!important;box-sizing:border-box!important}.bottom .nav{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important;min-width:0!important;width:100%!important;padding:7px 1px 5px!important;margin:0!important;overflow:hidden!important}.bottom .nav svg{width:19px!important;height:19px!important;flex:0 0 19px!important}.bottom .nav-label{display:block!important;max-width:100%!important;font-size:clamp(8px,2.25vw,10px)!important;line-height:1.05!important;letter-spacing:-.25px!important;white-space:normal!important;overflow-wrap:anywhere!important;text-align:center!important}.bottom .nav-sub{display:none!important}.bottom .nav-qr-passport .nav-label{font-size:0!important}.bottom .nav-qr-passport .nav-label:after{content:\"QR\";font-size:10px;letter-spacing:0}.bottom .nav-settings .nav-label{font-size:clamp(8px,2.1vw,9px)!important}}";document.head.appendChild(st);const q=document.querySelector(".bottom .nav-qr-passport .nav-label");if(q)q.textContent="QR";}
     const actions=modal&&$(".login-actions",modal);
     if(!modal||!email||!otp||!actions||modal.dataset.cicRealOtp==="true")return;
     modal.dataset.cicRealOtp="true";
