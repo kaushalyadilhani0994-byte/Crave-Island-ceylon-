@@ -22,7 +22,8 @@
     const {data,error}=await client.rpc("get_public_product_reviews",{p_product_id:productId||null,p_limit:30,p_offset:0});
     if(error){container.innerHTML='<p class="cic-review-note">The secure reviews service is being prepared. Review submissions will open when the service is connected.</p>';return false;}
     const rows=Array.isArray(data)?data:[];
-    container.innerHTML=rows.length?rows.map(reviewCard).join(""):'<p class="cic-review-note">No approved customer reviews yet. Genuine verified-purchase reviews will appear here after owner approval.</p>';\n    return true;
+    container.innerHTML=rows.length?rows.map(reviewCard).join(""):'<p class="cic-review-note">No approved customer reviews yet. Genuine verified-purchase reviews will appear here after owner approval.</p>';
+    return true;
   }
   async function loadProductOptions(select){
     const client=db(); if(!client||!select)return;
