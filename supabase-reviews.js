@@ -129,8 +129,16 @@
   window.CIC_RENDER_PRODUCT_REVIEWS=renderProductReviews;
   const baseOpen=window.openModal;
   if(typeof baseOpen==="function")window.openModal=function(id){const result=baseOpen.apply(this,arguments);if(id==="reviewsModal")setTimeout(renderModal,0);return result;};
-  const watch=new MutationObserver(()=>{if(document.getElementById("admin-overview")&&!adminMounted){owner().then(ok=>{if(ok){mountAdmin();adminMounted=true;}});}});
+  async function syncAdminCard(){
+    const ok=await owner();
+    const existing=document.getElementById("cicOwnerReviewsCard");
+    if(ok&&document.getElementById("admin-overview")){mountAdmin();adminMounted=true;}
+    else if(existing){existing.remove();adminMounted=false;}
+  }
+  const watch=new MutationObserver(()=>{if(!adminMounted)syncAdminCard();});
   if(document.body)watch.observe(document.body,{childList:true,subtree:true});
+  const client=db();if(client)client.auth.onAuthStateChange(()=>setTimeout(syncAdminCard,0));
+  syncAdminCard();
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>{if(location.search.includes("open=reviews"))renderModal();},{once:true});
   else if(location.search.includes("open=reviews"))renderModal();
 })();
