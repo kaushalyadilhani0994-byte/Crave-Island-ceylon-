@@ -90,8 +90,8 @@
   }
   async function showAdmin(){
     const root=document.getElementById("cicOwnerReviewsModal");if(!root)return;
-    if(!await owner()){root.innerHTML='<div class="cic-review-note">Approved Main Admin access is required.</div>';return;}
-    root.innerHTML='<div class="cic-review-admin-head"><h3>Customer Reviews</h3><button type="button" id="cicReviewAdminClose">Close</button></div><p class="cic-review-note">Only approved reviews are visible to customers. Approve genuine feedback or reject content that is not suitable.</p><div id="cicOwnerReviewRows">Loading pending reviews…</div>';
+    if(!await owner()){root.innerHTML='<section style="max-width:720px;margin:24px auto;background:#fff8e7;color:#2c1a14;border-radius:16px;padding:18px">Approved Main Admin access is required.</section>';root.style.display="block";return;}
+    root.innerHTML='<section style="max-width:720px;margin:24px auto;background:#fff8e7;color:#2c1a14;border:1px solid #d4af37;border-radius:16px;padding:18px;font:14px system-ui"><div class="cic-review-admin-head"><h3>Customer Reviews</h3><button type="button" id="cicReviewAdminClose">Close</button></div><p class="cic-review-note">Only approved reviews are visible to customers. Approve genuine feedback or reject content that is not suitable.</p><div id="cicOwnerReviewRows">Loading pending reviews…</div></section>';
     root.querySelector("#cicReviewAdminClose").onclick=()=>root.style.display="none";
     const refresh=async()=>{
       const list=root.querySelector("#cicOwnerReviewRows");
@@ -106,8 +106,8 @@
         await refresh();
       }));
     };
-    await refresh();
     root.style.display="block";
+    await refresh();
   }
   function mountAdmin(){
     const grid=document.querySelector("#admin-overview .control-grid");
@@ -120,10 +120,7 @@
     if(!document.getElementById("cicOwnerReviewsModal")){
       const modal=document.createElement("div");modal.id="cicOwnerReviewsModal";
       modal.style.cssText="display:none;position:fixed;inset:0;z-index:10030;overflow:auto;background:#1c110ed9;padding:14px";
-      modal.innerHTML='<section style="max-width:720px;margin:24px auto;background:#fff8e7;color:#2c1a14;border:1px solid #d4af37;border-radius:16px;padding:18px;font:14px system-ui"></section>';
       document.body.appendChild(modal);
-      const original=showAdmin;
-      showAdmin=async function(){const section=modal.firstElementChild;await original();section.innerHTML=modal.innerHTML;};
     }
   }
   const style=document.createElement("style");
