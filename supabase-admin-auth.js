@@ -88,19 +88,13 @@
       }
       syncOwnerAdminShortcut(true);
     } else {
-      // Keep the familiar V18 Admin entry visible on the home screen so the
-      // owner can always reach the secure OTP prompt, including on a new
-      // browser/device where no local owner-device hint exists. This exposes
-      // only the sign-in entry: the owner workspace and all data remain hidden
-      // until the server confirms the approved owner session.
+      // Customer navigation must never expose the Admin entry or its OTP launcher.
+      // The owner can open the OTP prompt using the private owner-access URL/device flow.
       document.body.classList.remove("cic-owner-shortcuts-unified");
-      if (bottom) bottom.style.removeProperty("grid-template-columns");
-      // Keep the V18 Admin sign-in entry visible; only the OTP gate is public.
-      // The Control Room remains protected by approved-owner verification.
-      if (adminButton) {
-        adminButton.hidden = false;
-        adminButton.removeAttribute("aria-hidden");
-        adminButton.style.setProperty("display", "flex", "important");
+      if (adminButton) adminButton.remove();
+      if (bottom) {
+        const count = Math.max(1, Array.from(bottom.querySelectorAll(".nav")).filter(el => getComputedStyle(el).display !== "none").length);
+        bottom.style.setProperty("grid-template-columns", "repeat(" + count + ",minmax(0,1fr))", "important");
       }
       syncOwnerAdminShortcut(false);
     }
