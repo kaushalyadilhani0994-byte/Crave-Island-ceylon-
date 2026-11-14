@@ -55,36 +55,48 @@ function qrDataUrl(text,size){
  throw new Error("Could not generate the product QR image on this device.");
 }
 async function save(e){
-e.preventDefault();if(!await owner()){message("Owner session expired. Please sign in again.");return}
-const id=$("#cicPassProduct").value,ingredients=$("#cicPassIngredients").value.trim();
-if(!id||!ingredients){message("Choose a product and enter its verified ingredients.");return}
-const btn=$("#cicPassSave");btn.disabled=true;btn.textContent="Saving…";
-const {data:existing,error:readError}=await db.from("product_passports").select("public_slug").eq("product_id",id).maybeSingle();
-if(readError){btn.disabled=false;btn.textContent="Save product passport";message("Could not check the existing passport. Please try again.");return}
-const slug=existing?.public_slug||("cic-"+id.toLowerCase());
-const row={product_id:id,public_slug:slug,ingredients:splitList(ingredients),allergen_information:splitList($("#cicPassAllergens").value),origin:$("#cicPassOrigin").value.trim()||null,batch_code:$("#cicPassBatch").value.trim()||null,best_before:$("#cicPassBest").value||null,storage_instructions:$("#cicPassStorage").value.trim()||null,public_story:$("#cicPassStory").value.trim()||null,published:$("#cicPassPublished").checked,updated_at:new Date().toISOString()};
-const {error}=await db.from("product_passports").upsert(row,{onConflict:"product_id"});
-btn.disabled=false;btn.textContent="Save product passport";
-if(error){message("Could not save passport. Confirm the latest store migration and owner permissions are active.");return}
-const url="https://craveislandceylonv18supabaseintegra.vercel.app/passport.html?slug="+encodeURIComponent(slug);
-const result=$("#cicPassResult");
-result.innerHTML='<div class="msg">'+(row.published?"Passport saved and published.":"Passport saved as unpublished; public QR page will not reveal it yet.")+'<br><a href="'+esc(url)+'" target="_blank" rel="noopener">Open product passport</a><br><label>QR destination</label><input readonly value="'+esc(url)+'"><button type="button" id="cicPassCopy">Copy QR destination</button>'+(row.published?'<p><div id="cicPassQrPreview" aria-label="Product passport QR code"></div></p><button type="button" id="cicPassPrint">Print product QR label</button><p>Print label includes CRAVE ISLAND CEYLON with the QR code underneath.</p>':"")+'</div>';
- if(row.published){try{new QRCode($("#cicPassQrPreview"),{text:url,width:240,height:240,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.H});}catch(qrError){message(qrError.message||"Could not generate the QR preview.");}}
-$("#cicPassCopy").onclick=async()=>{try{await navigator.clipboard.writeText(url);message("QR destination copied.")}catch(e){message("Select and copy the QR destination from the field.")}};
-const printButton=$("#cicPassPrint");
-if(printButton)printButton.onclick=()=>{
-const productName=$("#cicPassProduct").selectedOptions[0]?.textContent||"Product";
-const batch=$("#cicPassBatch").value.trim();
-let qr;try{qr=qrDataUrl(url,360);}catch(qrError){message(qrError.message);return;}
-const win=window.open("","_blank","width=480,height=640");
-if(!win){message("Allow pop-ups to print the QR label.");return}
-const safe=v=>String(v||"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-win.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CRAVE ISLAND CEYLON QR Label</title><style>@page{size:50mm 70mm;margin:3mm}*{box-sizing:border-box}body{margin:0;width:44mm;min-height:64mm;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;color:#2C1A14;font-family:Arial,sans-serif;padding:2mm}.brand{font:700 12pt Georgia,serif;letter-spacing:.4px;border-bottom:1px solid #D4AF37;padding-bottom:2mm;width:100%}.tag{font-size:6.5pt;letter-spacing:1px;margin-top:1.5mm}.name{font-size:9pt;font-weight:700;margin:3mm 0 1mm;overflow-wrap:anywhere}.qr{width:34mm;height:34mm;object-fit:contain;margin:1mm auto}.batch{font-size:7pt;margin-top:1mm}.note{font-size:6pt;margin-top:2mm;color:#65554b}@media screen{body{margin:15px auto;border:1px dashed #bbb;padding:10px;width:44mm}}</style></head><body><div class="brand">CRAVE ISLAND CEYLON</div><div class="tag">PRODUCT PASSPORT</div><div class="name">'+safe(productName)+'</div><img class="qr" alt="Product passport QR code" src="'+safe(qr)+'"><div class="batch">'+(batch?"Batch / Lot: "+safe(batch):"Scan to verify product details")+'</div><div class="note">Scan for verified ingredients and product information</div><script>const q=document.querySelector(".qr");q.onload=()=>setTimeout(()=>window.print(),250);q.onerror=()=>document.body.insertAdjacentHTML("beforeend","<p>QR image could not load. Close and try again.</p>");<\/script></body></html>');
-win.document.close();
-};
-
-
-message("Passport saved successfully.");
+e.preventDefault();
+const btn=$("#cicPassSave");
+if(btn.dataset.saving==="true")return;
+btn.dataset.saving="true";btn.disabled=true;btn.textContent="Saving…";
+try{
+ if(!await owner())throw new Error("Owner session expired. Please sign in again.");
+ const id=$("#cicPassProduct").value,ingredients=$("#cicPassIngredients").value.trim();
+ if(!id||!ingredients)throw new Error("Choose a product and enter its verified ingredients.");
+ const bestBefore=$("#cicPassBest").value||null;
+ if(bestBefore&&bestBefore<new Date().toISOString().slice(0,10))throw new Error("Best-before date is in the past. Verify the date before publishing.");
+ const {data:existing,error:readError}=await db.from("product_passports").select("public_slug").eq("product_id",id).maybeSingle();
+ if(readError)throw new Error("Could not check the existing passport: "+readError.message);
+ const slug=existing?.public_slug||("cic-"+id.toLowerCase());
+ const row={product_id:id,public_slug:slug,ingredients:splitList(ingredients),allergen_information:splitList($("#cicPassAllergens").value),origin:$("#cicPassOrigin").value.trim()||null,batch_code:$("#cicPassBatch").value.trim()||null,best_before:bestBefore,storage_instructions:$("#cicPassStorage").value.trim()||null,public_story:$("#cicPassStory").value.trim()||null,published:$("#cicPassPublished").checked,updated_at:new Date().toISOString()};
+ if(!row.ingredients.length)throw new Error("Enter at least one verified ingredient.");
+ const {error}=await db.from("product_passports").upsert(row,{onConflict:"product_id"});
+ if(error)throw new Error("Could not save passport: "+error.message);
+ const url="https://craveislandceylonv18supabaseintegra.vercel.app/passport.html?slug="+encodeURIComponent(slug);
+ const result=$("#cicPassResult");
+ result.innerHTML='<div class="msg">'+(row.published?"Passport saved and published.":"Passport saved as unpublished; public QR page will not reveal it yet.")+'<br><a href="'+esc(url)+'" target="_blank" rel="noopener">Open product passport</a><br><label>QR destination</label><input readonly value="'+esc(url)+'"><button type="button" id="cicPassCopy">Copy QR destination</button>'+(row.published?'<p><div id="cicPassQrPreview" aria-label="Product passport QR code"></div></p><button type="button" id="cicPassPrint">Print product QR label</button><p>Print label includes CRAVE ISLAND CEYLON with the QR code underneath.</p>':"")+'</div>';
+ if(row.published){
+   try{new QRCode($("#cicPassQrPreview"),{text:url,width:240,height:240,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.H});}
+   catch(qrError){message("Passport saved, but QR preview could not be generated: "+String(qrError.message||qrError));}
+ }
+ $("#cicPassCopy").onclick=async()=>{try{await navigator.clipboard.writeText(url);message("QR destination copied.")}catch(e){message("Select and copy the QR destination from the field.")}};
+ const printButton=$("#cicPassPrint");
+ if(printButton)printButton.onclick=()=>{
+   const productName=$("#cicPassProduct").selectedOptions[0]?.textContent||"Product";
+   const batch=$("#cicPassBatch").value.trim();
+   let qr;try{qr=qrDataUrl(url,360);}catch(qrError){message(qrError.message);return;}
+   const win=window.open("","_blank","width=480,height=640");
+   if(!win){message("Allow pop-ups to print the QR label.");return}
+   const safe=v=>String(v||"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+   win.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CRAVE ISLAND CEYLON QR Label</title><style>@page{size:50mm 70mm;margin:3mm}*{box-sizing:border-box}body{margin:0;width:44mm;min-height:64mm;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;color:#2C1A14;font-family:Arial,sans-serif;padding:2mm}.brand{font:700 12pt Georgia,serif;letter-spacing:.4px;border-bottom:1px solid #D4AF37;padding-bottom:2mm;width:100%}.tag{font-size:6.5pt;letter-spacing:1px;margin-top:1.5mm}.name{font-size:9pt;font-weight:700;margin:3mm 0 1mm;overflow-wrap:anywhere}.qr{width:34mm;height:34mm;object-fit:contain;margin:1mm auto}.batch{font-size:7pt;margin-top:1mm}.note{font-size:6pt;margin-top:2mm;color:#65554b}@media screen{body{margin:15px auto;border:1px dashed #bbb;padding:10px;width:44mm}}</style></head><body><div class="brand">CRAVE ISLAND CEYLON</div><div class="tag">PRODUCT PASSPORT</div><div class="name">'+safe(productName)+'</div><img class="qr" alt="Product passport QR code" src="'+safe(qr)+'"><div class="batch">'+(batch?"Batch / Lot: "+safe(batch):"Scan to verify product details")+'</div><div class="note">Scan for verified ingredients and product information</div><script>const q=document.querySelector(".qr");const doPrint=()=>setTimeout(()=>window.print(),250);if(q.complete&&q.naturalWidth)doPrint();else{q.onload=doPrint;q.onerror=()=>document.body.insertAdjacentHTML("beforeend","<p>QR image could not load. Close and try again.</p>");}<\\/script></body></html>');
+   win.document.close();
+ };
+ message(row.published?"Passport saved and published. QR is ready for scan testing.":"Passport saved as an unpublished draft.");
+}catch(error){
+ message(String(error&&error.message||"Could not save product passport. Please retry.").slice(0,260));
+}finally{
+ btn.disabled=false;btn.textContent="Save product passport";delete btn.dataset.saving;
+}
 }
 function init(){if(!window.CIC_SUPABASE_CONFIG?.anonKey||!window.CIC_SUPABASE?.client)return;mount();const update=async()=>{const b=$("#cicPassportButton");if(b)b.hidden=!(await owner())};update();db=window.CIC_SUPABASE.client;db.auth.onAuthStateChange(()=>setTimeout(update,200))}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(init,500));else setTimeout(init,500);
