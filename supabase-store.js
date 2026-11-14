@@ -144,9 +144,26 @@
       const categoryRows = categoriesResult.data || [];
       liveCategoryRows = categoryRows;
       const activeCategoryNames = new Set(categoryRows.map((row) => String(row.name || "")));
+      // Private product images are exposed only through a short-lived signed URL
+      // issued for an active product with a published passport.
+      const imageReadyRows = await Promise.all(rows.map(async (row) => {
+        const imageValue = String(row.image_url || "").trim();
+        if (!imageValue || /^https:\/\//i.test(imageValue)) return row;
+        if (!/^[0-9a-f-]{36}\//i.test(imageValue)) return { ...row, image_url: null };
+        try {
+          const response = await fetch(config.url + "/functions/v1/product-image?product_id=" + encodeURIComponent(row.id), {
+            method: "GET", headers: { apikey: config.anonKey }
+          });
+          if (!response.ok) return { ...row, image_url: null };
+          const signed = await response.json();
+          return { ...row, image_url: safeImageUrl(signed.url) };
+        } catch (_) {
+          return { ...row, image_url: null };
+        }
+      }));
       // A product in a hidden/missing collection must not leak into All Products,
       // search, gift pickers, or stale category filters.
-      const visibleRows = rows.filter((row) => activeCategoryNames.has(String(row.category || "")));
+      const visibleRows = imageReadyRows.filter((row) => activeCategoryNames.has(String(row.category || "")));
 
       // The database is the source of truth after a successful read, including
       // when it contains zero active rows. Never silently show demo products.
