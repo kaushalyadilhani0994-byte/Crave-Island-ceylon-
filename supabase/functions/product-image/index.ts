@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
   }
 
   const objectPath = product.image_url.trim();
-  if (!objectPath.startsWith(productId + "/") || objectPath.includes("..") || objectPath.startsWith("/")) {
+  if (!new RegExp("^" + productId + "/[A-Za-z0-9_-]+\\.(jpg|jpeg|png|webp)$", "i").test(objectPath)) {
     return Response.json({ error: "Image not found" }, { status: 404, headers: corsHeaders });
   }
 
