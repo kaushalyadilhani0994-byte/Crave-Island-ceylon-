@@ -356,6 +356,8 @@
       if(error)throw error;
       const result=Array.isArray(data)?data[0]:data;
       if(!result||!result.product_id||!result.qr_url)throw new Error("The server did not confirm the saved product and QR passport.");
+      // If a later photo upload fails, retry as an edit of this confirmed product, never as a duplicate create.
+      form.dataset.editId=String(result.product_id);
       if(selectedProductPhoto){
         const photo=selectedProductPhoto;
         const extension=photo.type==="image/png"?"png":photo.type==="image/webp"?"webp":"jpg";
@@ -372,7 +374,7 @@
       }
       form.reset();delete form.dataset.editId;delete form.dataset.requestId;selectedProductPhoto=null;renderProductPhotoPreview();
       const saveButton=form.querySelector("button[type=submit]");if(saveButton)saveButton.textContent="Save product as draft";
-      say((result.created?"Product saved as a hidden draft. ":"Product updated. ")+(result.replayed?"Previous confirmed save recovered. ":"")+"Product, passport and QR link were saved together. "+(selectedProductPhoto?"":""));
+      say((result.created?"Product saved as a hidden draft. ":"Product updated. ")+(result.replayed?"Previous confirmed save recovered. ":"")+"Product, passport and QR link were saved together. Passport publishing remains a separate owner action.");
       await loadAll();
       if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function")await window.CIC_SUPABASE.refreshCatalogue();
     }catch(error){
