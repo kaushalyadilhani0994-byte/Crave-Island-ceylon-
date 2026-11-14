@@ -89,7 +89,10 @@
     const checkbox=document.getElementById("cicCalmMusic");
     if(checkbox)checkbox.checked=enabled;
     // Browsers require a user gesture before resuming audio after a page reload.
-    if(enabled)startCalmMusic();
+    if(enabled&&!startCalmMusic()){
+      if(checkbox)checkbox.checked=false;
+      try{localStorage.setItem(KEY,"0");}catch(_){}
+    }
   };
   window.addEventListener("pagehide",stopCalmMusic);
 })();
