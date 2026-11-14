@@ -9,9 +9,10 @@
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="/supabase/client-config.js"></script>
+<script src="/supabase-reviews.js?v=20261114-verified-reviews-1"></script>
 </head>
 <body><header class="head">CRAVE ISLAND CEYLON<small>CEYLON HERITAGE · PRODUCT PASSPORT</small></header>
-<main><section class="card" id="passport" aria-live="polite"><div class="status">Verifying product information…</div></section><p class="muted" style="font-size:12px;text-align:center">Always read the physical package label. If details do not match, contact the brand before consuming.</p></main>
+<main><section class="card" id="passport" aria-live="polite"><div class="status">Verifying product information…</div></section><p class="muted" style="font-size:12px;text-align:center">Always read the physical package label. If details do not match, contact the brand before consuming.</p><section id="cicProductReviews" class="card" style="margin-top:16px" aria-live="polite" hidden><h2>Customer Reviews</h2><p class="muted">Loading approved reviews…</p></section><div class="passport-actions" style="display:grid;gap:10px;margin:18px 0"><a href="/?open=reviews" style="display:block;text-align:center;padding:13px 16px;border-radius:999px;background:#2C1A14;color:#FFF8E7;text-decoration:none;font-weight:700;border:1px solid #D4AF37">Read customer reviews</a><a href="/" style="display:block;text-align:center;padding:12px 16px;border-radius:999px;background:#fffdf7;color:#2C1A14;text-decoration:none;font-weight:700;border:1px solid #D4AF37">← Back to CRAVE ISLAND CEYLON shop</a></div></main>
 <script>
 (function(){
 const root=document.getElementById("passport");
@@ -37,6 +38,7 @@ const image=product.image_url?'<img src="'+esc(product.image_url)+'" alt="'+esc(
 const description=story?'<p class="muted">'+esc(story)+'</p>':"";
 let price="";if(product.price!=null){const amount=Number(product.price);if(Number.isFinite(amount)){try{price=amount.toLocaleString("en-LK",{style:"currency",currency:/^[A-Z]{3}$/.test(product.currency||"")?product.currency:"LKR"});}catch(_){price="LKR "+amount.toLocaleString("en-LK");}}}
 root.innerHTML=image+'<h1>'+esc(productName)+'</h1>'+description+'<div class="grid">'+f("Collection",product.category)+f("Price",price)+f("Batch / lot",data.batch_code)+f("Origin",data.origin)+f("Net content / pack size",data.net_content)+f("Manufacturing date",data.manufacturing_date)+f("Best before / expiry",data.best_before)+f("Ingredients",data.ingredients,true)+f("Allergen information",data.allergen_information,true)+f("Storage instructions",data.storage_instructions,true)+'</div>';
+const reviewSection=document.getElementById("cicProductReviews");if(reviewSection&&window.CIC_RENDER_PRODUCT_REVIEWS){reviewSection.hidden=false;window.CIC_RENDER_PRODUCT_REVIEWS(product.id);}
 }catch(e){fail("Product verification is temporarily unavailable. Please try again later.")}
 }
 init();

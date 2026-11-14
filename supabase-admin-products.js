@@ -32,7 +32,7 @@
       #cicOwnerCatalogue .cic-muted{color:#59463b;font-size:12px;line-height:1.55}
       #cicOwnerCatalogue .cic-card{border:1px solid #e2d5c4;border-radius:10px;padding:12px;margin:8px 0;display:flex;gap:12px;align-items:center;justify-content:space-between}
       #cicOwnerCatalogue .cic-message{padding:10px;border-radius:8px;background:#f0e5d4;margin:10px 0;white-space:pre-wrap}
-      #cicOwnerCatalogue .cic-section{border-top:1px solid #e3d5c3;margin-top:18px;padding-top:16px}
+      #cicOwnerCatalogue .cic-section{border-top:1px solid #e3d5c3;margin-top:18px;padding-top:16px}#cicOwnerCatalogue .cic-category-group{border:1px solid #d9c7ae;border-radius:12px;padding:10px;margin:10px 0;background:#fffdf8}#cicOwnerCatalogue .cic-category-title{display:flex;justify-content:space-between;gap:8px;align-items:center;color:#2C1A14;font-size:13px;margin:2px 2px 7px}#cicOwnerCatalogue .cic-category-title span{font-size:9px;letter-spacing:.6px;color:#806b55}#cicOwnerCatalogue .cic-category-children{margin-left:16px;padding-left:10px;border-left:2px solid #e3d5c3}#cicOwnerCatalogue .cic-subcategory{background:#faf5ec}#cicOwnerCatalogue .cic-category-actions{display:flex;gap:6px;flex-wrap:wrap}
       @media(max-width:600px){#cicOwnerCatalogue{padding:8px}#cicOwnerCatalogue .cic-panel{padding:14px}#cicOwnerCatalogue .cic-grid{grid-template-columns:1fr}#cicOwnerCatalogue .cic-card{align-items:flex-start;flex-direction:column}}
     `;
     document.head.appendChild(s);
@@ -52,7 +52,7 @@
         <div class="cic-grid"><div><label for="cicCatName">Category / subcategory name *</label><input id="cicCatName" maxlength="80" required></div><div><label for="cicCatParent">Parent category (leave blank for a main category)</label><select id="cicCatParent"><option value="">Main category</option></select></div><div><label for="cicCatImage">Collection image URL (optional)</label><input id="cicCatImage" type="url" maxlength="1500"></div></div>
         <label for="cicCatDesc">Description</label><textarea id="cicCatDesc" maxlength="500"></textarea>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="cicCategorySave" type="submit">Save collection</button><button id="cicCategoryCancel" type="button" hidden>Cancel edit</button></div>
-      </form></div>
+      </form><div class="cic-section" style="margin-top:12px"><div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap"><h3 style="margin:0">Your categories & collections</h3><button type="button" id="cicCategoryRefresh">Refresh categories</button></div><div id="cicOwnerCategoryList" aria-live="polite"><p class="cic-muted">Loading categories…</p></div></div></div>
       <div class="cic-section"><h3>2. Add a real product</h3><p class="cic-muted">Only enter products that are actually ready to sell. Price is in LKR. Product image URL must be a publicly accessible HTTPS image URL.</p>
       <form id="cicProductForm">
         <div class="cic-grid"><div><label for="cicProdName">Product name *</label><input id="cicProdName" maxlength="160" required></div><div><label for="cicProdPrice">Price (LKR) *</label><input id="cicProdPrice" type="number" min="0.01" max="2000000" step="0.01" required></div>
@@ -68,6 +68,7 @@
     m.addEventListener("click",e=>{if(e.target===m)m.style.display="none";});
     $("#cicOwnerCatalogueClose",m).addEventListener("click",()=>m.style.display="none");
     $("#cicOwnerCatalogueRefresh",m).addEventListener("click",loadAll);
+    $("#cicCategoryRefresh",m).addEventListener("click",loadAll);
     $("#cicCategoryForm",m).addEventListener("submit",saveCategory);
     $("#cicCategoryCancel",m).addEventListener("click",resetCategoryEditor);
     $("#cicProductForm",m).addEventListener("submit",saveProduct);
@@ -86,7 +87,7 @@
     const {data:{session},error}=await client.auth.getSession();
     if(error||!session){allowed=false;return false;}
     const {data:staff,error:staffError}=await client.from("staff_profiles").select("role,approved").eq("id",session.user.id).maybeSingle();
-    allowed=!staffError&&!!staff&&staff.role==="owner"&&staff.approved===true;
+    allowed=!staffError&&!!staff&&staff.role==="owner"&&staff.approved===true&&String(session.user.email||"").trim().toLowerCase()==="kaushalyadilhani0994@gmail.com";
     return allowed;
   }
 
@@ -103,11 +104,15 @@
     const select=$("#cicProdCategory");
     select.innerHTML='<option value="">Choose a category or subcategory</option>'+(cats.data||[]).filter(c=>c.is_active).map(c=>{const parent=(cats.data||[]).find(p=>p.id===c.parent_id);return '<option value="'+esc(c.name)+'">'+(parent?esc(parent.name)+' › ':'')+esc(c.name)+'</option>';}).join("");
      const parentSelect=$("#cicCatParent"); if(parentSelect)parentSelect.innerHTML='<option value="">Main category</option>'+(cats.data||[]).filter(c=>!c.parent_id).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join("");
-    const catList=(cats.data||[]).map(c=>{const parent=(cats.data||[]).find(p=>p.id===c.parent_id);return '<div class="cic-card"><div><b>'+(parent?esc(parent.name)+' › ':'')+esc(c.name)+'</b><div class="cic-muted">'+(c.parent_id?"Subcategory · ":"Main category · ")+(c.is_active?"Active":"Hidden")+'</div></div><div><button type="button" data-cic-category-edit="'+esc(c.id)+'">Edit details</button> <button type="button" data-cic-category-toggle="'+esc(c.id)+'" data-active="'+String(!!c.is_active)+'">'+(c.is_active?"Hide":"Activate")+'</button></div></div>';}).join("");
+    const categoryRows=cats.data||[];
+    const categoryRow=(c,isSub)=>'<div class="cic-card '+(isSub?'cic-subcategory':'cic-main-category')+'"><div><b>'+(isSub?'↳ ':'')+esc(c.name)+'</b><div class="cic-muted">'+(isSub?'Subcategory':'Main category')+' · '+(c.is_active?'Active':'Hidden')+' · Display order: '+Number(c.sort_order||0)+'</div></div><div class="cic-category-actions"><button type="button" data-cic-category-edit="'+esc(c.id)+'">Edit details</button> <button type="button" data-cic-category-toggle="'+esc(c.id)+'" data-active="'+String(!!c.is_active)+'">'+(c.is_active?'Hide':'Activate')+'</button></div></div>';
+    const mainCategories=categoryRows.filter(c=>!c.parent_id).sort((a,b)=>Number(a.sort_order||0)-Number(b.sort_order||0)||String(a.name).localeCompare(String(b.name)));
+    const catList=mainCategories.map(parent=>'<section class="cic-category-group"><div class="cic-category-title"><b>'+esc(parent.name)+'</b><span>'+(parent.is_active?'ACTIVE':'HIDDEN')+'</span></div>'+categoryRow(parent,false)+'<div class="cic-category-children">'+categoryRows.filter(c=>c.parent_id===parent.id).sort((a,b)=>Number(a.sort_order||0)-Number(b.sort_order||0)||String(a.name).localeCompare(String(b.name))).map(c=>categoryRow(c,true)).join('')+'</div></section>').join('')+categoryRows.filter(c=>c.parent_id&&!categoryRows.some(p=>p.id===c.parent_id)).map(c=>categoryRow(c,true)).join('');
     const prodList=productRows.map(p=>'<div class="cic-card" data-cic-product-card="'+esc(p.id)+'"><div style="min-width:0;flex:1"><b>'+esc(p.name)+'</b><div class="cic-muted">'+esc(p.category||"Uncategorised")+' · '+money(p.price)+' · '+(p.is_active?"Active":"Hidden")+'</div><div class="cic-muted">'+(p.track_inventory?"Stock: "+Number(p.stock_quantity||0)+" · Low-stock threshold: "+Number(p.low_stock_threshold||5):"Stock tracking off")+(p.manufacturing_date?" · MFG: "+esc(p.manufacturing_date):" · MFG not set")+(p.expiry_date?" · Expiry: "+esc(p.expiry_date):" · No expiry date recorded")+(p.batch_number?" · Batch: "+esc(p.batch_number):"")+(p.storage_location?" · Stored: "+esc(p.storage_location):"")+(p.created_at?" · Added: "+esc(new Date(p.created_at).toLocaleDateString()):"")+(p.sku?" · SKU: "+esc(p.sku):"")+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:end;margin-top:9px"><label style="margin:0">Stock<input data-cic-stock-qty type="number" min="0" max="1000000" step="1" value="'+Number(p.stock_quantity||0)+'" style="width:88px;min-height:34px;padding:6px"></label><label style="margin:0">Low-stock at<input data-cic-stock-threshold type="number" min="0" max="1000000" step="1" value="'+Number(p.low_stock_threshold||5)+'" style="width:88px;min-height:34px;padding:6px"></label><label style="margin:0">Expiry<input data-cic-stock-expiry type="date" value="'+esc(p.expiry_date||"")+'" style="width:145px;min-height:34px;padding:6px"></label><label style="margin:0"><input data-cic-track-stock type="checkbox" '+(p.track_inventory?"checked":"")+' style="width:auto;min-height:0"> Track</label><button type="button" data-cic-stock-save="'+esc(p.id)+'">Save stock</button></div></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start"><button type="button" data-cic-product-edit="'+esc(p.id)+'">Edit details</button> <button type="button" data-cic-product-toggle="'+esc(p.id)+'" data-active="'+String(!!p.is_active)+'">'+(p.is_active?"Hide product":"Activate product")+'</button></div></div>').join("");
-    $("#cicOwnerCatalogueList").innerHTML='<h3 style="margin-top:14px">Collections ('+(cats.data||[]).length+')</h3>'+(catList||'<p class="cic-muted">No collections yet. Create one above.</p>')+'<h3 style="margin-top:18px">Products ('+(products.data||[]).length+')</h3>'+(prodList||'<p class="cic-muted">No products yet. Add verified product details above.</p>');
-    $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-category-edit]").forEach(btn=>btn.addEventListener("click",()=>editCategory(btn.getAttribute("data-cic-category-edit"))));
-    $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-category-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("categories",btn.getAttribute("data-cic-category-toggle"),btn.getAttribute("data-active")==="true")));
+    $("#cicOwnerCategoryList").innerHTML=(cats.data||[]).length?catList:'<p class="cic-muted">No categories yet. Add your first main category above.</p>';
+    $("#cicOwnerCatalogueList").innerHTML='<h3 style="margin-top:14px">Products ('+(products.data||[]).length+')</h3>'+(prodList||'<p class="cic-muted">No products yet. Add verified product details above.</p>');
+    $("#cicOwnerCategoryList").querySelectorAll("[data-cic-category-edit]").forEach(btn=>btn.addEventListener("click",()=>editCategory(btn.getAttribute("data-cic-category-edit"))));
+    $("#cicOwnerCategoryList").querySelectorAll("[data-cic-category-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("categories",btn.getAttribute("data-cic-category-toggle"),btn.getAttribute("data-active")==="true")));
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-product-toggle]").forEach(btn=>btn.addEventListener("click",()=>toggleRow("products",btn.getAttribute("data-cic-product-toggle"),btn.getAttribute("data-active")==="true")));
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-product-edit]").forEach(btn=>btn.addEventListener("click",()=>editProduct(btn.getAttribute("data-cic-product-edit"))));
     $("#cicOwnerCatalogueList").querySelectorAll("[data-cic-stock-save]").forEach(btn=>btn.addEventListener("click",()=>saveInventory(btn.getAttribute("data-cic-stock-save"),btn)));
@@ -348,6 +353,14 @@
   function init() {
     if(!window.CIC_SUPABASE_CONFIG||!window.CIC_SUPABASE_CONFIG.anonKey)return;
     mount();
+    window.CIC_OPEN_OWNER_CATALOGUE=async function(section){
+      if(!await checkAccess()){say("Sign in using the approved owner account to manage the catalogue.",true);return false;}
+      const modal=$("#cicOwnerCatalogue");if(!modal)return false;
+      modal.style.display="flex";await loadAll();
+      const target=section==="categories"?$("#cicCategoryForm"):section==="products"?$("#cicProductForm"):null;
+      if(target)target.scrollIntoView({behavior:"smooth",block:"start"});
+      return true;
+    };
     const update=async()=>{const ok=await checkAccess(); const b=$("#cicOwnerCatalogueButton"); if(b)b.hidden=!ok;};
     update();
     const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
