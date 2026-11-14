@@ -19,10 +19,10 @@
   function setSelectedPhotos(files){
     const valid=[];
     for(const file of files){
-      if(!file||!file.type||!file.type.startsWith("image/"))continue;
-      if(file.size>8*1024*1024){say("Each selected photo must be 8 MB or smaller.",true);continue;}
-      if(!valid.some(item=>item.name===file.name&&item.size===file.size&&item.lastModified===file.lastModified))valid.push(file);
-      if(valid.length===3)break;
+      if(!file||!["image/jpeg","image/png","image/webp"].includes(file.type)){say("Use a JPG, PNG or WebP product photo.",true);continue;}
+      if(file.size>8*1024*1024){say("The product photo must be 8 MB or smaller.",true);continue;}
+      if(valid.length===0)valid.push(file);
+      break;
     }
     selectedPhotos=valid;renderPhotoPreviews();
   }
@@ -87,9 +87,9 @@
       <form id="cicProductForm">
         <div class="cic-grid"><div><label for="cicProdName">Product name *</label><input id="cicProdName" maxlength="160" required></div><div><label for="cicProdPrice">Price (LKR) *</label><input id="cicProdPrice" type="number" min="0.01" max="2000000" step="0.01" required></div>
         <div><label for="cicProdCategory">Collection *</label><select id="cicProdCategory" required><option value="">Create a collection first</option></select></div><div><label for="cicProdImage">Product image URL (optional)</label><input id="cicProdImage" type="url" maxlength="1500" placeholder="HTTPS image link"></div></div>
-        <div class="cic-photo-tools"><div><label for="cicProdCamera">Take product photo</label><input id="cicProdCamera" type="file" accept="image/*" capture="environment"></div><div><label for="cicProdGallery">Choose up to 3 gallery photos</label><input id="cicProdGallery" type="file" accept="image/*" multiple></div></div>
+        <div class="cic-photo-tools"><div><label for="cicProdCamera">Take product photo</label><input id="cicProdCamera" type="file" accept="image/*" capture="environment"></div><div><label for="cicProdGallery">Choose product photo (JPG, PNG or WebP)</label><input id="cicProdGallery" type="file" accept="image/*" multiple></div></div>
         <div id="cicProdPhotoPreview" class="cic-photo-preview" aria-live="polite"><span class="cic-muted">No photos selected yet.</span></div>
-        <p class="cic-muted" id="cicProdPhotoNotice">Photo preview is available here. Secure permanent upload is being prepared because product images are stored in a private owner-only bucket; this keeps customer access protected.</p>
+        <p class="cic-muted" id="cicProdPhotoNotice">Selected photos are uploaded to the private product-images bucket when you save. The storefront only receives a short-lived image link for active products.</p>
         <label for="cicProdDesc">Product description</label><textarea id="cicProdDesc" maxlength="3000" placeholder="Describe the product clearly for customers"></textarea>
         <label for="cicProdIngredients">Ingredients *</label><textarea id="cicProdIngredients" maxlength="5000" required placeholder="Enter the exact verified ingredient list"></textarea>
         <label for="cicProdAllergens">Allergen information</label><textarea id="cicProdAllergens" maxlength="2000" placeholder="Declared allergens and cross-contact information (if applicable)"></textarea>
@@ -367,6 +367,20 @@
       if(error)throw error;
       const result=Array.isArray(data)?data[0]:data;
       if(!result||!result.product_id||!result.qr_url)throw new Error("The server did not confirm the saved product and QR passport.");
+      if(selectedPhotos.length){
+        const photo=selectedPhotos[0];
+        const extension=photo.type==="image/png"?"png":photo.type==="image/webp"?"webp":"jpg";
+        const objectPath=String(result.product_id)+"/"+window.crypto.randomUUID()+"."+extension;
+        const {data:uploaded,error:uploadError}=await client.storage.from("product-images").upload(objectPath,photo,{
+          cacheControl:"31536000",contentType:photo.type,upsert:false
+        });
+        if(uploadError)throw new Error("Product and QR were saved, but the private photo upload failed: "+uploadError.message);
+        const {error:imageSaveError}=await client.from("products").update({image_url:uploaded.path}).eq("id",result.product_id);
+        if(imageSaveError){
+          await client.storage.from("product-images").remove([uploaded.path]).catch(()=>{});
+          throw new Error("Photo uploaded but could not be attached to the product. Retry the save: "+imageSaveError.message);
+        }
+      }
       form.reset();delete form.dataset.editId;delete form.dataset.requestId;selectedPhotos=[];renderPhotoPreviews();
       const saveButton=form.querySelector("button[type=submit]");if(saveButton)saveButton.textContent="Save product as draft";
       say((result.created?"Product saved as a hidden draft. ":"Product updated. ")+(result.replayed?"Previous confirmed save recovered. ":"")+"Product, passport and QR link were saved together. Passport publishing remains a separate owner action. QR: "+result.qr_url);
