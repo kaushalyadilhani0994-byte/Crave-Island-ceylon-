@@ -351,7 +351,7 @@
         p_product_id:editId||null,
         p_request_id:form.dataset.requestId,
         p_payload:payload,
-        p_site_origin:location.origin
+        p_site_origin:"https://craveislandceylonv18supabaseintegra.vercel.app"
       });
       if(error)throw error;
       const result=Array.isArray(data)?data[0]:data;
