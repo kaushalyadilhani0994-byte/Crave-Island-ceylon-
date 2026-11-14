@@ -446,11 +446,13 @@
         }
       });
       $("#cicDashClose").onclick=()=>{
+        stopOwnerCalmMusic();
         // Keep the verified owner workspace in memory. Returning from the shop can reopen it without another OTP.
         dashboard.style.display="none";
         if(history.state&&history.state.cicOwnerDashboard)history.back();
       };
       $("#cicDashSignOut").onclick=async()=>{
+        stopOwnerCalmMusic();
         const client=db();
         if(client)await client.auth.signOut();
         dashboard.remove();
