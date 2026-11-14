@@ -117,7 +117,7 @@
     card.type="button";card.id="cicOwnerReviewsCard";card.className="control-card";
     card.innerHTML="<h4>Customer Reviews</h4><p>Review verified customer feedback and approve public reviews.</p><b>Open Review Moderation</b><div class=\"mini\">Owner-only approval</div>";
     card.addEventListener("click",showAdmin);
-    grid.appendChild(card);
+    grid.insertBefore(card, grid.firstElementChild);
     if(!document.getElementById("cicOwnerReviewsModal")){
       const modal=document.createElement("div");modal.id="cicOwnerReviewsModal";
       modal.style.cssText="display:none;position:fixed;inset:0;z-index:10030;overflow:auto;background:#1c110ed9;padding:14px";
