@@ -290,6 +290,8 @@
       let index=0;
       const play=()=>{
         if(!ownerMusicContext)return;
+        const volumeControl=$("#cicSettingsMusicVolume")||$("#cicDashMusicVolume");
+        const volume=Number(volumeControl?.value||12)/1000;
         const osc=ownerMusicContext.createOscillator(),gain=ownerMusicContext.createGain();
         osc.type="sine";osc.frequency.value=notes[index++%notes.length];
         gain.gain.setValueAtTime(0,ownerMusicContext.currentTime);
