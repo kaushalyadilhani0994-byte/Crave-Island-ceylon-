@@ -32,12 +32,6 @@ Deno.serve(async (req) => {
     return Response.json({ error: "Image not found" }, { status: 404, headers: corsHeaders });
   }
 
-  const { data: passport, error: passportError } = await admin
-    .from("product_passports").select("published").eq("product_id", productId).eq("published", true).maybeSingle();
-  if (passportError || !passport?.published) {
-    return Response.json({ error: "Image not found" }, { status: 404, headers: corsHeaders });
-  }
-
   const { data: signed, error: signError } = await admin.storage
     .from("product-images").createSignedUrl(objectPath, 900);
   if (signError || !signed?.signedUrl) {
