@@ -363,7 +363,7 @@
         const extension=photo.type==="image/png"?"png":photo.type==="image/webp"?"webp":"jpg";
         const objectPath=String(result.product_id)+"/"+window.crypto.randomUUID()+"."+extension;
         const {data:uploaded,error:uploadError}=await client.storage.from("product-images").upload(objectPath,photo,{
-          cacheControl:"31536000",contentType:photo.type,upsert:false
+          cacheControl:"900",contentType:photo.type,upsert:false
         });
         if(uploadError)throw new Error("Product details were saved, but the private photo upload failed: "+uploadError.message);
         const {error:imageSaveError}=await client.from("products").update({image_url:uploaded.path}).eq("id",result.product_id);
