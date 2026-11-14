@@ -18,7 +18,7 @@
     if(!client)return;
     try{await client.functions.invoke("owner-alert-notify",{body:{action:"log_denied_owner_access"}});}catch(_){}
   }
-  const OWNER_EMAILS = ["kaushalyadilhani0994@gmail.com", "kaushalyadhanidissanayake@gmail.com"];
+  const OWNER_EMAILS = ["kaushalyadilhani0994@gmail.com"];
   function isOwnerEmail(email) {
     return OWNER_EMAILS.includes(String(email||"").trim().toLowerCase());
   }
@@ -274,18 +274,18 @@
     if(ownerMusicTimer){clearInterval(ownerMusicTimer);ownerMusicTimer=null;}
     ownerMusicNodes.forEach(node=>{try{node.stop();}catch(_){}try{node.disconnect();}catch(_){}});
     ownerMusicNodes=[];
-    const status=$("#cicDashMusicStatus"),button=$("#cicDashMusicToggle");
+    const status=$("#cicSettingsMusicStatus")||$("#cicDashMusicStatus"),button=$("#cicSettingsMusicToggle")||$("#cicDashMusicToggle");
     if(status)status.textContent="Soft calm tone: Off";
     if(button)button.textContent="Play calm tone";
   }
   function toggleOwnerCalmMusic(){
     if(ownerMusicTimer){stopOwnerCalmMusic();return;}
     const AudioCtx=window.AudioContext||window.webkitAudioContext;
-    if(!AudioCtx){const s=$("#cicDashMusicStatus");if(s)s.textContent="This browser does not support audio playback.";return;}
+    if(!AudioCtx){const s=$("#cicSettingsMusicStatus")||$("#cicDashMusicStatus");if(s)s.textContent="This browser does not support audio playback.";return;}
     try{
       ownerMusicContext=ownerMusicContext||new AudioCtx();
       ownerMusicContext.resume();
-      const volume=Number($("#cicDashMusicVolume")?.value||12)/1000;
+      const volume=Number(($("#cicSettingsMusicVolume")||$("#cicDashMusicVolume"))?.value||12)/1000;
       const notes=[261.63,329.63,392.00,329.63,293.66,349.23,440.00,349.23];
       let index=0;
       const play=()=>{
@@ -412,26 +412,13 @@
               <button class="cic-dash-card" type="button" data-open="mediaModal"><strong>Brand, Media & Social</strong><span>Open existing media and social tools.</span></button>
               <button class="cic-dash-card" type="button" data-open="loyaltyModal"><strong>Loyalty & Rewards</strong><span>Open the existing loyalty programme.</span></button>
             </div>
-            <details class="cic-dash-settings">
-              <summary>Settings · Appearance & sound</summary>
-              <div class="cic-dash-setting-row"><div><strong>Dark mode</strong><span>High-contrast colours for clear reading.</span></div><button class="cic-dash-action" type="button" id="cicDashThemeToggle" aria-pressed="false">Turn dark mode on</button></div>
-              <div class="cic-dash-setting-row"><div><strong>Calm sound</strong><span>Optional soft original ambient tone. Off by default.</span></div><div class="cic-dash-sound"><span id="cicDashMusicStatus">Soft calm tone: Off</span><button class="cic-dash-action" type="button" id="cicDashMusicToggle">Play calm tone</button><label>Volume <input id="cicDashMusicVolume" type="range" min="0" max="30" value="12"></label></div></div>
-            </details>
-          </details>
+                      </details>
           <p class="cic-dash-note">Only the approved Main Admin can open these controls. Customer storefront design remains unchanged.</p></section>
           <div class="cic-dash-footer"><p>Verified owner access · CRAVE ISLAND CEYLON</p><button class="cic-dash-action" type="button" id="cicDashClose">Back to shop</button></div>
         </div>`;
       document.body.appendChild(dashboard);
       // Make the phone/browser Back action close the owner dashboard instead of leaving the app.
       try{history.pushState({cicOwnerDashboard:true},'','#owner-admin');}catch(_){}
-      const savedTheme=(()=>{try{return localStorage.getItem("cic_owner_admin_theme")==="dark";}catch(_){return false;}})();
-      const themeButton=$("#cicDashThemeToggle");
-      const applyTheme=(dark)=>{dashboard.classList.toggle("cic-theme-dark",!!dark);document.body.classList.toggle("cic-owner-admin-dark",!!dark);if(themeButton){themeButton.textContent=dark?"Turn light mode on":"Turn dark mode on";themeButton.setAttribute("aria-pressed",String(!!dark));}try{localStorage.setItem("cic_owner_admin_theme",dark?"dark":"light");}catch(_){}};
-      applyTheme(savedTheme);
-      const savedVolume=(()=>{try{return Number(localStorage.getItem("cic_owner_music_volume")||12);}catch(_){return 12;}})();
-      $("#cicDashMusicVolume").value=String(Math.max(0,Math.min(30,savedVolume)));
-      $("#cicDashMusicVolume").addEventListener("input",e=>{try{localStorage.setItem("cic_owner_music_volume",String(e.target.value));}catch(_){}});
-      themeButton.addEventListener("click",()=>applyTheme(!dashboard.classList.contains("cic-theme-dark")));
       dashboard.addEventListener("click",async e=>{
         const music=e.target.closest("#cicDashMusicToggle,[data-action='music']");
         if(music){toggleOwnerCalmMusic();return;}
@@ -539,10 +526,48 @@
     }catch(_){status("Could not verify the owner session. Please reopen Admin and try again.",true);}
     finally{handlingPendingOwnerSession=false;}
   }
+  function installStorefrontPreferences(){
+    const modal=$("#cicSettingsModal"),grid=modal&&modal.querySelector(".cic-pref-grid");
+    if(!modal||!grid)return;
+    if(!$("#cicSettingsMusicRow")){
+      const row=document.createElement("div");
+      row.className="cic-pref-row";row.id="cicSettingsMusicRow";
+      row.innerHTML='<label>Calm sound</label><div class="cic-pref-options" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><button type="button" id="cicSettingsMusicToggle">Play calm sound</button><span id="cicSettingsMusicStatus" role="status">Calm sound: Off</span></div><label for="cicSettingsMusicVolume" style="margin-top:10px">Volume</label><input id="cicSettingsMusicVolume" type="range" min="0" max="30" value="12" style="width:100%;max-width:220px"><p>Optional original ambient tone. Off by default.</p>';
+      grid.appendChild(row);
+    }
+    const volume=$("#cicSettingsMusicVolume");
+    let saved=12;try{saved=Number(localStorage.getItem("cic_owner_music_volume")||12);}catch(_){}
+    if(volume&&!volume.dataset.bound){
+      volume.value=String(Math.max(0,Math.min(30,saved)));
+      volume.dataset.bound="1";
+      volume.addEventListener("input",()=>{try{localStorage.setItem("cic_owner_music_volume",String(volume.value));}catch(_){}});
+    }
+    const music=$("#cicSettingsMusicToggle");
+    if(music&&!music.dataset.bound){music.dataset.bound="1";music.addEventListener("click",toggleOwnerCalmMusic);}
+    if(modal&&!modal.dataset.cicMusicCloseBound){
+      modal.dataset.cicMusicCloseBound="1";
+      modal.addEventListener("click",event=>{
+        if(event.target.closest(".close")||event.target.closest(".login-actions button"))stopOwnerCalmMusic();
+      });
+    }
+    if(!window.__cicSettingsThemeBridge){
+      const original=window.cicSetTheme;
+      window.cicSetTheme=function(theme){
+        if(typeof original==="function")original(theme);
+        const dark=theme==="dark";
+        document.body.classList.toggle("cic-owner-admin-dark",dark);
+        try{localStorage.setItem("cic_owner_admin_theme",dark?"dark":"light");}catch(_){}
+      };
+      window.__cicSettingsThemeBridge=true;
+    }
+    let dark=false;try{dark=localStorage.getItem("cic-ui-theme")==="dark"||localStorage.getItem("cic_owner_admin_theme")==="dark";}catch(_){}
+    if(typeof window.cicSetTheme==="function")window.cicSetTheme(dark?"dark":"light");
+  }
   async function wire(){
     // Hide the customer-facing Admin nav immediately on startup, before any
     // persisted session or auth-state callback is processed.
     setOwnerNavVisible(false);
+    installStorefrontPreferences();
     install();
     const original=window.openAdminAccess;
     window.openAdminAccess=function(){
