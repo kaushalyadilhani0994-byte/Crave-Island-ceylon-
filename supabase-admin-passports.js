@@ -31,7 +31,8 @@ const sel=$("#cicPassProduct");sel.innerHTML='<option value="">Choose a product<
 sel.onchange=async()=>{
 $("#cicPassResult").innerHTML="";
 const id=sel.value;if(!id)return;
-const {data:p}=await db.from("product_passports").select("*").eq("product_id",id).maybeSingle();
+const {data:p,error:passportReadError}=await db.from("product_passports").select("*").eq("product_id",id).maybeSingle();
+if(passportReadError){message("Could not load this product’s saved passport. Please retry before editing.");return;}
 const opt=sel.options[sel.selectedIndex];
 $("#cicPassBatch").value=p?.batch_code||opt.dataset.batch||"";
 $("#cicPassIngredients").value=(p?.ingredients||[]).join(", ")||opt.dataset.ingredients||"";
