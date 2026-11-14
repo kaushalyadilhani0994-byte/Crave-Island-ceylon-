@@ -268,6 +268,42 @@
       dashboard.scrollTop=0;
     });
   }
+  // Original, low-volume ambient tones are generated locally; no third-party audio is loaded.
+  let ownerMusicContext=null, ownerMusicTimer=null, ownerMusicNodes=[];
+  function stopOwnerCalmMusic(){
+    if(ownerMusicTimer){clearInterval(ownerMusicTimer);ownerMusicTimer=null;}
+    ownerMusicNodes.forEach(node=>{try{node.stop();}catch(_){}try{node.disconnect();}catch(_){}});
+    ownerMusicNodes=[];
+    const status=$("#cicDashMusicStatus"),button=$("#cicDashMusicToggle");
+    if(status)status.textContent="Calm instrumental: Off";
+    if(button)button.textContent="Play calm tone";
+  }
+  function toggleOwnerCalmMusic(){
+    if(ownerMusicTimer){stopOwnerCalmMusic();return;}
+    const AudioCtx=window.AudioContext||window.webkitAudioContext;
+    if(!AudioCtx){const s=$("#cicDashMusicStatus");if(s)s.textContent="This browser does not support audio playback.";return;}
+    try{
+      ownerMusicContext=ownerMusicContext||new AudioCtx();
+      ownerMusicContext.resume();
+      const volume=Number($("#cicDashMusicVolume")?.value||12)/1000;
+      const notes=[261.63,329.63,392.00,329.63,293.66,349.23,440.00,349.23];
+      let index=0;
+      const play=()=>{
+        if(!ownerMusicContext)return;
+        const osc=ownerMusicContext.createOscillator(),gain=ownerMusicContext.createGain();
+        osc.type="sine";osc.frequency.value=notes[index++%notes.length];
+        gain.gain.setValueAtTime(0,ownerMusicContext.currentTime);
+        gain.gain.linearRampToValueAtTime(volume,ownerMusicContext.currentTime+0.35);
+        gain.gain.linearRampToValueAtTime(0,ownerMusicContext.currentTime+2.8);
+        osc.connect(gain);gain.connect(ownerMusicContext.destination);
+        osc.start();osc.stop(ownerMusicContext.currentTime+2.9);
+      };
+      play();ownerMusicTimer=setInterval(play,2400);
+      const status=$("#cicDashMusicStatus"),button=$("#cicDashMusicToggle");
+      if(status)status.textContent="Calm instrumental: On";
+      if(button)button.textContent="Turn music off";
+    }catch(_){const s=$("#cicDashMusicStatus");if(s)s.textContent="Audio could not start. Tap Play again.";}
+  }
   async function openOwnerDashboard(){
     // Fail closed even if a customer calls the exported dashboard function manually.
     const client=db();
@@ -331,31 +367,33 @@
       dashboard.setAttribute("aria-label","CRAVE ISLAND CEYLON owner dashboard");
       dashboard.innerHTML=`
         <div class="cic-dash-wrap">
-          <header class="cic-dash-top"><div><h1>CRAVE ISLAND CEYLON</h1><p>Owner workspace · Manage your business from one place.</p></div><button class="cic-dash-action" type="button" id="cicDashSignOut">Sign out</button></header>
-          <section class="cic-dash-section"><h2>Main Admin</h2>
+          <header class="cic-dash-top"><div><h1>CRAVE ISLAND CEYLON</h1><p>Main Admin · Live store control</p></div><button class="cic-dash-action" type="button" id="cicDashSignOut">Sign out</button></header>
+          <section class="cic-dash-section"><h2>Store management</h2>
           <div class="cic-dash-grid">
-            <button class="cic-dash-card" type="button" data-view="overview"><strong>Business Overview</strong><span>Daily activity, orders and store status.</span></button>
-            <button class="cic-dash-card" type="button" data-view="catalog"><strong>Products & Categories</strong><span>Add products, manage prices and collections.</span></button>
-            <button class="cic-dash-card" type="button" data-view="orders"><strong>Owner Orders</strong><span>View incoming orders and update fulfilment.</span></button>
-            <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>QR Passport</strong><span>Product batches, certificates and public QR pages.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicOwnerCatalogueButton" data-section="categories"><strong>01 · Categories</strong><span>Open all main categories and subcategories. Add, edit and manage visibility.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicOwnerCatalogueButton" data-section="products"><strong>02 · Products</strong><span>Add and update real products, prices, ingredients, batches and expiry details.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicOwnerOrdersButton"><strong>03 · Orders</strong><span>Review real customer orders and manage fulfilment status.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicPassportButton"><strong>04 · Product QR</strong><span>Prepare product passports, certificates and printable QR labels.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicOwnerCatalogueButton" data-section="stock"><strong>05 · Stock & Expiry</strong><span>Review inventory quantities, low-stock thresholds and expiry dates.</span></button>
+            <button class="cic-dash-card" type="button" data-open="cicOwnerAlertsButton"><strong>06 · Alerts & Reports</strong><span>Check open order, stock, expiry and security alerts.</span></button>
           </div>
-          <details class="cic-dash-more"><summary>More business tools</summary>
+          <details class="cic-dash-more"><summary>More owner settings</summary>
             <div class="cic-dash-grid">
-              <button class="cic-dash-card" type="button" data-view="brand"><strong>Brand & Store Settings</strong><span>Brand identity, delivery rules and store preferences.</span></button>
-              <button class="cic-dash-card" type="button" data-open="mediaModal"><strong>Media & Social</strong><span>Photography, media clips, reels and social drafts.</span></button>
-              <button class="cic-dash-card" type="button" data-open="loyaltyModal"><strong>Loyalty & Star Points</strong><span>Rewards and scratch-card programme overview.</span></button>
-              <button class="cic-dash-card" type="button" data-view="automation"><strong>Payments & Accounts</strong><span>Invoices, COD reconciliation and finance reports.</span></button>
-              <button class="cic-dash-card" type="button" data-view="team"><strong>Team & Staff</strong><span>Review staff roles and access boundaries.</span></button>
-              <button class="cic-dash-card" type="button" data-view="security"><strong>Security & Audit</strong><span>Owner access checks and security review.</span></button>
+              <button class="cic-dash-card" type="button" data-open="mediaModal"><strong>Brand, Media & Social</strong><span>Open existing media and social tools.</span></button>
+              <button class="cic-dash-card" type="button" data-open="loyaltyModal"><strong>Loyalty & Rewards</strong><span>Open the existing loyalty programme.</span></button>
+              <button class="cic-dash-card" type="button" data-action="music"><strong>Calm Music</strong><span>Optional gentle instrumental sound. Starts only when you choose.</span></button>
             </div>
           </details>
-          <p class="cic-dash-note">Only approved owner accounts can open this workspace. Staff access remains restricted until role permissions are verified.</p></section>
+          <section class="cic-dash-section" aria-label="Music settings"><h2>Sound preference</h2><div class="cic-dash-note" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span id="cicDashMusicStatus">Calm instrumental: Off</span><button class="cic-dash-action" type="button" id="cicDashMusicToggle">Play calm tone</button><label style="font-size:12px">Volume <input id="cicDashMusicVolume" type="range" min="0" max="30" value="12" style="width:105px;vertical-align:middle"></label></div></section>
+          <p class="cic-dash-note">Only the approved Main Admin can open these controls. Customer storefront design remains unchanged.</p></section>
           <div class="cic-dash-footer"><p>Verified owner access · CRAVE ISLAND CEYLON</p><button class="cic-dash-action" type="button" id="cicDashClose">Back to shop</button></div>
         </div>`;
       document.body.appendChild(dashboard);
       // Make the phone/browser Back action close the owner dashboard instead of leaving the app.
       try{history.pushState({cicOwnerDashboard:true},'','#owner-admin');}catch(_){}
       dashboard.addEventListener("click",async e=>{
+        const music=e.target.closest("#cicDashMusicToggle,[data-action='music']");
+        if(music){toggleOwnerCalmMusic();return;}
         const viewCard=e.target.closest("[data-view]");
         if(viewCard){
           const view=viewCard.getAttribute("data-view");
@@ -390,12 +428,13 @@
               addOwnerMenuReturnButton(dashboard);
               b.hidden=false;
               b.click();
-              if(section==="categories"||section==="products"){
-                const form=document.getElementById(section==="categories"?"cicCategoryForm":"cicProductForm");
+              if(section==="categories"||section==="products"||section==="stock"){
+                const targetSection=section==="categories"?"cicCategoryForm":section==="products"?"cicProductForm":"cicOwnerCatalogueList";
+                const form=document.getElementById(targetSection);
                 if(form){
                   form.scrollIntoView({behavior:"smooth",block:"start"});
                   const input=form.querySelector("input,select,textarea");
-                  if(input)input.focus({preventScroll:true});
+                  if(input&&section!=="stock")input.focus({preventScroll:true});
                 }
               }
               return;
