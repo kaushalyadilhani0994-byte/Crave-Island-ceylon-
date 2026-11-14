@@ -248,29 +248,29 @@
   // Load the live owner order panel only after the authenticated Supabase client is configured.
   const ownerOrdersScript = document.createElement("script");
   ownerOrdersScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerOrdersScript.src = "supabase-admin-orders.js?v=20261106-team-inventory-ui";
+  ownerOrdersScript.src = "supabase-admin-orders.js?v=20261114-order-admin-refresh-1";
   ownerOrdersScript.defer = true;
   document.body.appendChild(ownerOrdersScript);
   const ownerProductsScript = document.createElement("script");
   ownerProductsScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerProductsScript.src = "supabase-admin-products.js?v=20261110-expiry-date-validation-1";
+  ownerProductsScript.src = "supabase-admin-products.js?v=20261114-product-stock-refresh-1";
   ownerProductsScript.defer = true;
   document.body.appendChild(ownerProductsScript);
   const secureCheckoutScript = document.createElement("script");
   secureCheckoutScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  secureCheckoutScript.src = "supabase-checkout.js?v=20261110-atomic-order-retry";
+  secureCheckoutScript.src = "supabase-checkout.js?v=20261114-secure-checkout-refresh-1";
   secureCheckoutScript.defer = true;
   document.body.appendChild(secureCheckoutScript);
 
   const ownerPassportsScript = document.createElement("script");
   ownerPassportsScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerPassportsScript.src = "supabase-admin-passports.js?v=20261109-local-qr-privacy";
+  ownerPassportsScript.src = "supabase-admin-passports.js?v=20261114-product-qr-refresh-1";
   ownerPassportsScript.defer = true;
   document.body.appendChild(ownerPassportsScript);
 
   const ownerAuthScript = document.createElement("script");
   ownerAuthScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerAuthScript.src = "supabase-admin-auth.js?v=20261110-team-invite-role-alignment-1";
+  ownerAuthScript.src = "supabase-admin-auth.js?v=20261114-owner-otp-refresh-1";
   ownerAuthScript.defer = true;
   document.body.appendChild(ownerAuthScript);
 
