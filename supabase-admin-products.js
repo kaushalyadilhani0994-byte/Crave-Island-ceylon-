@@ -322,12 +322,12 @@
     }
     const name=$("#cicProdName").value.trim(), category=$("#cicProdCategory").value, price=Number($("#cicProdPrice").value);
     const ingredients=$("#cicProdIngredients").value.trim(), allergens=$("#cicProdAllergens").value.trim(), imageUrl=$("#cicProdImage").value.trim();
-    const editId=form.dataset.editId||"", existingProductImage=editId?(productRows.find(row=>String(row.id)===String(editId))?.image_url||null):null;
     const batch=$("#cicProdBatch").value.trim(), mfgDate=$("#cicProdMfg").value||null, expiryDate=$("#cicProdExpiry").value||null, storage=$("#cicProdStorage").value.trim();
     if(!name||!category||!ingredients||!Number.isFinite(price)||price<=0||price>2000000){delete form.dataset.saving;say("Enter product name, collection, verified ingredients, and a valid LKR price.",true);return;}
     if(!isHttpsUrl(imageUrl)){delete form.dataset.saving;say("Product image URL must be a valid HTTPS URL without embedded credentials.",true);return;}
     if(mfgDate&&expiryDate&&mfgDate>expiryDate){delete form.dataset.saving;say("Manufacturing date cannot be later than the expiry / best-before date.",true);return;}
     const btn=event.submitter, editId=form.dataset.editId||"";
+    const existingProductImage=editId?(productRows.find(row=>String(row.id)===String(editId))?.image_url||null):null;
     const stockQuantity=Number($("#cicProdStock").value||0),lowStockThreshold=Number($("#cicProdLowStock").value||5);
     if(!Number.isInteger(stockQuantity)||stockQuantity<0||!Number.isInteger(lowStockThreshold)||lowStockThreshold<0){delete form.dataset.saving;say("Stock and low-stock threshold must be whole numbers of zero or more.",true);return;}
     const controls=Array.from(form.elements).map(el=>({el,disabled:el.disabled}));
