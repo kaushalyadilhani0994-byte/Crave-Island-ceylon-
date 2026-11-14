@@ -2,7 +2,7 @@
 (function(){
   "use strict";
   const KEY="cicCalmMusicEnabled";
-  let audioContext=null, masterGain=null, oscillators=[];
+  let audioContext=null, masterGain=null, oscillators=[], melodyTimer=null;
   function toast(message){
     if(typeof window.toast==="function")window.toast(message);
   }
@@ -32,6 +32,27 @@
         oscillator.connect(gain);gain.connect(filter);oscillator.start();
         return oscillator;
       });
+      // A small original, slow-moving melody keeps the ambience musical without
+      // loading or streaming third-party audio.
+      const melody=audioContext.createOscillator();
+      const melodyGain=audioContext.createGain();
+      melody.type="sine";melodyGain.gain.value=0.0001;
+      melody.connect(melodyGain);melodyGain.connect(filter);melody.start();
+      oscillators.push(melody);
+      const phrase=[261.63,329.63,392.00,329.63,293.66,349.23,440.00,349.23];
+      const schedulePhrase=()=>{
+        if(!audioContext)return;
+        const startAt=audioContext.currentTime+0.15;
+        phrase.forEach((frequency,index)=>{
+          const at=startAt+index*2;
+          melody.frequency.setValueAtTime(frequency,at);
+          melodyGain.gain.setValueAtTime(0.0001,at);
+          melodyGain.gain.linearRampToValueAtTime(0.004,at+0.35);
+          melodyGain.gain.linearRampToValueAtTime(0.0001,at+1.8);
+        });
+      };
+      schedulePhrase();
+      melodyTimer=window.setInterval(schedulePhrase,16000);
       if(audioContext.state==="suspended")audioContext.resume();
       return true;
     }catch(error){
@@ -39,6 +60,7 @@
     }
   }
   function stopCalmMusic(){
+    if(melodyTimer){window.clearInterval(melodyTimer);melodyTimer=null;}
     if(!audioContext)return;
     const context=audioContext,gain=masterGain,nodes=oscillators.slice();
     audioContext=null;masterGain=null;oscillators=[];
