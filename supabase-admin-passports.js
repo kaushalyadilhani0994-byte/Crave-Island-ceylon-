@@ -83,7 +83,7 @@ win.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name=
 win.document.close();
 };
 
-$("#cicPassCopy").onclick=async()=>{try{await navigator.clipboard.writeText(url);message("QR destination copied.")}catch(e){message("Select and copy the QR destination from the field.")}};
+
 message("Passport saved successfully.");
 }
 function init(){if(!window.CIC_SUPABASE_CONFIG?.anonKey||!window.CIC_SUPABASE?.client)return;mount();const update=async()=>{const b=$("#cicPassportButton");if(b)b.hidden=!(await owner())};update();db=window.CIC_SUPABASE.client;db.auth.onAuthStateChange(()=>setTimeout(update,200))}
