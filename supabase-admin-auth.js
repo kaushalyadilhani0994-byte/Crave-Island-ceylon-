@@ -356,6 +356,26 @@
           #cicOwnerDashboard .cic-dash-more[open] summary:after{content:"−"}
           #cicOwnerDashboard .cic-dash-more .cic-dash-grid{padding-bottom:14px}
           #cicOwnerDashboard .cic-dash-note{font-size:12px;margin-top:12px;padding:12px;border-radius:12px;background:#efe5d8}
+          #cicOwnerDashboard .cic-dash-settings{margin-top:12px;border:1px solid #d9c9b8;border-radius:13px;background:#fffaf3;padding:0 14px}
+          #cicOwnerDashboard .cic-dash-settings>summary{cursor:pointer;list-style:none;padding:14px 2px;font-weight:750;color:#4a3023}
+          #cicOwnerDashboard .cic-dash-settings>summary::-webkit-details-marker{display:none}
+          #cicOwnerDashboard .cic-dash-settings>summary:after{content:"＋";float:right;color:#9a762e}
+          #cicOwnerDashboard .cic-dash-settings[open]>summary:after{content:"−"}
+          #cicOwnerDashboard .cic-dash-setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid #e6d9cb;padding:12px 2px}
+          #cicOwnerDashboard .cic-dash-setting-row strong{display:block;color:#2c1a14;font-size:13px}
+          #cicOwnerDashboard .cic-dash-setting-row span{display:block;color:#66564c;font-size:11px;margin-top:3px}
+          #cicOwnerDashboard .cic-dash-sound{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+          #cicOwnerDashboard .cic-dash-sound label{font-size:11px;color:#33251e}
+          #cicOwnerDashboard .cic-dash-sound input{width:105px;vertical-align:middle}
+          #cicOwnerDashboard.cic-theme-dark{background:#171b20;color:#f4f2ed}
+          #cicOwnerDashboard.cic-theme-dark .cic-dash-top{border-color:#46505a}
+          #cicOwnerDashboard.cic-theme-dark p,#cicOwnerDashboard.cic-theme-dark .cic-dash-card span{color:#d1d8df}
+          #cicOwnerDashboard.cic-theme-dark .cic-dash-card,#cicOwnerDashboard.cic-theme-dark .cic-dash-more,#cicOwnerDashboard.cic-theme-dark .cic-dash-settings{background:#242b33;color:#f5f4ef;border-color:#536170}
+          #cicOwnerDashboard.cic-theme-dark .cic-dash-card strong,#cicOwnerDashboard.cic-theme-dark .cic-dash-more summary,#cicOwnerDashboard.cic-theme-dark .cic-dash-settings summary,#cicOwnerDashboard.cic-theme-dark .cic-dash-setting-row strong{color:#fff!important}
+          #cicOwnerDashboard.cic-theme-dark .cic-dash-setting-row span,#cicOwnerDashboard.cic-theme-dark .cic-dash-sound label{color:#e0e5eb!important}
+          #cicOwnerDashboard.cic-theme-dark .cic-dash-note{background:#303a45;color:#f4f2ed}
+          #cicOwnerDashboard.cic-theme-dark .cic-dash-action{background:#f0d17b;color:#21170e;border-color:#f0d17b}
+          #cicOwnerDashboard.cic-theme-dark .cic-dash-setting-row{border-color:#536170}
           @media(max-width:430px){#cicOwnerDashboard{padding:12px}#cicOwnerDashboard .cic-dash-top{gap:8px;padding-bottom:12px;margin-bottom:12px}#cicOwnerDashboard .cic-dash-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#cicOwnerDashboard .cic-dash-card{min-height:92px;padding:11px;gap:5px;border-radius:12px}#cicOwnerDashboard .cic-dash-card strong{font:400 16px/1.15 Georgia,serif}#cicOwnerDashboard .cic-dash-card span{font-size:11px;line-height:1.35}#cicOwnerDashboard .cic-dash-section{margin-top:14px}#cicOwnerDashboard .cic-dash-section h2{font-size:20px;margin-bottom:8px}#cicOwnerDashboard .cic-dash-note{font-size:11px;padding:10px}}
         `;
         document.head.appendChild(style);
@@ -381,16 +401,27 @@
             <div class="cic-dash-grid">
               <button class="cic-dash-card" type="button" data-open="mediaModal"><strong>Brand, Media & Social</strong><span>Open existing media and social tools.</span></button>
               <button class="cic-dash-card" type="button" data-open="loyaltyModal"><strong>Loyalty & Rewards</strong><span>Open the existing loyalty programme.</span></button>
-              <button class="cic-dash-card" type="button" data-action="music"><strong>Calm Music</strong><span>Optional gentle, original ambient tone. Starts only when you choose.</span></button>
             </div>
+            <details class="cic-dash-settings">
+              <summary>Settings · Appearance & sound</summary>
+              <div class="cic-dash-setting-row"><div><strong>Dark mode</strong><span>High-contrast colours for clear reading.</span></div><button class="cic-dash-action" type="button" id="cicDashThemeToggle" aria-pressed="false">Turn dark mode on</button></div>
+              <div class="cic-dash-setting-row"><div><strong>Calm sound</strong><span>Optional soft original ambient tone. Off by default.</span></div><div class="cic-dash-sound"><span id="cicDashMusicStatus">Soft calm tone: Off</span><button class="cic-dash-action" type="button" id="cicDashMusicToggle">Play calm tone</button><label>Volume <input id="cicDashMusicVolume" type="range" min="0" max="30" value="12"></label></div></div>
+            </details>
           </details>
-          <section class="cic-dash-section" aria-label="Music settings"><h2>Sound preference</h2><div class="cic-dash-note" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span id="cicDashMusicStatus">Soft calm tone: Off</span><button class="cic-dash-action" type="button" id="cicDashMusicToggle">Play calm tone</button><label style="font-size:12px">Volume <input id="cicDashMusicVolume" type="range" min="0" max="30" value="12" style="width:105px;vertical-align:middle"></label></div></section>
           <p class="cic-dash-note">Only the approved Main Admin can open these controls. Customer storefront design remains unchanged.</p></section>
           <div class="cic-dash-footer"><p>Verified owner access · CRAVE ISLAND CEYLON</p><button class="cic-dash-action" type="button" id="cicDashClose">Back to shop</button></div>
         </div>`;
       document.body.appendChild(dashboard);
       // Make the phone/browser Back action close the owner dashboard instead of leaving the app.
       try{history.pushState({cicOwnerDashboard:true},'','#owner-admin');}catch(_){}
+      const savedTheme=(()=>{try{return localStorage.getItem("cic_owner_admin_theme")==="dark";}catch(_){return false;}})();
+      const themeButton=$("#cicDashThemeToggle");
+      const applyTheme=(dark)=>{dashboard.classList.toggle("cic-theme-dark",!!dark);if(themeButton){themeButton.textContent=dark?"Turn light mode on":"Turn dark mode on";themeButton.setAttribute("aria-pressed",String(!!dark));}try{localStorage.setItem("cic_owner_admin_theme",dark?"dark":"light");}catch(_){}};
+      applyTheme(savedTheme);
+      const savedVolume=(()=>{try{return Number(localStorage.getItem("cic_owner_music_volume")||12);}catch(_){return 12;}})();
+      $("#cicDashMusicVolume").value=String(Math.max(0,Math.min(30,savedVolume)));
+      $("#cicDashMusicVolume").addEventListener("input",e=>{try{localStorage.setItem("cic_owner_music_volume",String(e.target.value));}catch(_){}});
+      themeButton.addEventListener("click",()=>applyTheme(!dashboard.classList.contains("cic-theme-dark")));
       dashboard.addEventListener("click",async e=>{
         const music=e.target.closest("#cicDashMusicToggle,[data-action='music']");
         if(music){toggleOwnerCalmMusic();return;}
