@@ -77,7 +77,7 @@
     $("#cicProductForm",m).addEventListener("submit",saveProduct);
     $("#cicProdCamera",m).addEventListener("change",event=>setProductPhoto(event.target.files?.[0]));
     $("#cicProdGallery",m).addEventListener("change",event=>setProductPhoto(event.target.files?.[0]));
-    $("#cicProductForm",m).addEventListener("input",()=>{const form=$("#cicProductForm",m);if(form.dataset.saving!=="true")delete form.dataset.requestId;});
+    $("#cicProductForm",m).addEventListener("input",event=>{const form=$("#cicProductForm",m);if(form.dataset.saving!=="true"&&event.target.type!=="file")delete form.dataset.requestId;});
     document.body.appendChild(m); root=m;
   }
 
