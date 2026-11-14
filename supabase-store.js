@@ -145,7 +145,7 @@
       liveCategoryRows = categoryRows;
       const activeCategoryNames = new Set(categoryRows.map((row) => String(row.name || "")));
       // Private product images are exposed only through a short-lived signed URL
-      // issued for an active product with a published passport.
+      // issued only for an active product with a valid private image path.
       const imageReadyRows = await Promise.all(rows.map(async (row) => {
         const imageValue = String(row.image_url || "").trim();
         if (!imageValue || /^https:\/\//i.test(imageValue)) return row;
