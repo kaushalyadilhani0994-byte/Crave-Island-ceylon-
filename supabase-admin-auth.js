@@ -285,7 +285,6 @@
     try{
       ownerMusicContext=ownerMusicContext||new AudioCtx();
       ownerMusicContext.resume();
-      const volume=Number(($("#cicSettingsMusicVolume")||$("#cicDashMusicVolume"))?.value||12)/1000;
       const notes=[261.63,329.63,392.00,329.63,293.66,349.23,440.00,349.23];
       let index=0;
       const play=()=>{
@@ -301,7 +300,7 @@
         osc.start();osc.stop(ownerMusicContext.currentTime+2.9);
       };
       play();ownerMusicTimer=setInterval(play,2400);
-      const status=$("#cicDashMusicStatus"),button=$("#cicDashMusicToggle");
+      const status=$("#cicSettingsMusicStatus")||$("#cicDashMusicStatus"),button=$("#cicSettingsMusicToggle")||$("#cicDashMusicToggle");
       if(status)status.textContent="Soft calm tone: On";
       if(button)button.textContent="Turn music off";
     }catch(_){const s=$("#cicDashMusicStatus");if(s)s.textContent="Audio could not start. Tap Play again.";}
@@ -549,6 +548,21 @@
       modal.addEventListener("click",event=>{
         if(event.target.closest(".close")||event.target.closest(".login-actions button"))stopOwnerCalmMusic();
       });
+    }
+    if(!$("#cicSettingsContrastStyle")){
+      const contrast=document.createElement("style");contrast.id="cicSettingsContrastStyle";
+      contrast.textContent=`
+        body.cic-dark-preference .shell{color:#f3dfc3!important}
+        body.cic-dark-preference .hero-copy,body.cic-dark-preference .hero-copy h1,body.cic-dark-preference .hero-copy h2,body.cic-dark-preference .section-title,body.cic-dark-preference .section-title *,body.cic-dark-preference .story-card,body.cic-dark-preference .story-card *,body.cic-dark-preference .collection-card *,body.cic-dark-preference .product-card *,body.cic-dark-preference .product-tile *{color:#f3dfc3!important}
+        body.cic-dark-preference .muted-note,body.cic-dark-preference .cic-pref-row p,body.cic-dark-preference .nav-sub{color:#d7c4ae!important}
+        body.cic-dark-preference .cic-pref-row{background:#29211b!important;border-color:#65503e!important;color:#f3dfc3!important}
+        body.cic-dark-preference .cic-pref-row label{color:#f3dfc3!important}
+        body.cic-dark-preference .cic-pref-row button{background:#3a2b20!important;color:#ffe3a8!important;border-color:#927442!important}
+        body.cic-dark-preference .bottom{background:#211913!important;border-color:#594434!important}
+        body.cic-dark-preference .bottom .nav-label{color:#f3dfc3!important}
+        body.cic-dark-preference input,body.cic-dark-preference select,body.cic-dark-preference textarea{background:#fff8ed!important;color:#24170f!important;-webkit-text-fill-color:#24170f!important}
+      `;
+      document.head.appendChild(contrast);
     }
     if(!window.__cicSettingsThemeBridge){
       const original=window.cicSetTheme;
