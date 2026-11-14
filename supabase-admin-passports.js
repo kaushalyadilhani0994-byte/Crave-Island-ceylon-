@@ -44,6 +44,16 @@ $("#cicPassPublished").checked=!!p?.published;
 };
 }
 function splitList(v){return v.split(/[,;\n]/).map(s=>s.trim()).filter(Boolean)}
+function qrDataUrl(text,size){
+ if(typeof QRCode!=="function")throw new Error("The local QR generator is not loaded. Refresh the page and try again.");
+ const host=document.createElement("div");
+ new QRCode(host,{text,width:size,height:size,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.H});
+ const canvas=host.querySelector("canvas");
+ if(canvas)return canvas.toDataURL("image/png");
+ const image=host.querySelector("img");
+ if(image&&image.src.startsWith("data:"))return image.src;
+ throw new Error("Could not generate the product QR image on this device.");
+}
 async function save(e){
 e.preventDefault();if(!await owner()){message("Owner session expired. Please sign in again.");return}
 const id=$("#cicPassProduct").value,ingredients=$("#cicPassIngredients").value.trim();
@@ -58,13 +68,14 @@ btn.disabled=false;btn.textContent="Save product passport";
 if(error){message("Could not save passport. Confirm the latest store migration and owner permissions are active.");return}
 const url=location.origin+"/passport.html?slug="+encodeURIComponent(slug);
 const result=$("#cicPassResult");
-result.innerHTML='<div class="msg">'+(row.published?"Passport saved and published.":"Passport saved as unpublished; public QR page will not reveal it yet.")+'<br><a href="'+esc(url)+'" target="_blank" rel="noopener">Open product passport</a><br><label>QR destination</label><input readonly value="'+esc(url)+'"><button type="button" id="cicPassCopy">Copy QR destination</button>'+(row.published?'<p><img alt="QR code for this product passport" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='+encodeURIComponent(url)+'"></p><button type="button" id="cicPassPrint">Print product QR label</button><p>Print label includes CRAVE ISLAND CEYLON with the QR code underneath.</p>':"")+'</div>';
+result.innerHTML='<div class="msg">'+(row.published?"Passport saved and published.":"Passport saved as unpublished; public QR page will not reveal it yet.")+'<br><a href="'+esc(url)+'" target="_blank" rel="noopener">Open product passport</a><br><label>QR destination</label><input readonly value="'+esc(url)+'"><button type="button" id="cicPassCopy">Copy QR destination</button>'+(row.published?'<p><div id="cicPassQrPreview" aria-label="Product passport QR code"></div></p><button type="button" id="cicPassPrint">Print product QR label</button><p>Print label includes CRAVE ISLAND CEYLON with the QR code underneath.</p>':"")+'</div>';
+ if(row.published){try{new QRCode($("#cicPassQrPreview"),{text:url,width:240,height:240,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.H});}catch(qrError){message(qrError.message||"Could not generate the QR preview.");}}
 $("#cicPassCopy").onclick=async()=>{try{await navigator.clipboard.writeText(url);message("QR destination copied.")}catch(e){message("Select and copy the QR destination from the field.")}};
 const printButton=$("#cicPassPrint");
 if(printButton)printButton.onclick=()=>{
 const productName=$("#cicPassProduct").selectedOptions[0]?.textContent||"Product";
 const batch=$("#cicPassBatch").value.trim();
-const qr="https://api.qrserver.com/v1/create-qr-code/?size=360x360&data="+encodeURIComponent(url);
+let qr;try{qr=qrDataUrl(url,360);}catch(qrError){message(qrError.message);return;}
 const win=window.open("","_blank","width=480,height=640");
 if(!win){message("Allow pop-ups to print the QR label.");return}
 const safe=v=>String(v||"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
