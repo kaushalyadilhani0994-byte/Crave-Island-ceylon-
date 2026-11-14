@@ -83,13 +83,13 @@
         <label for="cicCatDesc">Description</label><textarea id="cicCatDesc" maxlength="500"></textarea>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="cicCategorySave" type="submit">Save collection</button><button id="cicCategoryCancel" type="button" hidden>Cancel edit</button></div>
       </form></div>
-      <div class="cic-section"><h3>2. Add a real product</h3><p class="cic-muted">Only enter products that are actually ready to sell. Price is in LKR. Product image URL must be a publicly accessible HTTPS image URL.</p>
+      <div class="cic-section"><h3>2. Add a real product</h3><p class="cic-muted">Only enter products that are actually ready to sell. Price is in LKR. Add one product photo using the camera or gallery, or provide an existing HTTPS image URL. Uploaded photos are stored privately.</p>
       <form id="cicProductForm">
         <div class="cic-grid"><div><label for="cicProdName">Product name *</label><input id="cicProdName" maxlength="160" required></div><div><label for="cicProdPrice">Price (LKR) *</label><input id="cicProdPrice" type="number" min="0.01" max="2000000" step="0.01" required></div>
-        <div><label for="cicProdCategory">Collection *</label><select id="cicProdCategory" required><option value="">Create a collection first</option></select></div><div><label for="cicProdImage">Product image URL (optional)</label><input id="cicProdImage" type="url" maxlength="1500" placeholder="HTTPS image link"></div></div>
+        <div><label for="cicProdCategory">Collection *</label><select id="cicProdCategory" required><option value="">Create a collection first</option></select></div><div><label for="cicProdImage">Existing HTTPS image URL (optional)</label><input id="cicProdImage" type="url" maxlength="1500" placeholder="Paste an HTTPS image link only if you already have one"></div></div>
         <div class="cic-photo-tools"><div><label for="cicProdCamera">Take product photo</label><input id="cicProdCamera" type="file" accept="image/jpeg,image/png,image/webp" capture="environment"></div><div><label for="cicProdGallery">Choose product photo (JPG, PNG or WebP)</label><input id="cicProdGallery" type="file" accept="image/jpeg,image/png,image/webp"></div></div>
         <div id="cicProdPhotoPreview" class="cic-photo-preview" aria-live="polite"><span class="cic-muted">No photos selected yet.</span></div>
-        <p class="cic-muted" id="cicProdPhotoNotice">Selected photos are uploaded to the private product-images bucket when you save. The storefront only receives a short-lived image link for active products.</p>
+        <p class="cic-muted" id="cicProdPhotoNotice">One selected photo is uploaded to the private product-images bucket when you save. The storefront receives a short-lived image link only for active products.</p>
         <label for="cicProdDesc">Product description</label><textarea id="cicProdDesc" maxlength="3000" placeholder="Describe the product clearly for customers"></textarea>
         <label for="cicProdIngredients">Ingredients *</label><textarea id="cicProdIngredients" maxlength="5000" required placeholder="Enter the exact verified ingredient list"></textarea>
         <label for="cicProdAllergens">Allergen information</label><textarea id="cicProdAllergens" maxlength="2000" placeholder="Declared allergens and cross-contact information (if applicable)"></textarea>
@@ -192,7 +192,7 @@
     if(p.category&&!Array.from(categorySelect.options).some(option=>option.value===p.category)){
       const option=document.createElement("option"); option.value=p.category; option.textContent=p.category+" (inactive collection)"; categorySelect.appendChild(option);
     }
-    categorySelect.value=p.category||""; $("#cicProdImage").value=p.image_url||"";
+    categorySelect.value=p.category||""; $("#cicProdImage").value=/^https:\/\//i.test(String(p.image_url||""))?p.image_url:"";
     selectedPhotos=[];renderPhotoPreviews();
     $("#cicProdDesc").value=p.description||""; $("#cicProdIngredients").value=p.ingredients||""; $("#cicProdAllergens").value=p.allergen_information||"";
     $("#cicProdBatch").value=p.batch_number||""; $("#cicProdStock").value=Number(p.stock_quantity||0); $("#cicProdLowStock").value=Number(p.low_stock_threshold||5); $("#cicProdMfg").value=p.manufacturing_date||""; $("#cicProdExpiry").value=p.expiry_date||""; $("#cicProdStorage").value=p.storage_location||""; $("#cicProdTrackStock").checked=Boolean(p.track_inventory);
