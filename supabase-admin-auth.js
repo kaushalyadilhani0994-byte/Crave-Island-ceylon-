@@ -275,7 +275,7 @@
     ownerMusicNodes.forEach(node=>{try{node.stop();}catch(_){}try{node.disconnect();}catch(_){}});
     ownerMusicNodes=[];
     const status=$("#cicDashMusicStatus"),button=$("#cicDashMusicToggle");
-    if(status)status.textContent="Calm instrumental: Off";
+    if(status)status.textContent="Soft calm tone: Off";
     if(button)button.textContent="Play calm tone";
   }
   function toggleOwnerCalmMusic(){
@@ -300,7 +300,7 @@
       };
       play();ownerMusicTimer=setInterval(play,2400);
       const status=$("#cicDashMusicStatus"),button=$("#cicDashMusicToggle");
-      if(status)status.textContent="Calm instrumental: On";
+      if(status)status.textContent="Soft calm tone: On";
       if(button)button.textContent="Turn music off";
     }catch(_){const s=$("#cicDashMusicStatus");if(s)s.textContent="Audio could not start. Tap Play again.";}
   }
@@ -381,10 +381,10 @@
             <div class="cic-dash-grid">
               <button class="cic-dash-card" type="button" data-open="mediaModal"><strong>Brand, Media & Social</strong><span>Open existing media and social tools.</span></button>
               <button class="cic-dash-card" type="button" data-open="loyaltyModal"><strong>Loyalty & Rewards</strong><span>Open the existing loyalty programme.</span></button>
-              <button class="cic-dash-card" type="button" data-action="music"><strong>Calm Music</strong><span>Optional gentle instrumental sound. Starts only when you choose.</span></button>
+              <button class="cic-dash-card" type="button" data-action="music"><strong>Calm Music</strong><span>Optional gentle, original ambient tone. Starts only when you choose.</span></button>
             </div>
           </details>
-          <section class="cic-dash-section" aria-label="Music settings"><h2>Sound preference</h2><div class="cic-dash-note" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span id="cicDashMusicStatus">Calm instrumental: Off</span><button class="cic-dash-action" type="button" id="cicDashMusicToggle">Play calm tone</button><label style="font-size:12px">Volume <input id="cicDashMusicVolume" type="range" min="0" max="30" value="12" style="width:105px;vertical-align:middle"></label></div></section>
+          <section class="cic-dash-section" aria-label="Music settings"><h2>Sound preference</h2><div class="cic-dash-note" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span id="cicDashMusicStatus">Soft calm tone: Off</span><button class="cic-dash-action" type="button" id="cicDashMusicToggle">Play calm tone</button><label style="font-size:12px">Volume <input id="cicDashMusicVolume" type="range" min="0" max="30" value="12" style="width:105px;vertical-align:middle"></label></div></section>
           <p class="cic-dash-note">Only the approved Main Admin can open these controls. Customer storefront design remains unchanged.</p></section>
           <div class="cic-dash-footer"><p>Verified owner access · CRAVE ISLAND CEYLON</p><button class="cic-dash-action" type="button" id="cicDashClose">Back to shop</button></div>
         </div>`;
