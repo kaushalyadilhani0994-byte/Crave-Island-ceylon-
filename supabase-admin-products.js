@@ -87,7 +87,7 @@
       <form id="cicProductForm">
         <div class="cic-grid"><div><label for="cicProdName">Product name *</label><input id="cicProdName" maxlength="160" required></div><div><label for="cicProdPrice">Price (LKR) *</label><input id="cicProdPrice" type="number" min="0.01" max="2000000" step="0.01" required></div>
         <div><label for="cicProdCategory">Collection *</label><select id="cicProdCategory" required><option value="">Create a collection first</option></select></div><div><label for="cicProdImage">Product image URL (optional)</label><input id="cicProdImage" type="url" maxlength="1500" placeholder="HTTPS image link"></div></div>
-        <div class="cic-photo-tools"><div><label for="cicProdCamera">Take product photo</label><input id="cicProdCamera" type="file" accept="image/*" capture="environment"></div><div><label for="cicProdGallery">Choose product photo (JPG, PNG or WebP)</label><input id="cicProdGallery" type="file" accept="image/*" multiple></div></div>
+        <div class="cic-photo-tools"><div><label for="cicProdCamera">Take product photo</label><input id="cicProdCamera" type="file" accept="image/jpeg,image/png,image/webp" capture="environment"></div><div><label for="cicProdGallery">Choose product photo (JPG, PNG or WebP)</label><input id="cicProdGallery" type="file" accept="image/jpeg,image/png,image/webp"></div></div>
         <div id="cicProdPhotoPreview" class="cic-photo-preview" aria-live="polite"><span class="cic-muted">No photos selected yet.</span></div>
         <p class="cic-muted" id="cicProdPhotoNotice">Selected photos are uploaded to the private product-images bucket when you save. The storefront only receives a short-lived image link for active products.</p>
         <label for="cicProdDesc">Product description</label><textarea id="cicProdDesc" maxlength="3000" placeholder="Describe the product clearly for customers"></textarea>
@@ -336,7 +336,6 @@
     const batch=$("#cicProdBatch").value.trim(), mfgDate=$("#cicProdMfg").value||null, expiryDate=$("#cicProdExpiry").value||null, storage=$("#cicProdStorage").value.trim();
     if(!name||!category||!ingredients||!Number.isFinite(price)||price<=0||price>2000000){delete form.dataset.saving;say("Enter product name, collection, verified ingredients, and a valid LKR price.",true);return;}
     if(!isHttpsUrl(imageUrl)){delete form.dataset.saving;say("Product image URL must be a valid HTTPS URL without embedded credentials.",true);return;}
-    if(selectedPhotos.length){delete form.dataset.saving;say("Your camera/gallery photos are previewed but not uploaded or attached yet. Remove the previews and use a secure HTTPS image link for now; do not assume these local photos were saved.",true);return;}
     if(mfgDate&&expiryDate&&mfgDate>expiryDate){delete form.dataset.saving;say("Manufacturing date cannot be later than the expiry / best-before date.",true);return;}
     const btn=event.submitter, editId=form.dataset.editId||"";
     const stockQuantity=Number($("#cicProdStock").value||0),lowStockThreshold=Number($("#cicProdLowStock").value||5);
