@@ -66,7 +66,7 @@ const row={product_id:id,public_slug:slug,ingredients:splitList(ingredients),all
 const {error}=await db.from("product_passports").upsert(row,{onConflict:"product_id"});
 btn.disabled=false;btn.textContent="Save product passport";
 if(error){message("Could not save passport. Confirm the latest store migration and owner permissions are active.");return}
-const url=location.origin+"/passport.html?slug="+encodeURIComponent(slug);
+const url="https://craveislandceylonv18supabaseintegra.vercel.app/passport.html?slug="+encodeURIComponent(slug);
 const result=$("#cicPassResult");
 result.innerHTML='<div class="msg">'+(row.published?"Passport saved and published.":"Passport saved as unpublished; public QR page will not reveal it yet.")+'<br><a href="'+esc(url)+'" target="_blank" rel="noopener">Open product passport</a><br><label>QR destination</label><input readonly value="'+esc(url)+'"><button type="button" id="cicPassCopy">Copy QR destination</button>'+(row.published?'<p><div id="cicPassQrPreview" aria-label="Product passport QR code"></div></p><button type="button" id="cicPassPrint">Print product QR label</button><p>Print label includes CRAVE ISLAND CEYLON with the QR code underneath.</p>':"")+'</div>';
  if(row.published){try{new QRCode($("#cicPassQrPreview"),{text:url,width:240,height:240,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.H});}catch(qrError){message(qrError.message||"Could not generate the QR preview.");}}
