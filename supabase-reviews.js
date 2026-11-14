@@ -46,27 +46,37 @@
     form.addEventListener("submit",async e=>{
       e.preventDefault();
       const status=form.querySelector("[data-review-status]"),button=form.querySelector("button[type=submit]");
-      const {data:{session},error:sessionError}=await client.auth.getSession();
-      if(sessionError||!session){status.textContent="Please sign in with the same account used to place the order.";return;}
-      const selected=productId||form.querySelector('[name="product_id"]').value;
-      button.disabled=true;status.textContent="Checking delivered order and submitting securely…";
-      const {data,error}=await client.rpc("submit_verified_product_review",{
-        p_order_number:form.elements.order_number.value.trim(),
-        p_product_id:selected,
-        p_rating:Number(form.elements.rating.value),
-        p_title:form.elements.title.value.trim(),
-        p_review_body:form.elements.review_body.value.trim()
-      });
-      button.disabled=false;
-      if(error){
-        const m=String(error.message||"");
-        if(m.includes("VERIFIED_DELIVERED_PURCHASE_REQUIRED"))status.textContent="We could not verify a delivered purchase for this product and account. Reviews are available after delivery.";
-        else if(m.includes("REVIEW_ALREADY_SUBMITTED"))status.textContent="A review has already been submitted for this product and order.";
-        else if(m.includes("CUSTOMER_SIGN_IN_REQUIRED"))status.textContent="Please sign in with your customer account first.";
-        else status.textContent="The review could not be submitted. Check the details and try again.";
-        return;
+      if(form.dataset.submitting==="true")return;
+      form.dataset.submitting="true";
+      if(button)button.disabled=true;
+      status.textContent="Checking delivered order and submitting securely…";
+      try{
+        const {data:{session},error:sessionError}=await client.auth.getSession();
+        if(sessionError||!session){status.textContent="Please sign in with the same account used to place the order.";return;}
+        const selected=productId||form.querySelector('[name="product_id"]').value;
+        if(!selected){status.textContent="Choose the product from your delivered order.";return;}
+        const {error}=await client.rpc("submit_verified_product_review",{
+          p_order_number:form.elements.order_number.value.trim(),
+          p_product_id:selected,
+          p_rating:Number(form.elements.rating.value),
+          p_title:form.elements.title.value.trim(),
+          p_review_body:form.elements.review_body.value.trim()
+        });
+        if(error){
+          const m=String(error.message||"");
+          if(m.includes("VERIFIED_DELIVERED_PURCHASE_REQUIRED"))status.textContent="We could not verify a delivered purchase for this product and account. Reviews are available after delivery.";
+          else if(m.includes("REVIEW_ALREADY_SUBMITTED"))status.textContent="A review has already been submitted for this product and order.";
+          else if(m.includes("CUSTOMER_SIGN_IN_REQUIRED"))status.textContent="Please sign in with your customer account first.";
+          else status.textContent="The review could not be submitted. Check the details and try again.";
+          return;
+        }
+        form.reset();status.textContent="Thank you. Your verified review has been sent to the owner for approval.";
+      }catch(_){
+        status.textContent="The connection was interrupted. Your review may not have been saved; check again before submitting another copy.";
+      }finally{
+        delete form.dataset.submitting;
+        if(button)button.disabled=false;
       }
-      form.reset();status.textContent="Thank you. Your verified review has been sent to the owner for approval.";
     });
   }
   async function renderProductReviews(productId){
