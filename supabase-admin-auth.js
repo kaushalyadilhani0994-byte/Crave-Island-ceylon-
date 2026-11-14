@@ -54,8 +54,7 @@
   }
   function setOwnerNavVisible(visible) {
     const bottom = document.querySelector(".bottom");
-    // The secure Admin sign-in entry remains available on the V18 storefront.
-    // The owner workspace itself is shown only after server-side approval.
+    // Customer Settings stays in the bottom bar; Admin is added only after owner approval.
     let adminButton = bottom && (
       bottom.querySelector("#cicOwnerAdminNavEntry") ||
       bottom.querySelector('[onclick*="openAdminAccess"]') ||
@@ -84,11 +83,8 @@
       if (adminButton) adminButton.style.setProperty("display", "flex", "important");
       syncOwnerAdminShortcut(true);
     } else {
-      // Keep the familiar V18 Admin entry visible on the home screen so the
-      // owner can always reach the secure OTP prompt, including on a new
-      // browser/device where no local owner-device hint exists. This exposes
-      // only the sign-in entry: the owner workspace and all data remain hidden
-      // until the server confirms the approved owner session.
+      // Keep customer Settings visible and remove the owner-only Admin entry on sign-out.
+      // The owner can reopen secure OTP from Settings on any browser/device.
       document.body.classList.remove("cic-owner-shortcuts-unified");
       if (bottom) bottom.style.removeProperty("grid-template-columns");
       const privateEntry = document.getElementById("cicOwnerAdminNavEntry");
@@ -776,8 +772,7 @@
       ownerAutoPromptOpened = true;
       window.setTimeout(() => window.openAdminAccess(), 0);
     };
-    // Hide the customer-facing Admin nav immediately on startup, before any
-    // persisted session or auth-state callback is processed.
+    // Ensure no owner-only Admin entry is exposed before server-side approval.
     setOwnerNavVisible(false);
     install();
     // Keep observing until the dynamically injected login modal is actually
