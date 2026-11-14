@@ -351,7 +351,7 @@
       const payload={
         name,category,price,currency:"LKR",
         description:$("#cicProdDesc").value.trim()||null,
-        image_url:imageUrl||null,ingredients,
+        image_url:imageUrl||(editId?(productRows.find(row=>String(row.id)===String(editId))?.image_url||null):null),ingredients,
         allergen_information:allergens||null,batch_number:batch||null,
         stock_quantity:stockQuantity,low_stock_threshold:lowStockThreshold,
         manufacturing_date:mfgDate,expiry_date:expiryDate,
