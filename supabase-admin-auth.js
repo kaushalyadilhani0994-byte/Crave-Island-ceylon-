@@ -376,6 +376,14 @@
           #cicOwnerDashboard.cic-theme-dark .cic-dash-note{background:#303a45;color:#f4f2ed}
           #cicOwnerDashboard.cic-theme-dark .cic-dash-action{background:#f0d17b;color:#21170e;border-color:#f0d17b}
           #cicOwnerDashboard.cic-theme-dark .cic-dash-setting-row{border-color:#536170}
+          body.cic-owner-admin-dark #cicOwnerCatalogue{background:#0c1117eF!important}
+          body.cic-owner-admin-dark #cicOwnerCatalogue .cic-panel{background:#1c2530!important;color:#f4f6f8!important;border-color:#718096!important}
+          body.cic-owner-admin-dark #cicOwnerCatalogue h2,body.cic-owner-admin-dark #cicOwnerCatalogue h3,body.cic-owner-admin-dark #cicOwnerCatalogue label,body.cic-owner-admin-dark #cicOwnerCatalogue b{color:#fff!important}
+          body.cic-owner-admin-dark #cicOwnerCatalogue .cic-muted{color:#d3dce6!important}
+          body.cic-owner-admin-dark #cicOwnerCatalogue .cic-card{background:#263340!important;border-color:#586a7d!important;color:#fff!important}
+          body.cic-owner-admin-dark #cicOwnerCatalogue input:not([type=checkbox]),body.cic-owner-admin-dark #cicOwnerCatalogue textarea,body.cic-owner-admin-dark #cicOwnerCatalogue select{background:#f8fafc!important;color:#17212b!important;-webkit-text-fill-color:#17212b!important;border-color:#b9c4d0!important}
+          body.cic-owner-admin-dark #cicOwnerCatalogue .cic-message{background:#334354!important;color:#fff!important}
+          body.cic-owner-admin-dark #cicOwnerCatalogue button{background:#f0d17b!important;color:#21170e!important;-webkit-text-fill-color:#21170e!important;border-color:#f0d17b!important}
           @media(max-width:430px){#cicOwnerDashboard{padding:12px}#cicOwnerDashboard .cic-dash-top{gap:8px;padding-bottom:12px;margin-bottom:12px}#cicOwnerDashboard .cic-dash-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#cicOwnerDashboard .cic-dash-card{min-height:92px;padding:11px;gap:5px;border-radius:12px}#cicOwnerDashboard .cic-dash-card strong{font:400 16px/1.15 Georgia,serif}#cicOwnerDashboard .cic-dash-card span{font-size:11px;line-height:1.35}#cicOwnerDashboard .cic-dash-section{margin-top:14px}#cicOwnerDashboard .cic-dash-section h2{font-size:20px;margin-bottom:8px}#cicOwnerDashboard .cic-dash-note{font-size:11px;padding:10px}}
         `;
         document.head.appendChild(style);
@@ -416,7 +424,7 @@
       try{history.pushState({cicOwnerDashboard:true},'','#owner-admin');}catch(_){}
       const savedTheme=(()=>{try{return localStorage.getItem("cic_owner_admin_theme")==="dark";}catch(_){return false;}})();
       const themeButton=$("#cicDashThemeToggle");
-      const applyTheme=(dark)=>{dashboard.classList.toggle("cic-theme-dark",!!dark);if(themeButton){themeButton.textContent=dark?"Turn light mode on":"Turn dark mode on";themeButton.setAttribute("aria-pressed",String(!!dark));}try{localStorage.setItem("cic_owner_admin_theme",dark?"dark":"light");}catch(_){}};
+      const applyTheme=(dark)=>{dashboard.classList.toggle("cic-theme-dark",!!dark);document.body.classList.toggle("cic-owner-admin-dark",!!dark);if(themeButton){themeButton.textContent=dark?"Turn light mode on":"Turn dark mode on";themeButton.setAttribute("aria-pressed",String(!!dark));}try{localStorage.setItem("cic_owner_admin_theme",dark?"dark":"light");}catch(_){}};
       applyTheme(savedTheme);
       const savedVolume=(()=>{try{return Number(localStorage.getItem("cic_owner_music_volume")||12);}catch(_){return 12;}})();
       $("#cicDashMusicVolume").value=String(Math.max(0,Math.min(30,savedVolume)));
