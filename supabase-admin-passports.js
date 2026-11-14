@@ -130,7 +130,7 @@ try {
 const response=await db.rpc("owner_update_product_passport",{
 p_product_id:id,
 p_payload:row,
-p_site_origin:location.origin
+p_site_origin:"https://craveislandceylonv18supabaseintegra.vercel.app"
 });
 data=response.data;error=response.error;
 } catch (requestError) {
