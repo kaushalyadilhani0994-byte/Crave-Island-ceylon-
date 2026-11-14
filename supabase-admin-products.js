@@ -336,6 +336,7 @@
     const batch=$("#cicProdBatch").value.trim(), mfgDate=$("#cicProdMfg").value||null, expiryDate=$("#cicProdExpiry").value||null, storage=$("#cicProdStorage").value.trim();
     if(!name||!category||!ingredients||!Number.isFinite(price)||price<=0||price>2000000){delete form.dataset.saving;say("Enter product name, collection, verified ingredients, and a valid LKR price.",true);return;}
     if(!isHttpsUrl(imageUrl)){delete form.dataset.saving;say("Product image URL must be a valid HTTPS URL without embedded credentials.",true);return;}
+    if(selectedPhotos.length){delete form.dataset.saving;say("Your camera/gallery photos are previewed but not uploaded or attached yet. Remove the previews and use a secure HTTPS image link for now; do not assume these local photos were saved.",true);return;}
     if(mfgDate&&expiryDate&&mfgDate>expiryDate){delete form.dataset.saving;say("Manufacturing date cannot be later than the expiry / best-before date.",true);return;}
     const btn=event.submitter, editId=form.dataset.editId||"";
     const stockQuantity=Number($("#cicProdStock").value||0),lowStockThreshold=Number($("#cicProdLowStock").value||5);
