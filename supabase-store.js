@@ -270,7 +270,7 @@
   document.body.appendChild(ownerOrdersScript);
   const ownerProductsScript = document.createElement("script");
   ownerProductsScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerProductsScript.src = "supabase-admin-products.js?v=20261114-private-photo-retry-safe";
+  ownerProductsScript.src = "supabase-admin-products.js?v=20261114-private-photo-cache-safe";
   ownerProductsScript.defer = true;
   document.body.appendChild(ownerProductsScript);
   const secureCheckoutScript = document.createElement("script");
