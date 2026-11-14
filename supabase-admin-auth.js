@@ -275,8 +275,8 @@
     ownerMusicNodes.forEach(node=>{try{node.stop();}catch(_){}try{node.disconnect();}catch(_){}});
     ownerMusicNodes=[];
     const status=$("#cicSettingsMusicStatus")||$("#cicDashMusicStatus"),button=$("#cicSettingsMusicToggle")||$("#cicDashMusicToggle");
-    if(status)status.textContent="Soft calm tone: Off";
-    if(button)button.textContent="Play calm tone";
+    if(status)status.textContent="Calm sound: Off";
+    if(button)button.textContent="Play calm sound";
   }
   function toggleOwnerCalmMusic(){
     if(ownerMusicTimer){stopOwnerCalmMusic();return;}
@@ -301,9 +301,9 @@
       };
       play();ownerMusicTimer=setInterval(play,2400);
       const status=$("#cicSettingsMusicStatus")||$("#cicDashMusicStatus"),button=$("#cicSettingsMusicToggle")||$("#cicDashMusicToggle");
-      if(status)status.textContent="Soft calm tone: On";
-      if(button)button.textContent="Turn music off";
-    }catch(_){const s=$("#cicDashMusicStatus");if(s)s.textContent="Audio could not start. Tap Play again.";}
+      if(status)status.textContent="Calm sound: On";
+      if(button)button.textContent="Turn sound off";
+    }catch(_){const s=$("#cicSettingsMusicStatus")||$("#cicDashMusicStatus");if(s)s.textContent="Audio could not start. Tap Play again."; }
   }
   async function openOwnerDashboard(){
     // Fail closed even if a customer calls the exported dashboard function manually.
