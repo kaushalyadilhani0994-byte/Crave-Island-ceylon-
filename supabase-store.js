@@ -287,7 +287,7 @@
 
   const ownerAuthScript = document.createElement("script");
   ownerAuthScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerAuthScript.src = "supabase-admin-auth.js?v=20261115-owner-gate-nav-preserved";
+  ownerAuthScript.src = "supabase-admin-auth.js?v=20261115-admin-social-handler-fix";
   ownerAuthScript.defer = true;
   document.body.appendChild(ownerAuthScript);
 
