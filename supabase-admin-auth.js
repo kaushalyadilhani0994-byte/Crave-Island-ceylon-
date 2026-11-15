@@ -234,6 +234,7 @@
       {key:"orders",title:"Orders & Customers",label:"Open live Orders & Fulfilment",selectors:["#cicOwnerOrdersButton"]},
       {key:"passports",title:"Certificates & QR",label:"Open live QR Product Passports",selectors:["#cicPassportButton"]},
       {key:"media",title:"Media & Social",label:"Open owner Social Draft Desk (local preview only)",selectors:[]},
+      {key:"team",title:"Team & Roles",label:"Open secure Team Access",selectors:[]},
       {key:"alerts",title:"Security & Audit",label:"Open live Owner Alerts",selectors:["#cicOwnerAlertsButton","#cicOwnerAlertButton","#cicAlertsButton"],textMatch:/owner\s*alerts/i}
     ];
 
@@ -277,10 +278,20 @@
         const def=definitions.find(item=>item.key===kind);
         if(!def)return;
         const status=control.querySelector('[data-cic-live-status="'+kind+'"]');
+        if(!document.body.classList.contains("cic-owner-shortcuts-unified"))return;
         if(kind==="media"){
-          if(!document.body.classList.contains("cic-owner-shortcuts-unified"))return;
           if(typeof window.openModal==="function")window.openModal("socialModal");
           if(status)status.textContent="Opened local draft preview. Live social publishing is not connected.";
+          return;
+        }
+        if(kind==="team"){
+          openOwnerTeamPanel();
+          if(status)status.textContent="Opened secure Team Access. Owner approval is checked again before team data is shown.";
+          return;
+        }
+        if(kind==="alerts"){
+          openOwnerAlertsPanel();
+          if(status)status.textContent="Opened live Owner Alerts. Owner approval is checked again before alerts are shown.";
           return;
         }
         let target=null;
