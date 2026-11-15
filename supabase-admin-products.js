@@ -399,14 +399,17 @@
     }
   }
 
-  function init() {
-    if(!window.CIC_SUPABASE_CONFIG||!window.CIC_SUPABASE_CONFIG.anonKey)return;
+  let productAdminInitStarted=false;
+  function init(attempt=0) {
+    if(productAdminInitStarted)return;
+    const config=window.CIC_SUPABASE_CONFIG,db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
+    if(!config?.anonKey||!db){if(attempt<40){window.setTimeout(()=>init(attempt+1),250);return;}console.warn("[CRAVE catalogue] Supabase client did not become ready; reload the page to retry.");return;}
+    productAdminInitStarted=true;
     mount();
     const update=async()=>{const ok=await checkAccess(); const b=$("#cicOwnerCatalogueButton"); if(b)b.hidden=!ok;};
     update();
-    const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
-    if(db)db.auth.onAuthStateChange(()=>window.setTimeout(update,150));
+    db.auth.onAuthStateChange(()=>window.setTimeout(update,150));
   }
-  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>window.setTimeout(init,250));
-  else window.setTimeout(init,250);
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>window.setTimeout(()=>init(),250),{once:true});
+  else window.setTimeout(()=>init(),250);
 })();
