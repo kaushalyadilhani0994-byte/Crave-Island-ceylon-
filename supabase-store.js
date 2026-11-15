@@ -326,8 +326,13 @@
     function textNode(tag,value){const el=document.createElement(tag);el.textContent=value;return el;}
     async function ownerSession(){
       const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;if(!db)return false;
-      const {data:{session},error}=await db.auth.getSession();if(error||!session)return false;
-      const {data,error:profileError}=await db.from("staff_profiles").select("role,approved").eq("id",session.user.id).maybeSingle();
+      const {data:{session},error}=await db.auth.getSession();if(error||!session||!session.user)return false;
+      // Match the same primary-owner email guard used by the authoritative
+      // database helper. A second approved profile must never reveal owner UI.
+      const {data:verified,error:verifyError}=await db.auth.getUser();
+      if(verifyError||!verified||!verified.user||verified.user.id!==session.user.id||
+         String(verified.user.email||"").trim().toLowerCase()!=="kaushalyadilhani0994@gmail.com")return false;
+      const {data,error:profileError}=await db.from("staff_profiles").select("role,approved").eq("id",verified.user.id).maybeSingle();
       return !profileError&&!!data&&data.role==="owner"&&data.approved===true;
     }
     async function refresh(){
