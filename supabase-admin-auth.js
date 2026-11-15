@@ -60,9 +60,10 @@
     shortcut.addEventListener("click", function () { if (typeof window.openAdminAccess === "function") window.openAdminAccess(); });
     document.body.appendChild(shortcut);
   }
-  function setOwnerNavVisible() {
-    // Keep the storefront navigation exactly as authored. Admin stays on the floating side shortcut.
-    document.body.classList.remove("cic-owner-shortcuts-unified");
+  function setOwnerNavVisible(visible) {
+    // This class is the verified-session gate used by the original V18 Control Room.
+    // It must never alter the storefront navigation or inject an Admin nav item.
+    document.body.classList.toggle("cic-owner-shortcuts-unified", visible === true);
     const legacyEntry = document.getElementById("cicOwnerAdminNavEntry");
     if (legacyEntry) legacyEntry.remove();
     syncOwnerAdminShortcut();
