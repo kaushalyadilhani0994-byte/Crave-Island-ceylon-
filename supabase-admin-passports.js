@@ -28,8 +28,11 @@ async function owner(){
 db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
 if(!db)return false;
 const {data:{session},error}=await db.auth.getSession();
-if(error||!session)return false;
-const {data,error:e}=await db.from("staff_profiles").select("role,approved").eq("id",session.user.id).maybeSingle();
+if(error||!session||!session.user)return false;
+const {data:verified,error:verifyError}=await db.auth.getUser();
+if(verifyError||!verified||!verified.user||verified.user.id!==session.user.id||
+   String(verified.user.email||"").trim().toLowerCase()!=="kaushalyadilhani0994@gmail.com")return false;
+const {data,error:e}=await db.from("staff_profiles").select("role,approved").eq("id",verified.user.id).maybeSingle();
 return !e&&data&&data.role==="owner"&&data.approved===true;
 }
 function mount(){
