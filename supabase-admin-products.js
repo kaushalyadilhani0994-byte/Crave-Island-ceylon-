@@ -175,7 +175,7 @@
     const form=$("#cicProductForm");
     if(form.dataset.saving==="true"){say("Please wait until the current product save finishes before switching products.",true);return;}
     const p=productRows.find(row=>String(row.id)===String(id)); if(!p)return;
-    delete form.dataset.requestId; form.dataset.editId=p.id;
+    delete form.dataset.requestId; form.dataset.editId=p.id; form.dataset.existingPrivateImage=/^https:\/\//i.test(String(p.image_url||""))?"":String(p.image_url||"");
     $("#cicProdName").value=p.name||""; $("#cicProdPrice").value=p.price==null?"":p.price;
     const categorySelect=$("#cicProdCategory");
     if(p.category&&!Array.from(categorySelect.options).some(option=>option.value===p.category)){
@@ -327,7 +327,7 @@
     if(!isHttpsUrl(imageUrl)){delete form.dataset.saving;say("Product image URL must be a valid HTTPS URL without embedded credentials.",true);return;}
     if(mfgDate&&expiryDate&&mfgDate>expiryDate){delete form.dataset.saving;say("Manufacturing date cannot be later than the expiry / best-before date.",true);return;}
     const btn=event.submitter, editId=form.dataset.editId||"";
-    const existingProductImage=editId?(productRows.find(row=>String(row.id)===String(editId))?.image_url||null):null;
+    const existingProductImage=editId?(form.dataset.existingPrivateImage||productRows.find(row=>String(row.id)===String(editId))?.image_url||null):null;
     const stockQuantity=Number($("#cicProdStock").value||0),lowStockThreshold=Number($("#cicProdLowStock").value||5);
     if(!Number.isInteger(stockQuantity)||stockQuantity<0||!Number.isInteger(lowStockThreshold)||lowStockThreshold<0){delete form.dataset.saving;say("Stock and low-stock threshold must be whole numbers of zero or more.",true);return;}
     const controls=Array.from(form.elements).map(el=>({el,disabled:el.disabled}));
@@ -360,19 +360,31 @@
       form.dataset.editId=String(result.product_id);
       if(selectedProductPhoto){
         const photo=selectedProductPhoto;
+        const previousPrivatePath=existingProductImage&&!/^https:\/\//i.test(String(existingProductImage))?String(existingProductImage):"";
+        // The passport RPC accepts HTTPS image URLs only. Restore the prior private
+        // object path before attempting replacement so a failed upload never blanks
+        // an already-working product photo.
+        if(previousPrivatePath){
+          const {error:restorePreviousError}=await client.from("products").update({image_url:previousPrivatePath}).eq("id",result.product_id);
+          if(restorePreviousError)throw new Error("Product details were saved, but the existing photo could not be preserved before replacement: "+restorePreviousError.message);
+        }
         const extension=photo.type==="image/png"?"png":photo.type==="image/webp"?"webp":"jpg";
         const objectPath=String(result.product_id)+"/"+window.crypto.randomUUID()+"."+extension;
         const {data:uploaded,error:uploadError}=await client.storage.from("product-images").upload(objectPath,photo,{
           cacheControl:"900",contentType:photo.type,upsert:false
         });
-        if(uploadError)throw new Error("Product details were saved, but the private photo upload failed: "+uploadError.message);
+        if(uploadError)throw new Error("Product details were saved; the previous photo was preserved, but the new private photo upload failed: "+uploadError.message);
         const {error:imageSaveError}=await client.from("products").update({image_url:uploaded.path}).eq("id",result.product_id);
-        if(imageSaveError){try{await client.storage.from("product-images").remove([uploaded.path]);}catch(_){}throw new Error("Photo uploaded but could not be attached to the product. The app attempted to clean up the unused file. Retry safely: "+imageSaveError.message);}
+        if(imageSaveError){try{await client.storage.from("product-images").remove([uploaded.path]);}catch(_){}throw new Error("Photo uploaded but could not be attached to the product. The previous photo was preserved and the app attempted to clean up the unused file: "+imageSaveError.message);}
+        if(previousPrivatePath&&previousPrivatePath!==uploaded.path){
+          // Cleanup is best-effort; a failed delete must not undo a successful photo replacement.
+          try{await client.storage.from("product-images").remove([previousPrivatePath]);}catch(_){}
+        }
       }else if(editId&&!imageUrl&&existingProductImage&&!/^https:\/\//i.test(String(existingProductImage))){
         const {error:restoreImageError}=await client.from("products").update({image_url:existingProductImage}).eq("id",result.product_id);
         if(restoreImageError)throw new Error("Product saved, but its existing private photo could not be preserved: "+restoreImageError.message);
       }
-      form.reset();delete form.dataset.editId;delete form.dataset.requestId;selectedProductPhoto=null;renderProductPhotoPreview();
+      form.reset();delete form.dataset.editId;delete form.dataset.requestId;delete form.dataset.existingPrivateImage;selectedProductPhoto=null;renderProductPhotoPreview();
       const saveButton=form.querySelector("button[type=submit]");if(saveButton)saveButton.textContent="Save product as draft";
       say((result.created?"Product saved as a hidden draft. ":"Product updated. ")+(result.replayed?"Previous confirmed save recovered. ":"")+"Product, passport and QR link were saved together. Passport publishing remains a separate owner action.");
       await loadAll();
