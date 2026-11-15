@@ -108,8 +108,11 @@
     client=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
     if(!client){allowed=false;return false;}
     const {data:{session},error}=await client.auth.getSession();
-    if(error||!session){allowed=false;return false;}
-    const {data:staff,error:staffError}=await client.from("staff_profiles").select("role,approved").eq("id",session.user.id).maybeSingle();
+    if(error||!session||!session.user){allowed=false;return false;}
+    const {data:verified,error:verifyError}=await client.auth.getUser();
+    if(verifyError||!verified||!verified.user||verified.user.id!==session.user.id||
+       String(verified.user.email||"").trim().toLowerCase()!=="kaushalyadilhani0994@gmail.com"){allowed=false;return false;}
+    const {data:staff,error:staffError}=await client.from("staff_profiles").select("role,approved").eq("id",verified.user.id).maybeSingle();
     allowed=!staffError&&!!staff&&staff.role==="owner"&&staff.approved===true;
     return allowed;
   }
