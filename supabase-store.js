@@ -287,7 +287,7 @@
 
   const ownerAuthScript = document.createElement("script");
   ownerAuthScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerAuthScript.src = "supabase-admin-auth.js?v=20261110-team-invite-role-alignment-1";
+  ownerAuthScript.src = "supabase-admin-auth.js?v=20261115-owner-gate-nav-preserved";
   ownerAuthScript.defer = true;
   document.body.appendChild(ownerAuthScript);
 
