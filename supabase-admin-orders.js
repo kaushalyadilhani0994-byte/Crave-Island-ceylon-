@@ -15,10 +15,12 @@
     const db=client(); if(!db) return {error:"Supabase connection is not ready."};
     const {data:{session},error}=await db.auth.getSession();
     if(error||!session||session.user?.is_anonymous) return {error:"Please sign in with an approved CRAVE team account."};
-    const {data:staff,error:se}=await db.from("staff_profiles").select("role,approved,permissions").eq("id",session.user.id).maybeSingle();
+    const {data:verified,error:verifyError}=await db.auth.getUser();
+    if(verifyError||!verified||!verified.user||verified.user.id!==session.user.id) return {error:"Your secure sign-in could not be verified. Please sign in again."};
+    const {data:staff,error:se}=await db.from("staff_profiles").select("role,approved,permissions").eq("id",verified.user.id).maybeSingle();
     if(se||!staff||staff.approved!==true) return {error:"This section is only available to an approved CRAVE team account."};
     const permissions=staff.permissions&&typeof staff.permissions==="object"?staff.permissions:{};
-    const isOwner=staff.role==="owner";
+    const isOwner=staff.role==="owner"&&String(verified.user.email||"").trim().toLowerCase()==="kaushalyadilhani0994@gmail.com";
     const canOrders=Array.isArray(permissions.orders)&&permissions.orders.includes("read");
     const canDispatch=Array.isArray(permissions.dispatch)&&permissions.dispatch.includes("read");
     if(!isOwner&&!canOrders&&!canDispatch) return {error:"Your account does not have permission to view orders."};
@@ -98,7 +100,7 @@
     const update=async()=>{
       const db=client();let permitted=false;
       try{
-        if(db){const {data:{session},error}=await db.auth.getSession();if(session&&!error&&!session.user?.is_anonymous){const {data,error:profileError}=await db.from("staff_profiles").select("role,approved,permissions").eq("id",session.user.id).maybeSingle();const p=data?.permissions&&typeof data.permissions==="object"?data.permissions:{};permitted=!profileError&&!!data&&data.approved===true&&(data.role==="owner"||["orders","dispatch"].some(k=>Array.isArray(p[k])&&p[k].includes("read")));}}
+        if(db){const {data:{session},error}=await db.auth.getSession();if(session&&!error&&!session.user?.is_anonymous){const {data:verified,error:verifyError}=await db.auth.getUser();if(!verifyError&&verified?.user&&verified.user.id===session.user.id){const {data,error:profileError}=await db.from("staff_profiles").select("role,approved,permissions").eq("id",verified.user.id).maybeSingle();const p=data?.permissions&&typeof data.permissions==="object"?data.permissions:{};const isOwner=data?.role==="owner"&&String(verified.user.email||"").trim().toLowerCase()==="kaushalyadilhani0994@gmail.com";permitted=!profileError&&!!data&&data.approved===true&&(isOwner||["orders","dispatch"].some(k=>Array.isArray(p[k])&&p[k].includes("read")));}}}
       }catch(_){}
       button.hidden=!permitted;
       if(!permitted)modal.style.display="none";
@@ -153,10 +155,12 @@
       const db=client();if(!db)return {error:"Supabase connection is not ready."};
       const {data:{session},error}=await db.auth.getSession();
       if(error||!session||session.user?.is_anonymous)return {error:"Please sign in with an approved CRAVE team account."};
-      const {data:staff,error:profileError}=await db.from("staff_profiles").select("role,approved,permissions").eq("id",session.user.id).maybeSingle();
+      const {data:verified,error:verifyError}=await db.auth.getUser();
+      if(verifyError||!verified?.user||verified.user.id!==session.user.id)return {error:"Your secure sign-in could not be verified. Please sign in again."};
+      const {data:staff,error:profileError}=await db.from("staff_profiles").select("role,approved,permissions").eq("id",verified.user.id).maybeSingle();
       if(profileError||!staff||staff.approved!==true)return {error:"Approved team access is required."};
       const p=staff.permissions&&typeof staff.permissions==="object"?staff.permissions:{};
-      const isOwner=staff.role==="owner";
+      const isOwner=staff.role==="owner"&&String(verified.user.email||"").trim().toLowerCase()==="kaushalyadilhani0994@gmail.com";
       const read=isOwner||(Array.isArray(p.inventory)&&p.inventory.some(x=>x==="read"||x==="update"));
       canUpdate=isOwner||(Array.isArray(p.inventory)&&p.inventory.includes("update"));
       return read?{db}:{error:"Your account does not have inventory read permission."};
