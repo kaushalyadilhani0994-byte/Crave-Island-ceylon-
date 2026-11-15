@@ -445,8 +445,9 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
     document.querySelectorAll("[onclick]").forEach(el=>{
       const action=el.getAttribute("onclick")||"";
       const opensDisabled=[...blocked].some(id=>action.includes("openModal('"+id+"')")||action.includes('openModal("'+id+'")'));
+      const ownerSocialLauncher=!!el.closest("#controlRoomModal")&&(action.includes("openModal('socialModal')")||action.includes('openModal("socialModal")'));
       const legacyAction=/downloadQR\s*\(|saveOwnerImageDemo\s*\(|clearOwnerImageDemo\s*\(|v7SendInvite\s*\(|prepareTeamInvite\s*\(|previewOwnerImage\s*\(/.test(action);
-      if(opensDisabled||legacyAction){el.hidden=true;el.setAttribute("aria-hidden","true");el.style.display="none";}
+      if((opensDisabled&&!ownerSocialLauncher)||legacyAction){el.hidden=true;el.setAttribute("aria-hidden","true");el.style.display="none";}
     });
   }
   /* Hide duplicate floating owner shortcuts; the secure Admin entry remains in the main bottom navigation. */
@@ -474,12 +475,12 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
       // The original V18 Control Room is the authenticated owner's live
       // workspace. The guard hides it for everyone until Supabase owner
       // approval adds this class; allow only that verified session through.
-      if(id==="controlRoomModal"&&document.body.classList.contains("cic-owner-shortcuts-unified")){
-        const control=document.getElementById("controlRoomModal");
-        if(control){
-          control.hidden=false;
-          control.removeAttribute("aria-hidden");
-          control.style.removeProperty("display");
+      if((id==="controlRoomModal"||id==="socialModal")&&document.body.classList.contains("cic-owner-shortcuts-unified")){
+        const allowedModal=document.getElementById(id);
+        if(allowedModal){
+          allowedModal.hidden=false;
+          allowedModal.removeAttribute("aria-hidden");
+          allowedModal.style.removeProperty("display");
         }
         if(typeof originalOpen==="function")return originalOpen.apply(this,arguments);
         return;
