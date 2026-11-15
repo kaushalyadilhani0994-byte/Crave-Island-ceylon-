@@ -367,7 +367,7 @@
         });
         if(uploadError)throw new Error("Product details were saved, but the private photo upload failed: "+uploadError.message);
         const {error:imageSaveError}=await client.from("products").update({image_url:uploaded.path}).eq("id",result.product_id);
-        if(imageSaveError)throw new Error("Photo uploaded but could not be attached to the product. Contact support before retrying: "+imageSaveError.message);
+        if(imageSaveError){try{await client.storage.from("product-images").remove([uploaded.path]);}catch(_){}throw new Error("Photo uploaded but could not be attached to the product. The app attempted to clean up the unused file. Retry safely: "+imageSaveError.message);}
       }else if(editId&&!imageUrl&&existingProductImage&&!/^https:\/\//i.test(String(existingProductImage))){
         const {error:restoreImageError}=await client.from("products").update({image_url:existingProductImage}).eq("id",result.product_id);
         if(restoreImageError)throw new Error("Product saved, but its existing private photo could not be preserved: "+restoreImageError.message);
