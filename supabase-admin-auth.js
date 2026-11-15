@@ -276,6 +276,7 @@
         const kind=action.dataset.cicLiveNode;
         const def=definitions.find(item=>item.key===kind);
         if(!def)return;
+        const status=control.querySelector('[data-cic-live-status="'+kind+'"]');
         if(kind==="media"){
           if(!document.body.classList.contains("cic-owner-shortcuts-unified"))return;
           if(typeof window.openModal==="function")window.openModal("socialModal");
@@ -287,7 +288,6 @@
         if(!target&&def.textMatch){
           target=Array.from(document.querySelectorAll("button")).find(el=>!el.hasAttribute("data-cic-live-node")&&def.textMatch.test(el.textContent||""));
         }
-        const status=control.querySelector('[data-cic-live-status="'+kind+'"]');
         if(target){
           target.click();
           if(status)status.textContent="Live owner tool opened.";
