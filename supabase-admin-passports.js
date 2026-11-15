@@ -180,6 +180,14 @@ win.document.close();
 
 message("Passport saved successfully.");
 }
-function init(){if(!window.CIC_SUPABASE_CONFIG?.anonKey||!window.CIC_SUPABASE?.client)return;mount();const update=async()=>{const b=$("#cicPassportButton");if(b)b.hidden=!(await owner())};update();db=window.CIC_SUPABASE.client;db.auth.onAuthStateChange(()=>setTimeout(update,200))}
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(init,500));else setTimeout(init,500);
+let passportInitStarted=false;
+function init(attempt=0){
+ if(passportInitStarted)return;
+ const config=window.CIC_SUPABASE_CONFIG,client=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
+ if(!config?.anonKey||!client){if(attempt<40){setTimeout(()=>init(attempt+1),250);return}console.warn("[CRAVE QR] Supabase client did not become ready; reload the page to retry.");return}
+ passportInitStarted=true;db=client;mount();
+ const update=async()=>{const b=$("#cicPassportButton");if(b)b.hidden=!(await owner())};
+ update();db.auth.onAuthStateChange(()=>setTimeout(update,200));
+}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(()=>init(),250),{once:true});else setTimeout(()=>init(),250);
 })();
