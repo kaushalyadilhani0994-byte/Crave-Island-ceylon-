@@ -270,7 +270,7 @@
   document.body.appendChild(ownerOrdersScript);
   const ownerProductsScript = document.createElement("script");
   ownerProductsScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerProductsScript.src = "supabase-admin-products.js?v=20261114-private-photo-cache-safe";
+  ownerProductsScript.src = "supabase-admin-products.js?v=20261115-private-photo-cleanup";
   ownerProductsScript.defer = true;
   document.body.appendChild(ownerProductsScript);
   const secureCheckoutScript = document.createElement("script");
@@ -281,7 +281,7 @@
 
   const ownerPassportsScript = document.createElement("script");
   ownerPassportsScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerPassportsScript.src = "supabase-admin-passports.js?v=20261114-canonical-qr-origin";
+  ownerPassportsScript.src = "supabase-admin-passports.js?v=20261115-private-passport-image";
   ownerPassportsScript.defer = true;
   document.body.appendChild(ownerPassportsScript);
 
