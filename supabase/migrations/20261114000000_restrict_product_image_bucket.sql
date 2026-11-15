@@ -33,3 +33,26 @@ begin
   end if;
 end
 $$;
+
+-- Allow only the approved owner to upload product photos to this private bucket.
+-- Client uploads use upsert=false; replacement/deletion is handled separately.
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'storage'
+      and tablename = 'objects'
+      and policyname = 'Owner insert product images'
+  ) then
+    create policy "Owner insert product images"
+      on storage.objects
+      for insert
+      to authenticated
+      with check (
+        bucket_id = 'product-images'
+        and private.is_approved_owner()
+        and (storage.foldername(name))[1] ~* '^[0-9a-f-]{36}$'
+      );
+  end if;
+end
+$$;
