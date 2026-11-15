@@ -233,6 +233,7 @@
       {key:"catalogue",title:"Catalogue & Products",label:"Open live Catalogue & Stock",selectors:["#cicOwnerCatalogueButton"]},
       {key:"orders",title:"Orders & Customers",label:"Open live Orders & Fulfilment",selectors:["#cicOwnerOrdersButton"]},
       {key:"passports",title:"Certificates & QR",label:"Open live QR Product Passports",selectors:["#cicPassportButton"]},
+      {key:"media",title:"Media & Social",label:"Open owner Social Draft Desk (local preview only)",selectors:[]},
       {key:"alerts",title:"Security & Audit",label:"Open live Owner Alerts",selectors:["#cicOwnerAlertsButton","#cicOwnerAlertButton","#cicAlertsButton"],textMatch:/owner\s*alerts/i}
     ];
 
@@ -275,6 +276,12 @@
         const kind=action.dataset.cicLiveNode;
         const def=definitions.find(item=>item.key===kind);
         if(!def)return;
+        if(kind==="media"){
+          if(!document.body.classList.contains("cic-owner-shortcuts-unified"))return;
+          if(typeof window.openModal==="function")window.openModal("socialModal");
+          if(status)status.textContent="Opened local draft preview. Live social publishing is not connected.";
+          return;
+        }
         let target=null;
         for(const selector of def.selectors){target=document.querySelector(selector);if(target)break;}
         if(!target&&def.textMatch){
