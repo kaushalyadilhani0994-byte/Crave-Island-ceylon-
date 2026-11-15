@@ -47,55 +47,36 @@
     tick();
     button.dataset.cicOtpTimer = String(window.setInterval(tick, 250));
   }
-  // Keep the original bottom-bar Admin entry; do not add a separate floating shortcut.
+  // Keep Admin outside customer navigation; show it only after fresh owner verification.
   function syncOwnerAdminShortcut(visible) {
-    const shortcut = document.getElementById("cicOwnerAdminShortcut");
-    if (shortcut) shortcut.remove();
+    let shortcut = document.getElementById("cicOwnerAdminShortcut");
+    if (!visible) { if (shortcut) shortcut.remove(); return; }
+    if (!shortcut) {
+      shortcut = document.createElement("button");
+      shortcut.type = "button";
+      shortcut.id = "cicOwnerAdminShortcut";
+      shortcut.className = "cic-owner-admin-float";
+      shortcut.setAttribute("aria-label", "Open secure CRAVE owner Admin");
+      shortcut.innerHTML = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 19 6v5c0 4.7-2.8 8-7 10-4.2-2-7-5.3-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span>Admin</span>';
+      shortcut.addEventListener("click", function () { if (typeof window.openAdminAccess === "function") window.openAdminAccess(); });
+      document.body.appendChild(shortcut);
+    }
   }
   function setOwnerNavVisible(visible) {
+    // Never insert Admin into the customer bottom navigation or change its grid.
+    document.body.classList.remove("cic-owner-shortcuts-unified");
     const bottom = document.querySelector(".bottom");
-    // Customer Settings stays in the bottom bar; Admin is added only after owner approval.
-    let adminButton = bottom && (
-      bottom.querySelector("#cicOwnerAdminNavEntry") ||
-      bottom.querySelector('[onclick*="openAdminAccess"]') ||
-      Array.from(bottom.querySelectorAll(".nav")).find(el =>
-        /(^|\s)Admin(\s|$)/i.test((el.innerText || el.textContent || "").replace(/\s+/g, " ").trim())
-      )
-    );
-    if (visible) {
-      document.body.classList.add("cic-owner-shortcuts-unified");
-      if (bottom && !adminButton) {
-        adminButton = document.createElement("button");
-        adminButton.type = "button";
-        adminButton.id = "cicOwnerAdminNavEntry";
-        adminButton.className = "nav cic-owner-admin-nav";
-        adminButton.setAttribute("aria-label", "Open secure owner Admin");
-        adminButton.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 19 6v5c0 4.7-2.8 8-7 10-4.2-2-7-5.3-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span class="nav-label">Admin</span>';
-        adminButton.addEventListener("click", function () {
-          if (typeof window.openAdminAccess === "function") window.openAdminAccess();
-        });
-        bottom.appendChild(adminButton);
-      }
-      if (bottom) {
-        const count = Math.max(1, Array.from(bottom.querySelectorAll(".nav")).filter(el => getComputedStyle(el).display !== "none").length);
-        bottom.style.setProperty("grid-template-columns", "repeat(" + count + ",minmax(0,1fr))", "important");
-      }
-      if (adminButton) adminButton.style.setProperty("display", "flex", "important");
-      syncOwnerAdminShortcut(true);
-    } else {
-      // Keep customer Settings visible and remove the owner-only Admin entry on sign-out.
-      // The owner can reopen secure OTP from Settings on any browser/device.
-      document.body.classList.remove("cic-owner-shortcuts-unified");
-      if (bottom) bottom.style.removeProperty("grid-template-columns");
-      const privateEntry = document.getElementById("cicOwnerAdminNavEntry");
-      if (privateEntry) privateEntry.remove();
-      if (adminButton && adminButton.id !== "cicOwnerAdminNavEntry") {
-        adminButton.hidden = false;
-        adminButton.removeAttribute("aria-hidden");
-        adminButton.style.setProperty("display", "flex", "important");
-      }
-      syncOwnerAdminShortcut(false);
-    }
+    if (bottom) bottom.style.removeProperty("grid-template-columns");
+    const legacyEntry = document.getElementById("cicOwnerAdminNavEntry");
+    if (legacyEntry) legacyEntry.remove();
+    syncOwnerAdminShortcut(!!visible);
+  }
+  function installOwnerShortcutStyle() {
+    if (document.getElementById("cic-owner-admin-float-style")) return;
+    const style = document.createElement("style");
+    style.id = "cic-owner-admin-float-style";
+    style.textContent = ".cic-owner-admin-float{position:fixed;right:max(10px,env(safe-area-inset-right,0px));bottom:calc(104px + env(safe-area-inset-bottom,0px));z-index:140;display:flex;align-items:center;gap:7px;padding:10px 13px;border:1px solid #d4af37;border-radius:999px;background:#2c1a14;color:#fff8e7;box-shadow:0 6px 22px #0004;font:700 11px system-ui;letter-spacing:.2px;touch-action:manipulation}.cic-owner-admin-float svg{flex:0 0 auto}.cic-owner-admin-float:focus-visible{outline:3px solid #d4af37;outline-offset:3px}@media(min-width:700px){.cic-owner-admin-float{right:max(calc((100vw - 620px)/2 + 12px),12px);bottom:110px}}";
+    document.head.appendChild(style);
   }
   async function isApprovedOwner(user) {
     const client=db(); if(!client||!user)return false;
@@ -104,6 +85,7 @@
     return !error&&!!data&&data.role==="owner"&&data.approved===true;
   }
   function install() {
+    installOwnerShortcutStyle();
     // The public bottom-bar QR is the shop promotion QR. Intercept the legacy
     // qrModal action so this entry no longer opens the old QR destination.
     if(!document.documentElement.dataset.cicShopQrNavBound){
