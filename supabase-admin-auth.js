@@ -47,29 +47,27 @@
     tick();
     button.dataset.cicOtpTimer = String(window.setInterval(tick, 250));
   }
-  // Keep Admin outside customer navigation; show it only after fresh owner verification.
-  function syncOwnerAdminShortcut(visible) {
+  // A small public entry point opens only the secure OTP gate; it never grants access.
+  function syncOwnerAdminShortcut() {
     let shortcut = document.getElementById("cicOwnerAdminShortcut");
-    if (!visible) { if (shortcut) shortcut.remove(); return; }
-    if (!shortcut) {
-      shortcut = document.createElement("button");
-      shortcut.type = "button";
-      shortcut.id = "cicOwnerAdminShortcut";
-      shortcut.className = "cic-owner-admin-float";
-      shortcut.setAttribute("aria-label", "Open secure CRAVE owner Admin");
-      shortcut.innerHTML = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 19 6v5c0 4.7-2.8 8-7 10-4.2-2-7-5.3-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span>Admin</span>';
-      shortcut.addEventListener("click", function () { if (typeof window.openAdminAccess === "function") window.openAdminAccess(); });
-      document.body.appendChild(shortcut);
-    }
+    if (shortcut) return;
+    shortcut = document.createElement("button");
+    shortcut.type = "button";
+    shortcut.id = "cicOwnerAdminShortcut";
+    shortcut.className = "cic-owner-admin-float";
+    shortcut.setAttribute("aria-label", "Open secure CRAVE owner Admin sign-in");
+    shortcut.innerHTML = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 19 6v5c0 4.7-2.8 8-7 10-4.2-2-7-5.3-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span>Admin</span>';
+    shortcut.addEventListener("click", function () { if (typeof window.openAdminAccess === "function") window.openAdminAccess(); });
+    document.body.appendChild(shortcut);
   }
   function setOwnerNavVisible(visible) {
-    // Never insert Admin into the customer bottom navigation or change its grid.
+    // Admin is never part of the bottom navigation. The side button is only an OTP entry point.
     document.body.classList.remove("cic-owner-shortcuts-unified");
     const bottom = document.querySelector(".bottom");
     if (bottom) bottom.style.removeProperty("grid-template-columns");
     const legacyEntry = document.getElementById("cicOwnerAdminNavEntry");
     if (legacyEntry) legacyEntry.remove();
-    syncOwnerAdminShortcut(!!visible);
+    syncOwnerAdminShortcut();
   }
   function installOwnerShortcutStyle() {
     if (document.getElementById("cic-owner-admin-float-style")) return;
