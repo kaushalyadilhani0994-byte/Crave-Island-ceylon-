@@ -238,6 +238,17 @@
       {key:"alerts",title:"Security & Audit",label:"Open live Owner Alerts",selectors:["#cicOwnerAlertsButton","#cicOwnerAlertButton","#cicAlertsButton"],textMatch:/owner\s*alerts/i}
     ];
 
+    window.cicOpenOwnerModule=function(kind,tab){
+      // The V18 top tabs are shortcuts into the same live owner tools used by
+      // the matching category cards; never route them into local demo editors.
+      if(tab){
+        const nav=tab.closest(".admin-tabs");
+        if(nav)nav.querySelectorAll("button").forEach(button=>button.classList.toggle("active",button===tab));
+      }
+      const action=control.querySelector('[data-cic-live-node="'+kind+'"]');
+      if(action){action.click();return;}
+      status("This owner tool is not ready yet. Please use the matching section below.",true);
+    };
     definitions.forEach(def=>{
       const node=Array.from(control.querySelectorAll("details.admin-node")).find(item=>
         (item.querySelector("summary")?.textContent||"").trim().toLowerCase()===def.title.toLowerCase()
