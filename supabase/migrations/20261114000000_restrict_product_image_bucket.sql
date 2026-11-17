@@ -11,26 +11,16 @@ where id = 'product-images';
 -- This does not grant public or staff delete access.
 do $$
 begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'storage'
-      and tablename = 'objects'
-      and policyname = 'Owner delete product images'
-  ) then
-    create policy "Owner delete product images"
-      on storage.objects
-      for delete
-      to authenticated
-      using (
-        bucket_id = 'product-images'
-        and exists (
-          select 1 from public.staff_profiles sp
-          where sp.id = auth.uid()
-            and sp.role = 'owner'
-            and sp.approved = true
-        )
-      );
-  end if;
+  -- Recreate the policy so an older, broader definition cannot survive.
+  drop policy if exists "Owner delete product images" on storage.objects;
+  create policy "Owner delete product images"
+    on storage.objects
+    for delete
+    to authenticated
+    using (
+      bucket_id = 'product-images'
+      and private.is_approved_owner()
+    );
 end
 $$;
 
