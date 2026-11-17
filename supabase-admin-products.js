@@ -368,7 +368,7 @@
         // object path before attempting replacement so a failed upload never blanks
         // an already-working product photo.
         if(previousPrivatePath){
-          const {error:restorePreviousError}=await client.from("products").update({image_url:previousPrivatePath}).eq("id",result.product_id);
+          const {error:restorePreviousError}=await client.rpc("owner_attach_product_image",{p_product_id:result.product_id,p_object_path:previousPrivatePath});
           if(restorePreviousError)throw new Error("Product details were saved, but the existing photo could not be preserved before replacement: "+restorePreviousError.message);
         }
         const extension=photo.type==="image/png"?"png":photo.type==="image/webp"?"webp":"jpg";
