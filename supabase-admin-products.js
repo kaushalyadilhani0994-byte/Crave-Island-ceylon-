@@ -54,7 +54,7 @@
         <label for="cicCatDesc">Description</label><textarea id="cicCatDesc" maxlength="500"></textarea>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="cicCategorySave" type="submit">Save collection</button><button id="cicCategoryCancel" type="button" hidden>Cancel edit</button></div>
       </form></div>
-      <div class="cic-section"><h3>2. Add a real product</h3><p class="cic-muted">Only enter products that are actually ready to sell. Price is in LKR. Product image URL must be a publicly accessible HTTPS image URL.</p>
+      <div class="cic-section"><h3>2. Add a real product</h3><p class="cic-muted">Only enter products that are actually ready to sell. Price is in LKR. Upload a JPG, PNG or WebP photo (8 MB max), or add an optional public HTTPS image URL.</p>
       <form id="cicProductForm">
         <div class="cic-grid"><div><label for="cicProdName">Product name *</label><input id="cicProdName" maxlength="160" required></div><div><label for="cicProdPrice">Price (LKR) *</label><input id="cicProdPrice" type="number" min="0.01" max="2000000" step="0.01" required></div>
         <div><label for="cicProdCategory">Collection *</label><select id="cicProdCategory" required><option value="">Create a collection first</option></select></div><div><label for="cicProdImage">Existing HTTPS image URL (optional)</label><input id="cicProdImage" type="url" maxlength="1500" placeholder="HTTPS image link"></div></div>
