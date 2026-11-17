@@ -377,14 +377,14 @@
           cacheControl:"900",contentType:photo.type,upsert:false
         });
         if(uploadError)throw new Error("Product details were saved; the previous photo was preserved, but the new private photo upload failed: "+uploadError.message);
-        const {error:imageSaveError}=await client.from("products").update({image_url:uploaded.path}).eq("id",result.product_id);
+        const {error:imageSaveError}=await client.rpc("owner_attach_product_image",{p_product_id:result.product_id,p_object_path:uploaded.path});
         if(imageSaveError){try{await client.storage.from("product-images").remove([uploaded.path]);}catch(_){}throw new Error("Photo uploaded but could not be attached to the product. The previous photo was preserved and the app attempted to clean up the unused file: "+imageSaveError.message);}
         if(previousPrivatePath&&previousPrivatePath!==uploaded.path){
           // Cleanup is best-effort; a failed delete must not undo a successful photo replacement.
           try{await client.storage.from("product-images").remove([previousPrivatePath]);}catch(_){}
         }
       }else if(editId&&!imageUrl&&existingProductImage&&!/^https:\/\//i.test(String(existingProductImage))){
-        const {error:restoreImageError}=await client.from("products").update({image_url:existingProductImage}).eq("id",result.product_id);
+        const {error:restoreImageError}=await client.rpc("owner_attach_product_image",{p_product_id:result.product_id,p_object_path:existingProductImage});
         if(restoreImageError)throw new Error("Product saved, but its existing private photo could not be preserved: "+restoreImageError.message);
       }
       form.reset();delete form.dataset.editId;delete form.dataset.requestId;delete form.dataset.existingPrivateImage;selectedProductPhoto=null;renderProductPhotoPreview();
