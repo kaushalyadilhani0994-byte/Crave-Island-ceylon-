@@ -12,7 +12,7 @@ AS $function$
 DECLARE
   v_product_id uuid;
 BEGIN
-  IF auth.uid() IS NULL OR NOT private.is_approved_owner() THEN
+  IF auth.uid() IS NULL OR private.is_approved_owner() IS NOT TRUE THEN
     RAISE EXCEPTION 'Approved owner access required' USING errcode = '42501';
   END IF;
 
