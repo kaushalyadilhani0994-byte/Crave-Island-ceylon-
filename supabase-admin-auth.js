@@ -50,6 +50,15 @@
   // A small public entry point opens only the secure OTP gate; it never grants access.
   function syncOwnerAdminShortcut() {
     let shortcut = document.getElementById("cicOwnerAdminShortcut");
+    // Keep the Admin entry off customer storefronts. The first owner sign-in
+    // remains available through the existing five-tap brand trigger; after
+    // successful OTP, the owner-device hint restores this shortcut on this device.
+    let ownerDevice = false;
+    try { ownerDevice = localStorage.getItem("cicOwnerDeviceHint") === "1"; } catch (_) {}
+    if (!ownerDevice && !document.body.classList.contains("cic-owner-shortcuts-unified")) {
+      if (shortcut) shortcut.remove();
+      return;
+    }
     if (shortcut) return;
     shortcut = document.createElement("button");
     shortcut.type = "button";
