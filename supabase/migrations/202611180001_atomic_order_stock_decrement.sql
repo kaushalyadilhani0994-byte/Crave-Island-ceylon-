@@ -199,26 +199,6 @@ begin
          (line.value->>'line_total')::numeric
   from jsonb_array_elements(v_lines) as line(value);
 
-  -- Reserve tracked stock in the same transaction as the order and order lines.
-  -- Product rows are already locked above; this conditional UPDATE is a final
-  -- guard against overselling. Any failure rolls back the order and all lines.
-  for v_item in select value from jsonb_array_elements(p_payload->'items') loop
-    v_pid := (v_item->>'product_id')::uuid;
-    v_qty := (v_item->>'quantity')::integer;
-    update public.products
-       set stock_quantity = stock_quantity - v_qty,
-           updated_at = now()
-     where id = v_pid
-       and track_inventory is true
-       and stock_quantity >= v_qty;
-    if not found and exists (
-      select 1 from public.products
-       where id = v_pid and track_inventory is true
-    ) then
-      raise exception 'INSUFFICIENT_STOCK' using errcode='P0001';
-    end if;
-  end loop;
-
 
   select jsonb_build_object('id',o.id,'order_number',o.order_number,'subtotal',o.subtotal,'delivery_fee',o.delivery_fee,'total',o.total,'payment_method',o.payment_method,'payment_status',o.payment_status,'order_status',o.order_status,'created_at',o.created_at) into v_order from public.store_orders o where o.id=v_order_id;
   select coalesce(jsonb_agg(jsonb_build_object(
