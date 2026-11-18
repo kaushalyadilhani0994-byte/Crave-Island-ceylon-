@@ -1,5 +1,5 @@
--- Atomically decrement tracked stock when an order is created.
--- Untracked products remain unchanged; failed order transactions roll back stock.
+-- Reconcile the atomic order RPC while retaining the existing order-item stock trigger.
+-- The AFTER INSERT trigger is the single stock decrement path for tracked products.
 -- Reconcile the production atomic checkout RPC into the main migration history.
 
 -- Additive and idempotent DDL only; no customer/order/product rows are modified.
