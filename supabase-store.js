@@ -144,9 +144,26 @@
       const categoryRows = categoriesResult.data || [];
       liveCategoryRows = categoryRows;
       const activeCategoryNames = new Set(categoryRows.map((row) => String(row.name || "")));
+      // Private product photos are resolved to short-lived signed URLs only for
+      // active catalogue products. External HTTPS images remain unchanged.
+      const imageReadyRows = await Promise.all(rows.map(async (row) => {
+        const imageValue = String(row.image_url || "").trim();
+        if (!imageValue || /^https:\/\//i.test(imageValue)) return row;
+        if (!/^[0-9a-f-]{36}\//i.test(imageValue)) return { ...row, image_url: null };
+        try {
+          const response = await fetch(config.url + "/functions/v1/product-image?product_id=" + encodeURIComponent(row.id), {
+            method: "GET", headers: { apikey: config.anonKey }
+          });
+          if (!response.ok) return { ...row, image_url: null };
+          const signed = await response.json();
+          return { ...row, image_url: safeImageUrl(signed.url) };
+        } catch (_) {
+          return { ...row, image_url: null };
+        }
+      }));
       // A product in a hidden/missing collection must not leak into All Products,
       // search, gift pickers, or stale category filters.
-      const visibleRows = rows.filter((row) => activeCategoryNames.has(String(row.category || "")));
+      const visibleRows = imageReadyRows.filter((row) => activeCategoryNames.has(String(row.category || "")));
 
       // The database is the source of truth after a successful read, including
       // when it contains zero active rows. Never silently show demo products.
@@ -248,12 +265,12 @@
   // Load the live owner order panel only after the authenticated Supabase client is configured.
   const ownerOrdersScript = document.createElement("script");
   ownerOrdersScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerOrdersScript.src = "supabase-admin-orders.js?v=20261106-team-inventory-ui";
+  ownerOrdersScript.src = "supabase-admin-orders.js?v=20261119-v18-owner-refresh";
   ownerOrdersScript.defer = true;
   document.body.appendChild(ownerOrdersScript);
   const ownerProductsScript = document.createElement("script");
   ownerProductsScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerProductsScript.src = "supabase-admin-products.js?v=20261110-expiry-date-validation-1";
+  ownerProductsScript.src = "supabase-admin-products.js?v=20261119-v18-owner-refresh";
   ownerProductsScript.defer = true;
   document.body.appendChild(ownerProductsScript);
   const secureCheckoutScript = document.createElement("script");
@@ -264,21 +281,29 @@
 
   const ownerPassportsScript = document.createElement("script");
   ownerPassportsScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerPassportsScript.src = "supabase-admin-passports.js?v=20261109-local-qr-privacy";
+  ownerPassportsScript.src = "supabase-admin-passports.js?v=20261119-v18-owner-refresh";
   ownerPassportsScript.defer = true;
   document.body.appendChild(ownerPassportsScript);
 
   const ownerAuthScript = document.createElement("script");
   ownerAuthScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerAuthScript.src = "supabase-admin-auth.js?v=20261110-team-invite-role-alignment-1";
+  ownerAuthScript.src = "supabase-admin-auth.js?v=20261119-v18-owner-refresh";
   ownerAuthScript.defer = true;
   document.body.appendChild(ownerAuthScript);
 
   const ownerWorkspaceScript = document.createElement("script");
   ownerWorkspaceScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerWorkspaceScript.src = "supabase-admin-workspace.js?v=20261103-admin-control-room-restore";
+  ownerWorkspaceScript.src = "supabase-admin-workspace.js?v=20261119-v18-owner-refresh";
   ownerWorkspaceScript.defer = true;
   document.body.appendChild(ownerWorkspaceScript);
+
+  // Live owner business operations: reviews, store settings, loyalty, scratch,
+  // invoices/manual payments, media library and staff tasks.
+  const ownerBusinessOpsScript = document.createElement("script");
+  ownerBusinessOpsScript.async = false;
+  ownerBusinessOpsScript.src = "supabase-admin-operations.js?v=20261119-business-ops";
+  ownerBusinessOpsScript.defer = true;
+  document.body.appendChild(ownerBusinessOpsScript);
 
 
   // Owner-only red-dot alert centre. Database RLS is the final authority.
@@ -309,8 +334,13 @@
     function textNode(tag,value){const el=document.createElement(tag);el.textContent=value;return el;}
     async function ownerSession(){
       const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;if(!db)return false;
-      const {data:{session},error}=await db.auth.getSession();if(error||!session)return false;
-      const {data,error:profileError}=await db.from("staff_profiles").select("role,approved").eq("id",session.user.id).maybeSingle();
+      const {data:{session},error}=await db.auth.getSession();if(error||!session||!session.user)return false;
+      // Match the same primary-owner email guard used by the authoritative
+      // database helper. A second approved profile must never reveal owner UI.
+      const {data:verified,error:verifyError}=await db.auth.getUser();
+      if(verifyError||!verified||!verified.user||verified.user.id!==session.user.id||
+         String(verified.user.email||"").trim().toLowerCase()!=="kaushalyadilhani0994@gmail.com")return false;
+      const {data,error:profileError}=await db.from("staff_profiles").select("role,approved").eq("id",verified.user.id).maybeSingle();
       return !profileError&&!!data&&data.role==="owner"&&data.approved===true;
     }
     async function refresh(){
