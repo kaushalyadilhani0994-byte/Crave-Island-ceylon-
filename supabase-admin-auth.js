@@ -519,11 +519,11 @@
   }
   function permissionsForTeamRole(role){
     const presets={
-      supervisor:{catalogue:["read","create","update"],inventory:["read","update"],orders:["read","update"],dispatch:["read","update"],reports:["read"],tasks:["read","update"]},
+      supervisor:{catalogue:["read","create","update"],inventory:["read","update"],orders:["read","update"],dispatch:["read","update"],reports:["read"],tasks:["read","create","update"]},
       staff:{catalogue:["read"],inventory:["read"],tasks:["read","update"]},
       media:{media:["read","create","update"],certificates:["read"],reports:["read"]},
-      accounts:{accounts:["read","create","update","export"],reports:["read","export"]},
-      star_club:{star_club:["read","create","update"],reports:["read"]}
+      accounts:{accounts:["read","create","update","export"],invoices:["read","create","update"],payments:["read","create","update"],reports:["read","export"]},
+      star_club:{star_club:["read","create","update"],loyalty:["read","create","update"],scratch_cards:["read","create","update"],reports:["read"]}
     };
     return presets[role]||presets.staff;
   }
