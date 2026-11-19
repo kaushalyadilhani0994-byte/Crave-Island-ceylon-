@@ -293,7 +293,7 @@
 
   const ownerWorkspaceScript = document.createElement("script");
   ownerWorkspaceScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerWorkspaceScript.src = "supabase-admin-workspace.js?v=20261103-admin-control-room-restore";
+  ownerWorkspaceScript.src = "supabase-admin-workspace.js?v=20261119-v18-owner-refresh";
   ownerWorkspaceScript.defer = true;
   document.body.appendChild(ownerWorkspaceScript);
 
