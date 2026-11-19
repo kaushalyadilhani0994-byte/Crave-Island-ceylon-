@@ -33,7 +33,20 @@ if(!product){fail("This product is not currently available in the public catalog
 const productName=product.name;
 document.title=productName+" | CRAVE ISLAND CEYLON";
 const story=data.public_story||product.description||"";
-const image=product.image_url?'<img src="'+esc(product.image_url)+'" alt="'+esc(productName)+'" style="display:block;width:100%;max-height:320px;object-fit:contain;border-radius:12px;margin:12px auto;background:#f4ead8" loading="lazy">':"";
+let imageUrl=String(product.image_url||"").trim();
+if(imageUrl&&!/^https:\/\//i.test(imageUrl)){
+  if(/^[0-9a-f-]{36}\/[A-Za-z0-9_-]+\.(jpg|jpeg|png|webp)$/i.test(imageUrl)){
+    try{
+      const response=await fetch(cfg.url+"/functions/v1/product-image?product_id="+encodeURIComponent(data.product_id),{method:"GET",headers:{apikey:cfg.anonKey}});
+      if(response.ok){
+        const signed=await response.json();
+        const candidate=new URL(signed.url);
+        imageUrl=candidate.protocol==="https:"?candidate.href:"";
+      }else imageUrl="";
+    }catch(_){imageUrl=""}
+  }else imageUrl="";
+}
+const image=imageUrl?'<img src="'+esc(imageUrl)+'" alt="'+esc(productName)+'" style="display:block;width:100%;max-height:320px;object-fit:contain;border-radius:12px;margin:12px auto;background:#f4ead8" loading="lazy">':"";
 const description=story?'<p class="muted">'+esc(story)+'</p>':"";
 let price="";if(product.price!=null){const amount=Number(product.price);if(Number.isFinite(amount)){try{price=amount.toLocaleString("en-LK",{style:"currency",currency:/^[A-Z]{3}$/.test(product.currency||"")?product.currency:"LKR"});}catch(_){price="LKR "+amount.toLocaleString("en-LK");}}}
 root.innerHTML=image+'<h1>'+esc(productName)+'</h1>'+description+'<div class="grid">'+f("Collection",product.category)+f("Price",price)+f("Batch / lot",data.batch_code)+f("Origin",data.origin)+f("Net content / pack size",data.net_content)+f("Manufacturing date",data.manufacturing_date)+f("Best before / expiry",data.best_before)+f("Ingredients",data.ingredients,true)+f("Allergen information",data.allergen_information,true)+f("Storage instructions",data.storage_instructions,true)+'</div>';

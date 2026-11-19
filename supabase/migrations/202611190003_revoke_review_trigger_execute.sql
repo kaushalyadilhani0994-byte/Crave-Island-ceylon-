@@ -1,0 +1,1 @@
+revoke all on function public.cic_mark_verified_review() from public, anon, authenticated;

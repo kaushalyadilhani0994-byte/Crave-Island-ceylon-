@@ -1,15 +1,25 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, idempotency-key",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json",
-};
+const PRODUCTION_ORIGIN = "https://craveislandceylonv18supabaseintegra.vercel.app";
 
-function respond(status: number, body: Record<string, unknown>) {
-  return new Response(JSON.stringify(body), { status, headers: corsHeaders });
+function allowedOrigin(origin: string | null): boolean {
+  return origin === PRODUCTION_ORIGIN
+    || (!!origin && /^https:\/\/craveislandceylonv18supabaseintegratedbuild-[a-z0-9-]+\.vercel\.app$/.test(origin));
+}
+
+function corsHeaders(origin: string | null) {
+  return {
+    ...(origin && allowedOrigin(origin) ? { "Access-Control-Allow-Origin": origin } : {}),
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, idempotency-key",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+    "Content-Type": "application/json",
+  };
+}
+
+function respond(status: number, body: Record<string, unknown>, origin: string | null) {
+  return new Response(JSON.stringify(body), { status, headers: corsHeaders(origin) });
 }
 
 function cleanText(value: unknown, max = 180): string {
@@ -17,15 +27,18 @@ function cleanText(value: unknown, max = 180): string {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return respond(405, { error: "Use POST to create an order." });
+  const origin = req.headers.get("Origin");
+  const reply = (status: number, body: Record<string, unknown>) => respond(status, body, origin);
+  if (origin && !allowedOrigin(origin)) return reply(403, { error: "origin_not_allowed" });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(origin) });
+  if (req.method !== "POST") return reply(405, { error: "Use POST to create an order." });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const authHeader = req.headers.get("Authorization") || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
   if (!supabaseUrl || !serviceKey || !token) {
-    return respond(401, { error: "Please sign in before placing an order." });
+    return reply(401, { error: "Please sign in before placing an order." });
   }
 
   try {
@@ -33,15 +46,15 @@ Deno.serve(async (req: Request) => {
       auth: { persistSession: false, autoRefreshToken: false },
     });
     const { data: authData, error: authError } = await admin.auth.getUser(token);
-    if (authError || !authData.user) return respond(401, { error: "Your session is invalid or expired. Please sign in again." });
+    if (authError || !authData.user) return reply(401, { error: "Your session is invalid or expired. Please sign in again." });
     const user = authData.user;
     // Anonymous Supabase sessions are not eligible to place store orders.
-    if (user.is_anonymous) return respond(401, { error: "Please sign in with a registered account before placing an order." });
+    if (user.is_anonymous) return reply(401, { error: "Please sign in with a registered account before placing an order." });
 
     let parsedBody: unknown;
-    try { parsedBody = await req.json(); } catch { return respond(400, { error: "Invalid JSON request." }); }
+    try { parsedBody = await req.json(); } catch { return reply(400, { error: "Invalid JSON request." }); }
     if (!parsedBody || typeof parsedBody !== "object" || Array.isArray(parsedBody)) {
-      return respond(400, { error: "Order request must be a JSON object." });
+      return reply(400, { error: "Order request must be a JSON object." });
     }
     const body = parsedBody as Record<string, unknown>;
 
@@ -54,33 +67,33 @@ Deno.serve(async (req: Request) => {
     const city = cleanText(address?.city, 100);
     const district = cleanText(address?.district, 100);
     if (!customerName || !phone || !addressLine || !city || !district) {
-      return respond(400, { error: "Name, phone, address, city and district are required." });
+      return reply(400, { error: "Name, phone, address, city and district are required." });
     }
 
     const paymentMethod = cleanText(body.payment_method, 30);
     if (paymentMethod !== "cod") {
-      return respond(400, { error: "This payment method is not available yet. Choose cash on delivery." });
+      return reply(400, { error: "This payment method is not available yet. Choose cash on delivery." });
     }
 
     if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > 50) {
-      return respond(400, { error: "An order must contain between 1 and 50 different products." });
+      return reply(400, { error: "An order must contain between 1 and 50 different products." });
     }
     const items = body.items.map((item: unknown) => {
       const value = item && typeof item === "object" ? item as Record<string, unknown> : {};
       return { product_id: cleanText(value.product_id, 64).toLowerCase(), quantity: Number(value.quantity) };
     });
     if (items.some((item) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(item.product_id) || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 50)) {
-      return respond(400, { error: "One or more product IDs or quantities are invalid." });
+      return reply(400, { error: "One or more product IDs or quantities are invalid." });
     }
     if (new Set(items.map((item) => item.product_id)).size !== items.length) {
-      return respond(400, { error: "Please combine duplicate products into one cart line." });
+      return reply(400, { error: "Please combine duplicate products into one cart line." });
     }
 
     // Atomic RPC: order header, order lines, stock reservation and retry record commit together.
     const rawKey = req.headers.get("idempotency-key") || "";
     const validKey = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if (rawKey && !validKey.test(rawKey)) {
-      return respond(400, { error: "The checkout retry key is invalid. Refresh checkout and try again." });
+      return reply(400, { error: "The checkout retry key is invalid. Refresh checkout and try again." });
     }
     const normalizedAddress = { line1: addressLine, line2: cleanText(address?.line2, 180), city, district, postal_code: cleanText(address?.postal_code, 20), country: "Sri Lanka" };
     const atomicPayload = { customer_name: customerName, email: user.email || null, phone, shipping_address: normalizedAddress, payment_method: paymentMethod, customer_note: note || null, items };
@@ -104,12 +117,12 @@ Deno.serve(async (req: Request) => {
     if (atomicError || !result || !result.order) {
       const detail = String(atomicError?.message || "");
       console.error("Atomic order creation failed", detail);
-      if (detail.includes("INSUFFICIENT_STOCK")) return respond(409, { error: "Stock changed while placing your order. Please review your basket and try again." });
-      if (detail.includes("PRODUCT_EXPIRED") || detail.includes("PRODUCT_UNAVAILABLE")) return respond(409, { error: "A product or collection is no longer available. Refresh the catalogue and try again." });
-      if (detail.includes("IDEMPOTENCY_KEY_REUSED")) return respond(409, { error: "This checkout retry key belongs to a different basket. Refresh checkout and try again." });
-      if (detail.includes("INVALID_PRODUCT_PRICE")) return respond(409, { error: "A product price or currency needs to be corrected before this order can be placed. Please refresh the catalogue." });
-      if (detail.includes("Required customer") || detail.includes("Only cash on delivery") || detail.includes("Invalid product") || detail.includes("Order must contain") || detail.includes("Order total")) return respond(400, { error: "Some checkout details or basket items are invalid. Please review them and try again." });
-      return respond(500, { error: "We could not safely save your order. Please try again." });
+      if (detail.includes("INSUFFICIENT_STOCK")) return reply(409, { error: "Stock changed while placing your order. Please review your basket and try again." });
+      if (detail.includes("PRODUCT_EXPIRED") || detail.includes("PRODUCT_UNAVAILABLE")) return reply(409, { error: "A product or collection is no longer available. Refresh the catalogue and try again." });
+      if (detail.includes("IDEMPOTENCY_KEY_REUSED")) return reply(409, { error: "This checkout retry key belongs to a different basket. Refresh checkout and try again." });
+      if (detail.includes("INVALID_PRODUCT_PRICE")) return reply(409, { error: "A product price or currency needs to be corrected before this order can be placed. Please refresh the catalogue." });
+      if (detail.includes("Required customer") || detail.includes("Only cash on delivery") || detail.includes("Invalid product") || detail.includes("Order must contain") || detail.includes("Order total")) return reply(400, { error: "Some checkout details or basket items are invalid. Please review them and try again." });
+      return reply(500, { error: "We could not safely save your order. Please try again." });
     }
     const order = result.order as Record<string, unknown>;
     const orderItems = Array.isArray(result.items) ? result.items as Array<Record<string, unknown>> : [];
@@ -205,15 +218,15 @@ Deno.serve(async (req: Request) => {
     // These integrations are deliberately best-effort; never lose a saved order because a notification provider is down.
     await Promise.all(notificationTasks);
 
-    return respond(result.replayed ? 200 : 201, { order, items: orderItems, replayed: Boolean(result.replayed), notifications: {
+    return reply(result.replayed ? 200 : 201, { order, items: orderItems, replayed: Boolean(result.replayed), notifications: {
       google_sheets_configured: Boolean(sheetsUrl && sheetsSecret),
       whatsapp_owner_configured: Boolean(waToken && waPhoneId && waAdmin && waTemplate),
     } });
   } catch (error) {
     if (error instanceof Error && error.message === "INVALID_PRICE") {
-      return respond(400, { error: "A product has an invalid price or currency." });
+      return reply(400, { error: "A product has an invalid price or currency." });
     }
     console.error("Unexpected order creation error", error);
-    return respond(500, { error: "Something went wrong while placing your order." });
+    return reply(500, { error: "Something went wrong while placing your order." });
   }
 });
