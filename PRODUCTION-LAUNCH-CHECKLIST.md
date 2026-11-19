@@ -184,3 +184,37 @@ Do not mark the application fully launch-ready until the real product data, deli
 - [x] Re-read live `pg_policies` for `public`, `storage`, and `cron`. Customer profile/order policies, staff profile policies, admin-alert policies, owner/team write policies, and storage upload/read policies are explicitly scoped to `authenticated`; public catalogue reads are limited to active categories/products, and public passport reads require a published passport linked to an active product.
 - [x] Confirmed the cron extension policies are declared for PostgreSQL `public` role but constrain rows to `username = CURRENT_USER`. The cron schema has no user-facing schema access in the previously verified grants. Keep this as an extension-level advisor warning to monitor; do not remove extension-managed policies blindly.
 - [ ] Leaked-password protection remains the one explicit Auth security-advisor warning that needs an Authentication dashboard setting; it is not exposed by the connected database operations. Enable it if available on the current plan, then rerun the advisor.
+
+
+---
+
+## Deep audit update — 2026-11-15 (working branch; production unchanged)
+
+### Confirmed by live read-only checks
+- [x] Checkout idempotency is implemented in `create_store_order_atomic`: customer/key advisory lock, payload hash replay check, stable product row locks, server-side price/category/expiry/stock validation, and atomic order + line insertion.
+- [x] Inventory decrement is performed by the `AFTER INSERT` trigger on `store_order_items`; cancellation restock is performed once by `owner_update_store_order_status` using `stock_restocked_at`. These paths were inspected in the live database function definitions and trigger list.
+- [x] Order status mutation is routed through the authenticated Edge Function and service-role-only RPC; direct authenticated order UPDATE grant is revoked.
+- [x] Public/owner RLS policy definitions were read directly. Public anonymous SELECT is limited to active catalogue rows and published passports for active products. Customer, owner, and staff policies target `authenticated`; the advisor's broad anonymous-policy warnings are not proof of anonymous order/customer access.
+- [x] Owner report, expiry sweep and urgent-alert cron jobs are active. Schedules correspond to 20:00, 00:15 and every minute in Sri Lanka time. Cron execution success does not itself prove Telegram delivery.
+- [x] Latest live data counts: 2 products / 0 active; 2 passports / 0 published; 0 orders; 1 staff profile (the owner only); 0 approved non-owner staff; 0 product-image objects; 0 open alerts.
+- [x] `product_reviews` table does not exist yet.
+
+### Working-branch code fixes
+- [x] Admin launcher remains a floating side button; it is not inserted into or allowed to resize the customer bottom navigation.
+- [x] Restored the verified-owner session class toggle required by the original V18 Control Room guard. Without this, a successful OTP could still be blocked from opening the original Control Room.
+- [x] Removed a second, conflicting seven-column bottom-navigation CSS override from `supabase-admin-orders.js`; updated its script cache key.
+- [x] Split the public Social destination from the owner Social composer. The public destination contains profile links; the composer is allowed only from the authenticated owner Control Room. Drafts remain device-local and real platform publishing is not connected.
+- [ ] Latest working-branch commits have not received a Vercel preview build: the free daily deployment API quota returned `api-deployments-free-per-day` and a 24-hour retry window. Do not treat the older READY preview as containing these latest fixes.
+
+### Remaining release blockers
+- [ ] Deploy the existing `product-image` Edge Function and apply the reviewed private product-image bucket limits/policies only after explicit owner approval. Live buckets are private, but `product-images` currently has no Storage file-size limit or MIME allow-list; the migration exists in the branch but is not applied.
+- [ ] Build and test the customer review submission + owner moderation workflow; no reviews table or workflow exists.
+- [ ] Complete real role workspaces for Supervisor, Staff, Media and Accounts. Role invitation/preset foundations exist, but task, media-library and accounting/invoice workspaces are not complete.
+- [ ] Connect real social publishing only through approved platform APIs/provider, secure server-side token storage, per-channel result tracking and explicit owner approval. Current composer only saves a local draft.
+- [ ] Configure delivery charges/policies and payment integrations; checkout remains COD-only with LKR 0 delivery fee.
+- [ ] Populate verified product data, activate only owner-approved products, publish passports, then physically print/scan QR labels.
+- [ ] Complete owner OTP/Admin, customer checkout, stock concurrency, order cancellation/restock, QR, staff permissions and public-vs-owner mobile browser tests. No real customer order or product was created during this audit.
+- [ ] Leaked-password protection remains disabled in Supabase Auth; it requires an Auth dashboard/plan capability check and has not been changed.
+
+### Release boundary
+All changes above are source/inspection work on the working branch. No production deployment, PR merge, database migration, Storage policy change, Edge Function deployment, real product activation, staff invitation or customer order was performed.
