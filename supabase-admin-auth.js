@@ -47,59 +47,42 @@
     tick();
     button.dataset.cicOtpTimer = String(window.setInterval(tick, 250));
   }
-  // Keep the original bottom-bar Admin entry; do not add a separate floating shortcut.
-  function syncOwnerAdminShortcut(visible) {
-    const shortcut = document.getElementById("cicOwnerAdminShortcut");
-    if (shortcut) shortcut.remove();
+  // A small public entry point opens only the secure OTP gate; it never grants access.
+  function syncOwnerAdminShortcut() {
+    let shortcut = document.getElementById("cicOwnerAdminShortcut");
+    // Keep the Admin entry off customer storefronts. The first owner sign-in
+    // remains available through the existing five-tap brand trigger; after
+    // successful OTP, the owner-device hint restores this shortcut on this device.
+    let ownerDevice = false;
+    try { ownerDevice = localStorage.getItem("cicOwnerDeviceHint") === "1"; } catch (_) {}
+    if (!ownerDevice && !document.body.classList.contains("cic-owner-shortcuts-unified")) {
+      if (shortcut) shortcut.remove();
+      return;
+    }
+    if (shortcut) return;
+    shortcut = document.createElement("button");
+    shortcut.type = "button";
+    shortcut.id = "cicOwnerAdminShortcut";
+    shortcut.className = "cic-owner-admin-float";
+    shortcut.setAttribute("aria-label", "Open secure CRAVE owner Admin sign-in");
+    shortcut.innerHTML = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 19 6v5c0 4.7-2.8 8-7 10-4.2-2-7-5.3-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span>Admin</span>';
+    shortcut.addEventListener("click", function () { if (typeof window.openAdminAccess === "function") window.openAdminAccess(); });
+    document.body.appendChild(shortcut);
   }
   function setOwnerNavVisible(visible) {
-    const bottom = document.querySelector(".bottom");
-    // The secure Admin sign-in entry remains available on the V18 storefront.
-    // The owner workspace itself is shown only after server-side approval.
-    let adminButton = bottom && (
-      bottom.querySelector("#cicOwnerAdminNavEntry") ||
-      bottom.querySelector('[onclick*="openAdminAccess"]') ||
-      Array.from(bottom.querySelectorAll(".nav")).find(el =>
-        /(^|\s)Admin(\s|$)/i.test((el.innerText || el.textContent || "").replace(/\s+/g, " ").trim())
-      )
-    );
-    if (visible) {
-      document.body.classList.add("cic-owner-shortcuts-unified");
-      if (bottom && !adminButton) {
-        adminButton = document.createElement("button");
-        adminButton.type = "button";
-        adminButton.id = "cicOwnerAdminNavEntry";
-        adminButton.className = "nav cic-owner-admin-nav";
-        adminButton.setAttribute("aria-label", "Open secure owner Admin");
-        adminButton.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 19 6v5c0 4.7-2.8 8-7 10-4.2-2-7-5.3-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span class="nav-label">Admin</span>';
-        adminButton.addEventListener("click", function () {
-          if (typeof window.openAdminAccess === "function") window.openAdminAccess();
-        });
-        bottom.appendChild(adminButton);
-      }
-      if (bottom) {
-        const count = Math.max(1, Array.from(bottom.querySelectorAll(".nav")).filter(el => getComputedStyle(el).display !== "none").length);
-        bottom.style.setProperty("grid-template-columns", "repeat(" + count + ",minmax(0,1fr))", "important");
-      }
-      if (adminButton) adminButton.style.setProperty("display", "flex", "important");
-      syncOwnerAdminShortcut(true);
-    } else {
-      // Keep the familiar V18 Admin entry visible on the home screen so the
-      // owner can always reach the secure OTP prompt, including on a new
-      // browser/device where no local owner-device hint exists. This exposes
-      // only the sign-in entry: the owner workspace and all data remain hidden
-      // until the server confirms the approved owner session.
-      document.body.classList.remove("cic-owner-shortcuts-unified");
-      if (bottom) bottom.style.removeProperty("grid-template-columns");
-      const privateEntry = document.getElementById("cicOwnerAdminNavEntry");
-      if (privateEntry) privateEntry.remove();
-      if (adminButton && adminButton.id !== "cicOwnerAdminNavEntry") {
-        adminButton.hidden = false;
-        adminButton.removeAttribute("aria-hidden");
-        adminButton.style.setProperty("display", "flex", "important");
-      }
-      syncOwnerAdminShortcut(false);
-    }
+    // This class is the verified-session gate used by the original V18 Control Room.
+    // It must never alter the storefront navigation or inject an Admin nav item.
+    document.body.classList.toggle("cic-owner-shortcuts-unified", visible === true);
+    const legacyEntry = document.getElementById("cicOwnerAdminNavEntry");
+    if (legacyEntry) legacyEntry.remove();
+    syncOwnerAdminShortcut();
+  }
+  function installOwnerShortcutStyle() {
+    if (document.getElementById("cic-owner-admin-float-style")) return;
+    const style = document.createElement("style");
+    style.id = "cic-owner-admin-float-style";
+    style.textContent = ".cic-owner-admin-float{position:fixed;right:max(10px,env(safe-area-inset-right,0px));bottom:calc(104px + env(safe-area-inset-bottom,0px));z-index:140;display:flex;align-items:center;gap:7px;padding:10px 13px;border:1px solid #d4af37;border-radius:999px;background:#2c1a14;color:#fff8e7;box-shadow:0 6px 22px #0004;font:700 11px system-ui;letter-spacing:.2px;touch-action:manipulation}.cic-owner-admin-float svg{flex:0 0 auto}.cic-owner-admin-float:focus-visible{outline:3px solid #d4af37;outline-offset:3px}@media(min-width:700px){.cic-owner-admin-float{right:max(calc((100vw - 620px)/2 + 12px),12px);bottom:110px}}";
+    document.head.appendChild(style);
   }
   async function isApprovedOwner(user) {
     const client=db(); if(!client||!user)return false;
@@ -108,6 +91,7 @@
     return !error&&!!data&&data.role==="owner"&&data.approved===true;
   }
   function install() {
+    installOwnerShortcutStyle();
     // The public bottom-bar QR is the shop promotion QR. Intercept the legacy
     // qrModal action so this entry no longer opens the old QR destination.
     if(!document.documentElement.dataset.cicShopQrNavBound){
@@ -122,16 +106,7 @@
       },true);
     }
     const modal=$("#adminAccessModal"), email=$("#adminEmail"), otp=$("#adminOtp");
-    // Hide owner QR tooling from customer navigation; direct printed passport URLs stay public.
-    if(!document.getElementById("cic-hide-customer-qr-tools")){
-      const privateNavStyle=document.createElement("style");
-      privateNavStyle.id="cic-hide-customer-qr-tools";
-      privateNavStyle.textContent=".bottom .nav-qr-passport{display:grid!important;visibility:visible!important;pointer-events:auto!important}@media(max-width:520px){.bottom{grid-template-columns:repeat(7,minmax(0,1fr))!important}}";
-      document.head.appendChild(privateNavStyle);
-    }
-
-    // Restore the public QR Passport destination in the mobile bar; Admin remains owner-only.
-    if(!document.getElementById("cic-nav-qr-visibility-fix")){const st=document.createElement("style");st.id="cic-nav-qr-visibility-fix";st.textContent=".bottom .nav-qr-passport{display:grid!important;visibility:visible!important;pointer-events:auto!important}.bottom .nav-qr-passport .nav-label{font-size:clamp(10px,2.7vw,12px);letter-spacing:-.3px}.bottom .nav-settings svg{stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}@media(max-width:520px){.bottom{display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:2px!important;padding:7px 5px!important;box-sizing:border-box!important}.bottom .nav{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important;min-width:0!important;width:100%!important;padding:7px 1px 5px!important;margin:0!important;overflow:hidden!important}.bottom .nav svg{width:19px!important;height:19px!important;flex:0 0 19px!important}.bottom .nav-label{display:block!important;max-width:100%!important;font-size:clamp(8px,2.25vw,10px)!important;line-height:1.05!important;letter-spacing:-.25px!important;white-space:normal!important;overflow-wrap:anywhere!important;text-align:center!important}.bottom .nav-sub{display:none!important}.bottom .nav-qr-passport .nav-label{font-size:0!important}.bottom .nav-qr-passport .nav-label:after{content:\"QR\";font-size:10px;letter-spacing:0}.bottom .nav-settings .nav-label{font-size:clamp(8px,2.1vw,9px)!important}}";document.head.appendChild(st);const q=document.querySelector(".bottom .nav-qr-passport .nav-label");if(q)q.textContent="QR";}
+    // Do not inject CSS or restructure the customer's bottom navigation.
     const actions=modal&&$(".login-actions",modal);
     if(!modal||!email||!otp||!actions||modal.dataset.cicRealOtp==="true")return;
     modal.dataset.cicRealOtp="true";
@@ -267,9 +242,22 @@
       {key:"catalogue",title:"Catalogue & Products",label:"Open live Catalogue & Stock",selectors:["#cicOwnerCatalogueButton"]},
       {key:"orders",title:"Orders & Customers",label:"Open live Orders & Fulfilment",selectors:["#cicOwnerOrdersButton"]},
       {key:"passports",title:"Certificates & QR",label:"Open live QR Product Passports",selectors:["#cicPassportButton"]},
+      {key:"media",title:"Media & Social",label:"Open owner Social Draft Desk (local preview only)",selectors:[]},
+      {key:"team",title:"Team & Roles",label:"Open secure Team Access",selectors:[]},
       {key:"alerts",title:"Security & Audit",label:"Open live Owner Alerts",selectors:["#cicOwnerAlertsButton","#cicOwnerAlertButton","#cicAlertsButton"],textMatch:/owner\s*alerts/i}
     ];
 
+    window.cicOpenOwnerModule=function(kind,tab){
+      // The V18 top tabs are shortcuts into the same live owner tools used by
+      // the matching category cards; never route them into local demo editors.
+      if(tab){
+        const nav=tab.closest(".admin-tabs");
+        if(nav)nav.querySelectorAll("button").forEach(button=>button.classList.toggle("active",button===tab));
+      }
+      const action=control.querySelector('[data-cic-live-node="'+kind+'"]');
+      if(action){action.click();return;}
+      status("This owner tool is not ready yet. Please use the matching section below.",true);
+    };
     definitions.forEach(def=>{
       const node=Array.from(control.querySelectorAll("details.admin-node")).find(item=>
         (item.querySelector("summary")?.textContent||"").trim().toLowerCase()===def.title.toLowerCase()
@@ -309,12 +297,28 @@
         const kind=action.dataset.cicLiveNode;
         const def=definitions.find(item=>item.key===kind);
         if(!def)return;
+        const status=control.querySelector('[data-cic-live-status="'+kind+'"]');
+        if(!document.body.classList.contains("cic-owner-shortcuts-unified"))return;
+        if(kind==="media"){
+          if(typeof window.openModal==="function")window.openModal("socialModal");
+          if(status)status.textContent="Opened local draft preview. Live social publishing is not connected.";
+          return;
+        }
+        if(kind==="team"){
+          openOwnerTeamPanel();
+          if(status)status.textContent="Opened secure Team Access. Owner approval is checked again before team data is shown.";
+          return;
+        }
+        if(kind==="alerts"){
+          openOwnerAlertsPanel();
+          if(status)status.textContent="Opened live Owner Alerts. Owner approval is checked again before alerts are shown.";
+          return;
+        }
         let target=null;
         for(const selector of def.selectors){target=document.querySelector(selector);if(target)break;}
         if(!target&&def.textMatch){
           target=Array.from(document.querySelectorAll("button")).find(el=>!el.hasAttribute("data-cic-live-node")&&def.textMatch.test(el.textContent||""));
         }
-        const status=control.querySelector('[data-cic-live-status="'+kind+'"]');
         if(target){
           target.click();
           if(status)status.textContent="Live owner tool opened.";
@@ -776,8 +780,7 @@
       ownerAutoPromptOpened = true;
       window.setTimeout(() => window.openAdminAccess(), 0);
     };
-    // Hide the customer-facing Admin nav immediately on startup, before any
-    // persisted session or auth-state callback is processed.
+    // Ensure no owner-only Admin entry is exposed before server-side approval.
     setOwnerNavVisible(false);
     install();
     // Keep observing until the dynamically injected login modal is actually
