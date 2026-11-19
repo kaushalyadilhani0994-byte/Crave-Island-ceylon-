@@ -28,8 +28,11 @@ async function owner(){
 db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
 if(!db)return false;
 const {data:{session},error}=await db.auth.getSession();
-if(error||!session)return false;
-const {data,error:e}=await db.from("staff_profiles").select("role,approved").eq("id",session.user.id).maybeSingle();
+if(error||!session||!session.user)return false;
+const {data:verified,error:verifyError}=await db.auth.getUser();
+if(verifyError||!verified||!verified.user||verified.user.id!==session.user.id||
+   String(verified.user.email||"").trim().toLowerCase()!=="kaushalyadilhani0994@gmail.com")return false;
+const {data,error:e}=await db.from("staff_profiles").select("role,approved").eq("id",verified.user.id).maybeSingle();
 return !e&&data&&data.role==="owner"&&data.approved===true;
 }
 function mount(){
@@ -130,7 +133,7 @@ try {
 const response=await db.rpc("owner_update_product_passport",{
 p_product_id:id,
 p_payload:row,
-p_site_origin:location.origin
+p_site_origin:"https://craveislandceylonv18supabaseintegra.vercel.app"
 });
 data=response.data;error=response.error;
 } catch (requestError) {
@@ -180,6 +183,14 @@ win.document.close();
 
 message("Passport saved successfully.");
 }
-function init(){if(!window.CIC_SUPABASE_CONFIG?.anonKey||!window.CIC_SUPABASE?.client)return;mount();const update=async()=>{const b=$("#cicPassportButton");if(b)b.hidden=!(await owner())};update();db=window.CIC_SUPABASE.client;db.auth.onAuthStateChange(()=>setTimeout(update,200))}
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(init,500));else setTimeout(init,500);
+let passportInitStarted=false;
+function init(attempt=0){
+ if(passportInitStarted)return;
+ const config=window.CIC_SUPABASE_CONFIG,client=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
+ if(!config?.anonKey||!client){if(attempt<40){setTimeout(()=>init(attempt+1),250);return}console.warn("[CRAVE QR] Supabase client did not become ready; reload the page to retry.");return}
+ passportInitStarted=true;db=client;mount();
+ const update=async()=>{const b=$("#cicPassportButton");if(b)b.hidden=!(await owner())};
+ update();db.auth.onAuthStateChange(()=>setTimeout(update,200));
+}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(()=>init(),250),{once:true});else setTimeout(()=>init(),250);
 })();
