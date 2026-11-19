@@ -28,8 +28,6 @@ create policy cic_media_read on public.media_assets for select to authenticated 
 create policy cic_media_insert on public.media_assets for insert to authenticated with check(private.is_approved_owner() or private.has_staff_permission('media','create'));
 create policy cic_media_update on public.media_assets for update to authenticated using(private.is_approved_owner() or private.has_staff_permission('media','update')) with check(private.is_approved_owner() or private.has_staff_permission('media','update'));
 create policy cic_media_delete on public.media_assets for delete to authenticated using(private.is_approved_owner() or private.has_staff_permission('media','delete'));
-create policy cic_loyalty_rewards_read on public.loyalty_rewards for select to authenticated using(private.is_approved_owner() or private.has_staff_permission('loyalty','read'));
-create policy cic_scratch_campaigns_read on public.scratch_campaigns for select to authenticated using(private.is_approved_owner() or private.has_staff_permission('scratch_cards','read'));
 create or replace function public.owner_adjust_loyalty_points(p_customer_id uuid,p_delta integer,p_note text,p_request_id uuid)
 returns jsonb language plpgsql security definer set search_path=pg_catalog,public as $$
 declare v_balance integer;declare v_existing public.loyalty_transactions%rowtype;
