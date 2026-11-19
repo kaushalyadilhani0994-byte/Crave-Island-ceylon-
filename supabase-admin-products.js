@@ -14,6 +14,7 @@
     } catch { return false; }
   };
   let root, client, allowed = false, productRows = [];
+  let selectedProductPhoto = null, productPhotoPreviewUrl = null;
 
   function style() {
     if ($("#cic-catalogue-admin-style")) return;
@@ -53,10 +54,13 @@
         <label for="cicCatDesc">Description</label><textarea id="cicCatDesc" maxlength="500"></textarea>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="cicCategorySave" type="submit">Save collection</button><button id="cicCategoryCancel" type="button" hidden>Cancel edit</button></div>
       </form></div>
-      <div class="cic-section"><h3>2. Add a real product</h3><p class="cic-muted">Only enter products that are actually ready to sell. Price is in LKR. Product image URL must be a publicly accessible HTTPS image URL.</p>
+      <div class="cic-section"><h3>2. Add a real product</h3><p class="cic-muted">Only enter products that are actually ready to sell. Price is in LKR. Upload a JPG, PNG or WebP photo (8 MB max), or add an optional public HTTPS image URL.</p>
       <form id="cicProductForm">
         <div class="cic-grid"><div><label for="cicProdName">Product name *</label><input id="cicProdName" maxlength="160" required></div><div><label for="cicProdPrice">Price (LKR) *</label><input id="cicProdPrice" type="number" min="0.01" max="2000000" step="0.01" required></div>
-        <div><label for="cicProdCategory">Collection *</label><select id="cicProdCategory" required><option value="">Create a collection first</option></select></div><div><label for="cicProdImage">Product image URL (optional)</label><input id="cicProdImage" type="url" maxlength="1500"></div></div>
+        <div><label for="cicProdCategory">Collection *</label><select id="cicProdCategory" required><option value="">Create a collection first</option></select></div><div><label for="cicProdImage">Existing HTTPS image URL (optional)</label><input id="cicProdImage" type="url" maxlength="1500" placeholder="HTTPS image link"></div></div>
+        <div class="cic-grid"><div><label for="cicProdCamera">Take product photo</label><input id="cicProdCamera" type="file" accept="image/jpeg,image/png,image/webp" capture="environment"></div><div><label for="cicProdGallery">Choose product photo (JPG, PNG or WebP)</label><input id="cicProdGallery" type="file" accept="image/jpeg,image/png,image/webp"></div></div>
+        <div id="cicProdPhotoPreview" class="cic-photo-preview" aria-live="polite"><span class="cic-muted">No replacement photo selected.</span></div>
+        <p class="cic-muted">One photo is stored in the private product-images bucket. Existing private photos are preserved when you edit other product details.</p>
         <label for="cicProdDesc">Product description</label><textarea id="cicProdDesc" maxlength="3000" placeholder="Describe the product clearly for customers"></textarea>
         <label for="cicProdIngredients">Ingredients *</label><textarea id="cicProdIngredients" maxlength="5000" required placeholder="Enter the exact verified ingredient list"></textarea>
         <label for="cicProdAllergens">Allergen information</label><textarea id="cicProdAllergens" maxlength="2000" placeholder="Declared allergens and cross-contact information (if applicable)"></textarea>
@@ -71,8 +75,28 @@
     $("#cicCategoryForm",m).addEventListener("submit",saveCategory);
     $("#cicCategoryCancel",m).addEventListener("click",resetCategoryEditor);
     $("#cicProductForm",m).addEventListener("submit",saveProduct);
-    $("#cicProductForm",m).addEventListener("input",()=>{const form=$("#cicProductForm",m);if(form.dataset.saving!=="true")delete form.dataset.requestId;});
+    $("#cicProdCamera",m).addEventListener("change",event=>setProductPhoto(event.target.files?.[0]));
+    $("#cicProdGallery",m).addEventListener("change",event=>setProductPhoto(event.target.files?.[0]));
+    $("#cicProductForm",m).addEventListener("input",event=>{const form=$("#cicProductForm",m);if(form.dataset.saving!=="true"&&event.target.type!=="file")delete form.dataset.requestId;});
     document.body.appendChild(m); root=m;
+  }
+
+  function clearProductPhotoPreview() {
+    if(productPhotoPreviewUrl){URL.revokeObjectURL(productPhotoPreviewUrl);productPhotoPreviewUrl=null;}
+  }
+  function setProductPhoto(file) {
+    if(!file){selectedProductPhoto=null;renderProductPhotoPreview();return;}
+    if(!["image/jpeg","image/png","image/webp"].includes(file.type)){say("Use a JPG, PNG or WebP product photo.",true);return;}
+    if(file.size>8*1024*1024){say("The product photo must be 8 MB or smaller.",true);return;}
+    selectedProductPhoto=file;renderProductPhotoPreview();
+  }
+  function renderProductPhotoPreview() {
+    const box=$("#cicProdPhotoPreview");if(!box)return;
+    clearProductPhotoPreview();
+    if(!selectedProductPhoto){box.innerHTML='<span class="cic-muted">No replacement photo selected.</span>';return;}
+    productPhotoPreviewUrl=URL.createObjectURL(selectedProductPhoto);
+    box.innerHTML='<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><img src="'+productPhotoPreviewUrl+'" alt="Selected product photo" style="width:92px;height:92px;object-fit:cover;border-radius:9px"><span class="cic-muted">'+esc(selectedProductPhoto.name)+' · '+Math.ceil(selectedProductPhoto.size/1024)+' KB</span><button type="button" id="cicProdPhotoRemove">Remove photo</button></div>';
+    $("#cicProdPhotoRemove").addEventListener("click",()=>{selectedProductPhoto=null;$("#cicProdCamera").value="";$("#cicProdGallery").value="";renderProductPhotoPreview();});
   }
 
   function say(message, bad=false) {
@@ -84,8 +108,11 @@
     client=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
     if(!client){allowed=false;return false;}
     const {data:{session},error}=await client.auth.getSession();
-    if(error||!session){allowed=false;return false;}
-    const {data:staff,error:staffError}=await client.from("staff_profiles").select("role,approved").eq("id",session.user.id).maybeSingle();
+    if(error||!session||!session.user){allowed=false;return false;}
+    const {data:verified,error:verifyError}=await client.auth.getUser();
+    if(verifyError||!verified||!verified.user||verified.user.id!==session.user.id||
+       String(verified.user.email||"").trim().toLowerCase()!=="kaushalyadilhani0994@gmail.com"){allowed=false;return false;}
+    const {data:staff,error:staffError}=await client.from("staff_profiles").select("role,approved").eq("id",verified.user.id).maybeSingle();
     allowed=!staffError&&!!staff&&staff.role==="owner"&&staff.approved===true;
     return allowed;
   }
@@ -151,13 +178,14 @@
     const form=$("#cicProductForm");
     if(form.dataset.saving==="true"){say("Please wait until the current product save finishes before switching products.",true);return;}
     const p=productRows.find(row=>String(row.id)===String(id)); if(!p)return;
-    delete form.dataset.requestId; form.dataset.editId=p.id;
+    delete form.dataset.requestId; form.dataset.editId=p.id; form.dataset.existingPrivateImage=/^https:\/\//i.test(String(p.image_url||""))?"":String(p.image_url||"");
     $("#cicProdName").value=p.name||""; $("#cicProdPrice").value=p.price==null?"":p.price;
     const categorySelect=$("#cicProdCategory");
     if(p.category&&!Array.from(categorySelect.options).some(option=>option.value===p.category)){
       const option=document.createElement("option"); option.value=p.category; option.textContent=p.category+" (inactive collection)"; categorySelect.appendChild(option);
     }
-    categorySelect.value=p.category||""; $("#cicProdImage").value=p.image_url||"";
+    categorySelect.value=p.category||""; $("#cicProdImage").value=/^https:\/\//i.test(String(p.image_url||""))?p.image_url:"";
+    selectedProductPhoto=null;$("#cicProdCamera").value="";$("#cicProdGallery").value="";renderProductPhotoPreview();
     $("#cicProdDesc").value=p.description||""; $("#cicProdIngredients").value=p.ingredients||""; $("#cicProdAllergens").value=p.allergen_information||"";
     $("#cicProdBatch").value=p.batch_number||""; $("#cicProdStock").value=Number(p.stock_quantity||0); $("#cicProdLowStock").value=Number(p.low_stock_threshold||5); $("#cicProdMfg").value=p.manufacturing_date||""; $("#cicProdExpiry").value=p.expiry_date||""; $("#cicProdStorage").value=p.storage_location||""; $("#cicProdTrackStock").checked=Boolean(p.track_inventory);
     const button=form.querySelector("button[type=submit]"); if(button)button.textContent="Update live product";
@@ -302,6 +330,7 @@
     if(!isHttpsUrl(imageUrl)){delete form.dataset.saving;say("Product image URL must be a valid HTTPS URL without embedded credentials.",true);return;}
     if(mfgDate&&expiryDate&&mfgDate>expiryDate){delete form.dataset.saving;say("Manufacturing date cannot be later than the expiry / best-before date.",true);return;}
     const btn=event.submitter, editId=form.dataset.editId||"";
+    const existingProductImage=editId?(form.dataset.existingPrivateImage||productRows.find(row=>String(row.id)===String(editId))?.image_url||null):null;
     const stockQuantity=Number($("#cicProdStock").value||0),lowStockThreshold=Number($("#cicProdLowStock").value||5);
     if(!Number.isInteger(stockQuantity)||stockQuantity<0||!Number.isInteger(lowStockThreshold)||lowStockThreshold<0){delete form.dataset.saving;say("Stock and low-stock threshold must be whole numbers of zero or more.",true);return;}
     const controls=Array.from(form.elements).map(el=>({el,disabled:el.disabled}));
@@ -315,7 +344,7 @@
       const payload={
         name,category,price,currency:"LKR",
         description:$("#cicProdDesc").value.trim()||null,
-        image_url:imageUrl||null,ingredients,
+        image_url:imageUrl||(editId&&/^https:\/\//i.test(String(existingProductImage||""))?existingProductImage:null),ingredients,
         allergen_information:allergens||null,batch_number:batch||null,
         stock_quantity:stockQuantity,low_stock_threshold:lowStockThreshold,
         manufacturing_date:mfgDate,expiry_date:expiryDate,
@@ -325,14 +354,42 @@
         p_product_id:editId||null,
         p_request_id:form.dataset.requestId,
         p_payload:payload,
-        p_site_origin:location.origin
+        p_site_origin:"https://craveislandceylonv18supabaseintegra.vercel.app"
       });
       if(error)throw error;
       const result=Array.isArray(data)?data[0]:data;
       if(!result||!result.product_id||!result.qr_url)throw new Error("The server did not confirm the saved product and QR passport.");
-      form.reset();delete form.dataset.editId;delete form.dataset.requestId;
+      // If a later photo upload fails, retry as an edit of this confirmed product, never as a duplicate create.
+      form.dataset.editId=String(result.product_id);
+      if(selectedProductPhoto){
+        const photo=selectedProductPhoto;
+        const previousPrivatePath=existingProductImage&&!/^https:\/\//i.test(String(existingProductImage))?String(existingProductImage):"";
+        // The passport RPC accepts HTTPS image URLs only. Restore the prior private
+        // object path before attempting replacement so a failed upload never blanks
+        // an already-working product photo.
+        if(previousPrivatePath){
+          const {error:restorePreviousError}=await client.rpc("owner_attach_product_image",{p_product_id:result.product_id,p_object_path:previousPrivatePath});
+          if(restorePreviousError)throw new Error("Product details were saved, but the existing photo could not be preserved before replacement: "+restorePreviousError.message);
+        }
+        const extension=photo.type==="image/png"?"png":photo.type==="image/webp"?"webp":"jpg";
+        const objectPath=String(result.product_id)+"/"+window.crypto.randomUUID()+"."+extension;
+        const {data:uploaded,error:uploadError}=await client.storage.from("product-images").upload(objectPath,photo,{
+          cacheControl:"900",contentType:photo.type,upsert:false
+        });
+        if(uploadError)throw new Error("Product details were saved; the previous photo was preserved, but the new private photo upload failed: "+uploadError.message);
+        const {error:imageSaveError}=await client.rpc("owner_attach_product_image",{p_product_id:result.product_id,p_object_path:uploaded.path});
+        if(imageSaveError){try{await client.storage.from("product-images").remove([uploaded.path]);}catch(_){}throw new Error("Photo uploaded but could not be attached to the product. The previous photo was preserved and the app attempted to clean up the unused file: "+imageSaveError.message);}
+        if(previousPrivatePath&&previousPrivatePath!==uploaded.path){
+          // Cleanup is best-effort; a failed delete must not undo a successful photo replacement.
+          try{await client.storage.from("product-images").remove([previousPrivatePath]);}catch(_){}
+        }
+      }else if(editId&&!imageUrl&&existingProductImage&&!/^https:\/\//i.test(String(existingProductImage))){
+        const {error:restoreImageError}=await client.rpc("owner_attach_product_image",{p_product_id:result.product_id,p_object_path:existingProductImage});
+        if(restoreImageError)throw new Error("Product saved, but its existing private photo could not be preserved: "+restoreImageError.message);
+      }
+      form.reset();delete form.dataset.editId;delete form.dataset.requestId;delete form.dataset.existingPrivateImage;selectedProductPhoto=null;renderProductPhotoPreview();
       const saveButton=form.querySelector("button[type=submit]");if(saveButton)saveButton.textContent="Save product as draft";
-      say((result.created?"Product saved as a hidden draft. ":"Product updated. ")+(result.replayed?"Previous confirmed save recovered. ":"")+"Product, passport and QR link were saved together. Passport publishing remains a separate owner action. QR: "+result.qr_url);
+      say((result.created?"Product saved as a hidden draft. ":"Product updated. ")+(result.replayed?"Previous confirmed save recovered. ":"")+"Product, passport and QR link were saved together. Passport publishing remains a separate owner action.");
       await loadAll();
       if(window.CIC_SUPABASE&&typeof window.CIC_SUPABASE.refreshCatalogue==="function")await window.CIC_SUPABASE.refreshCatalogue();
     }catch(error){
@@ -345,14 +402,17 @@
     }
   }
 
-  function init() {
-    if(!window.CIC_SUPABASE_CONFIG||!window.CIC_SUPABASE_CONFIG.anonKey)return;
+  let productAdminInitStarted=false;
+  function init(attempt=0) {
+    if(productAdminInitStarted)return;
+    const config=window.CIC_SUPABASE_CONFIG,db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
+    if(!config?.anonKey||!db){if(attempt<40){window.setTimeout(()=>init(attempt+1),250);return;}console.warn("[CRAVE catalogue] Supabase client did not become ready; reload the page to retry.");return;}
+    productAdminInitStarted=true;
     mount();
     const update=async()=>{const ok=await checkAccess(); const b=$("#cicOwnerCatalogueButton"); if(b)b.hidden=!ok;};
     update();
-    const db=window.CIC_SUPABASE&&window.CIC_SUPABASE.client;
-    if(db)db.auth.onAuthStateChange(()=>window.setTimeout(update,150));
+    db.auth.onAuthStateChange(()=>window.setTimeout(update,150));
   }
-  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>window.setTimeout(init,250));
-  else window.setTimeout(init,250);
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>window.setTimeout(()=>init(),250),{once:true});
+  else window.setTimeout(()=>init(),250);
 })();
