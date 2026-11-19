@@ -297,6 +297,14 @@
   ownerWorkspaceScript.defer = true;
   document.body.appendChild(ownerWorkspaceScript);
 
+  // Live owner business operations: reviews, store settings, loyalty, scratch,
+  // invoices/manual payments, media library and staff tasks.
+  const ownerBusinessOpsScript = document.createElement("script");
+  ownerBusinessOpsScript.async = false;
+  ownerBusinessOpsScript.src = "supabase-admin-operations.js?v=20261119-business-ops";
+  ownerBusinessOpsScript.defer = true;
+  document.body.appendChild(ownerBusinessOpsScript);
+
 
   // Owner-only red-dot alert centre. Database RLS is the final authority.
   (function installOwnerAlerts(){
