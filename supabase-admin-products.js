@@ -43,7 +43,7 @@
     if ($("#cicOwnerCatalogue")) return;
     style();
     const b=document.createElement("button"); b.id="cicOwnerCatalogueButton"; b.type="button"; b.textContent="Owner · Catalogue"; b.hidden=true;
-    b.addEventListener("click",()=>{ const m=$("#cicOwnerCatalogue"); if(m){m.style.display="flex"; loadAll();} });
+    b.addEventListener("click",async()=>{ const m=$("#cicOwnerCatalogue"); if(m){m.style.display="flex"; await loadAll(); const form=$("#cicProductForm",m); if(form){form.scrollIntoView({behavior:"smooth",block:"start"}); const first=$("#cicProdName",m); if(first)window.setTimeout(()=>first.focus({preventScroll:true}),250);} } });
     document.body.appendChild(b);
     const m=document.createElement("div"); m.id="cicOwnerCatalogue"; m.setAttribute("role","dialog"); m.setAttribute("aria-modal","true"); m.setAttribute("aria-label","Owner catalogue management");
     m.innerHTML=`<section class="cic-panel">
