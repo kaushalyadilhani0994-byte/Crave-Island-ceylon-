@@ -243,6 +243,8 @@
       {key:"orders",title:"Orders & Customers",label:"Open live Orders & Fulfilment",selectors:["#cicOwnerOrdersButton"]},
       {key:"passports",title:"Certificates & QR",label:"Open live QR Product Passports",selectors:["#cicPassportButton"]},
       {key:"media",title:"Media & Social",label:"Open owner Social Draft Desk (local preview only)",selectors:[]},
+      {key:"reviews",title:"Reviews & Customer Feedback",label:"Open live Customer Reviews",selectors:[]},
+      {key:"finance",title:"Invoices, Payments & Bank Transfer",label:"Open live Invoices & Manual Payments",selectors:[]},
       {key:"team",title:"Team & Roles",label:"Open secure Team Access",selectors:[]},
       {key:"alerts",title:"Security & Audit",label:"Open live Owner Alerts",selectors:["#cicOwnerAlertsButton","#cicOwnerAlertButton","#cicAlertsButton"],textMatch:/owner\s*alerts/i}
     ];
@@ -269,6 +271,9 @@
       // with the real Supabase-backed owner tools.
       const preview=body.querySelector(".node-open");
       if(preview){preview.hidden=true;preview.style.setProperty("display","none","important");}
+      if(def.key==="media"){
+        body.querySelectorAll(".gold-outline").forEach(el=>{el.hidden=true;el.style.setProperty("display","none","important");});
+      }
       let action=body.querySelector('[data-cic-live-node="'+def.key+'"]');
       if(!action){
         action=document.createElement("button");
@@ -299,9 +304,12 @@
         if(!def)return;
         const status=control.querySelector('[data-cic-live-status="'+kind+'"]');
         if(!document.body.classList.contains("cic-owner-shortcuts-unified"))return;
-        if(kind==="media"){
-          if(typeof window.openModal==="function")window.openModal("socialModal");
-          if(status)status.textContent="Opened local draft preview. Live social publishing is not connected.";
+        if(kind==="media"||kind==="reviews"||kind==="finance"){
+          if(typeof window.cicOpenBusinessOps==="function"){
+            window.cicOpenBusinessOps(kind).then(ok=>{
+              if(status)status.textContent=ok?(kind==="media"?"Opened the live owner Media Library. Social publishing still requires channel connection.":kind==="reviews"?"Opened live Customer Reviews moderation.":"Opened live invoices and manual payment reconciliation."):"Owner verification is required.";
+            }).catch(()=>{if(status)status.textContent="Could not open the live business workspace. Close and reopen Admin."});
+          }else if(status)status.textContent="Live Business Operations is still loading. Close and reopen Admin in a moment.";
           return;
         }
         if(kind==="team"){
@@ -359,6 +367,7 @@
               action.type="button";action.className="cic-live-node-action";action.dataset.cicLiveNode=def.key;action.textContent=def.label;body.appendChild(action);
               const status=document.createElement("span");status.className="cic-live-node-status";status.dataset.cicLiveStatus=def.key;status.setAttribute("role","status");status.setAttribute("aria-live","polite");action.insertAdjacentElement("afterend",status);
               const preview=body.querySelector(".node-open");if(preview){preview.hidden=true;preview.style.setProperty("display","none","important");}
+              if(def.key==="media")body.querySelectorAll(".gold-outline").forEach(el=>{el.hidden=true;el.style.setProperty("display","none","important");});
             }
           });
         }
