@@ -897,6 +897,17 @@
               if(typeof window.closeModal==="function")window.closeModal("adminAccessModal");
               openOriginalControlRoom();
             }else if(session&&session.user){
+              // Team invitations return through the existing approved redirect
+              // URL. Route a known team profile to its separate workspace without
+              // ever granting owner shortcuts or bypassing the staff approval flag.
+              if(url.searchParams.get("team-access")==="1"){
+                const {data:teamProfile,error:teamProfileError}=await client.from("staff_profiles").select("role").eq("id",session.user.id).maybeSingle();
+                if(!teamProfileError&&teamProfile&&["supervisor","staff","media","accounts"].includes(teamProfile.role)){
+                  try{sessionStorage.removeItem("cicOwnerOtpVerified");localStorage.removeItem("cicOwnerSignInPending");}catch(_){}
+                  window.location.replace("/team.html");
+                  return;
+                }
+              }
               await recordDeniedOwnerAttempt();
               await client.auth.signOut();
               setOwnerNavVisible(false);
