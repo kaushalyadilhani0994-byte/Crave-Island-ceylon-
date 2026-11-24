@@ -287,7 +287,7 @@
 
   const ownerAuthScript = document.createElement("script");
   ownerAuthScript.async = false; // Preserve dependency order for dynamically loaded owner modules.
-  ownerAuthScript.src = "supabase-admin-auth.js?v=20261119-v18-owner-refresh";
+  ownerAuthScript.src = "supabase-admin-auth.js?v=20261124-owner-ops-routing";
   ownerAuthScript.defer = true;
   document.body.appendChild(ownerAuthScript);
 
@@ -301,7 +301,7 @@
   // invoices/manual payments, media library and staff tasks.
   const ownerBusinessOpsScript = document.createElement("script");
   ownerBusinessOpsScript.async = false;
-  ownerBusinessOpsScript.src = "supabase-admin-operations.js?v=20261119-business-ops";
+  ownerBusinessOpsScript.src = "supabase-admin-operations.js?v=20261124-owner-ops-routing";
   ownerBusinessOpsScript.defer = true;
   document.body.appendChild(ownerBusinessOpsScript);
 
