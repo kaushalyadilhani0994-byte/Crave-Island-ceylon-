@@ -242,6 +242,7 @@
       {key:"catalogue",title:"Catalogue & Products",label:"Open live Catalogue & Stock",selectors:["#cicOwnerCatalogueButton"]},
       {key:"orders",title:"Orders & Customers",label:"Open live Orders & Fulfilment",selectors:["#cicOwnerOrdersButton"]},
       {key:"passports",title:"Certificates & QR",label:"Open live QR Product Passports",selectors:["#cicPassportButton"]},
+      {key:"settings",title:"Store Settings",label:"Open live Store Settings & Delivery",selectors:[]},
       {key:"media",title:"Media & Social",label:"Open owner Social Draft Desk (local preview only)",selectors:[]},
       {key:"reviews",title:"Reviews & Customer Feedback",label:"Open live Customer Reviews",selectors:[]},
       {key:"finance",title:"Invoices, Payments & Bank Transfer",label:"Open live Invoices & Manual Payments",selectors:[]},
@@ -304,10 +305,10 @@
         if(!def)return;
         const status=control.querySelector('[data-cic-live-status="'+kind+'"]');
         if(!document.body.classList.contains("cic-owner-shortcuts-unified"))return;
-        if(kind==="media"||kind==="reviews"||kind==="finance"){
+        if(kind==="media"||kind==="reviews"||kind==="finance"||kind==="settings"){
           if(typeof window.cicOpenBusinessOps==="function"){
             window.cicOpenBusinessOps(kind).then(ok=>{
-              if(status)status.textContent=ok?(kind==="media"?"Opened the live owner Media Library. Social publishing still requires channel connection.":kind==="reviews"?"Opened live Customer Reviews moderation.":"Opened live invoices and manual payment reconciliation."):"Owner verification is required.";
+              if(status)status.textContent=ok?(kind==="media"?"Opened the live owner Media Library. Social publishing still requires channel connection.":kind==="reviews"?"Opened live Customer Reviews moderation.":kind==="finance"?"Opened live invoices and manual payment reconciliation.":"Opened live Store Settings and delivery configuration."):"Owner verification is required.";
             }).catch(()=>{if(status)status.textContent="Could not open the live business workspace. Close and reopen Admin."});
           }else if(status)status.textContent="Live Business Operations is still loading. Close and reopen Admin in a moment.";
           return;
