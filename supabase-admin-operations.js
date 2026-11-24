@@ -49,6 +49,7 @@ if(a==="verify"||a==="rejectpay")r=await d.rpc("owner_set_payment_record_status"
 if(a==="media")r=await d.from("media_assets").update({status:"approved"}).eq("id",id);
 if(a==="taskdone")r=await d.from("staff_tasks").update({status:"done"}).eq("id",id);
 if(r?.error)throw r.error;say("Saved to live database.");show(tab)}catch(x){say(x.message||"Action failed.",true)}}
+window.cicOpenBusinessOps=async function(section){if(!await owner())return false;await open();if(section&&["overview","settings","reviews","loyalty","scratch","finance","media","tasks"].includes(section))await show(section);return true};
 async function init(){mount();let ok=await owner(),b=$("#cicBOTab");if(b)b.hidden=!ok;let d=db();if(d?.auth?.onAuthStateChange)d.auth.onAuthStateChange(()=>setTimeout(async()=>{let v=await owner(),t=$("#cicBOTab");if(t)t.hidden=!v;if(!v)close()},0))}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
