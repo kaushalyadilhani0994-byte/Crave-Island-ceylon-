@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#2C1A14">
+<title>Team Workspace | CRAVE ISLAND CEYLON</title>
+<style>
+:root{--brown:#2C1A14;--gold:#D4AF37;--cream:#FFF8E7;--ink:#2b1b15;--muted:#74645a;--line:#e6d8c3}
+*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font:14px/1.5 system-ui,sans-serif}
+header{background:var(--brown);color:var(--cream);border-bottom:3px solid var(--gold);padding:20px 16px;text-align:center}
+header strong{font:500 23px Georgia,serif;letter-spacing:.04em}header small{display:block;color:var(--gold);letter-spacing:.15em;margin-top:5px;font-size:10px}
+main{width:min(960px,100%);margin:22px auto;padding:0 14px 40px}
+.panel{background:#fffdf8;border:1px solid var(--line);border-radius:15px;padding:18px;margin:12px 0;box-shadow:0 5px 22px #2c1a1409}
+h1{font:500 27px Georgia,serif;margin:0 0 5px}h2{font:500 21px Georgia,serif;margin:0 0 10px}
+.muted{color:var(--muted)}.notice{padding:12px;border-radius:9px;background:#f0e5d4;color:#3c281f;margin:12px 0;overflow-wrap:anywhere}
+input,button,select{font:inherit}input{width:100%;min-height:44px;padding:10px;border:1px solid #bca995;border-radius:8px;background:white;color:var(--ink)}
+button{border:1px solid var(--gold);border-radius:8px;background:var(--brown);color:var(--cream);padding:10px 14px;min-height:42px;font-weight:700;cursor:pointer}
+button:disabled{opacity:.55;cursor:wait}.row{display:flex;gap:9px;align-items:end;flex-wrap:wrap}.row>*{flex:1;min-width:180px}
+.topline{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.role{display:inline-block;padding:4px 9px;border-radius:99px;background:#f0e5d4;color:#513a2e;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.tabs{display:flex;gap:7px;flex-wrap:wrap;margin:14px 0}.tabs button{background:#fff;color:var(--brown);min-height:36px;padding:7px 11px}.tabs button.active{background:var(--brown);color:var(--cream)}
+.section[hidden],#workspace[hidden],#login[hidden]{display:none!important}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.card{border:1px solid var(--line);border-radius:10px;background:#fff;padding:12px;min-width:0}.card strong{display:block;margin-bottom:3px}.card small{color:var(--muted)}
+.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:540px}th,td{text-align:left;padding:9px;border-bottom:1px solid var(--line);vertical-align:top}th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.task{border:1px solid var(--line);border-radius:10px;padding:12px;margin:9px 0;background:#fff}.task p{margin:4px 0;color:var(--muted)}.task .row{margin-top:8px}
+.empty{padding:15px;border:1px dashed #cdbba7;border-radius:9px;color:var(--muted)}
+@media(max-width:520px){main{padding-left:9px;padding-right:9px}.panel{padding:13px}h1{font-size:24px}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="/supabase/client-config.js"></script>
+</head>
+<body>
+<header><strong>CRAVE ISLAND CEYLON</strong><small>SECURE TEAM WORKSPACE</small></header>
+<main>
+<section id="login" class="panel">
+<h1>Team sign in</h1>
+<p class="muted">For invited Supervisor, Staff, Media and Accounts team members only. Main Admin uses the separate owner sign-in.</p>
+<form id="loginForm">
+<label for="teamEmail">Invited email address</label>
+<div class="row" style="margin-top:6px"><input id="teamEmail" type="email" maxlength="254" autocomplete="email" required placeholder="Enter the email used for your invitation"><button id="sendCode" type="submit">Send secure sign-in email</button></div>
+</form>
+<div id="codeBox" hidden style="margin-top:12px"><label for="teamCode">6-digit email code</label><div class="row" style="margin-top:6px"><input id="teamCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="Enter your code"><button id="verifyCode" type="button">Verify & open workspace</button></div></div>
+<div id="loginStatus" class="notice" role="status" aria-live="polite" hidden></div>
+</section>
+<section id="pending" class="panel" hidden>
+<h1>Invitation received</h1>
+<p>Your team account is recognised, but Main Admin approval is still pending. Your workspace will open after approval.</p>
+<div id="pendingEmail" class="muted"></div>
+<div class="row" style="margin-top:12px"><button id="pendingRefresh" type="button">Check approval</button><button id="pendingSignOut" type="button">Sign out</button></div>
+<div id="pendingStatus" class="notice" role="status" aria-live="polite"></div>
+</section>
+<section id="workspace" hidden>
+<div class="panel">
+<div class="topline"><div><h1 id="welcome">Team Workspace</h1><div id="teamEmailLabel" class="muted"></div></div><div><span id="teamRole" class="role"></span> <button id="teamSignOut" type="button">Sign out</button></div></div>
+<div class="muted" style="margin-top:8px">Only modules approved by Main Admin are shown. Database row-level permissions remain active for every request.</div>
+<div id="workspaceNotice" class="notice" hidden></div>
+<div id="tabs" class="tabs"></div>
+</div>
+<div id="sections"></div>
+</section>
+</main>
+<script>
+(function(){
+"use strict";
+var config=window.CIC_SUPABASE_CONFIG||{};
+var client=null, profile=null, currentUser=null, permissions={};
+var $=function(id){return document.getElementById(id)};
+var esc=function(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
+var has=function(module,action){var a=permissions&&Array.isArray(permissions[module])?permissions[module]:[];return a.indexOf(action)>=0};
+var say=function(id,message,bad){var el=$(id);if(!el)return;el.textContent=message;el.hidden=false;if(bad)el.style.background="#f8deda"};
+var money=function(v){var n=Number(v||0);return "LKR "+n.toLocaleString("en-LK",{maximumFractionDigits:2})};
+function hideAll(){ $("login").hidden=true;$("pending").hidden=true;$("workspace").hidden=true; }
+function showLogin(){hideAll();$("login").hidden=false}
+function noRows(msg){return '<div class="empty">'+esc(msg)+'</div>'}
+function makeSection(key,title,html){return '<section class="panel section" id="sec-'+esc(key)+'" hidden><h2>'+esc(title)+'</h2>'+html+'</section>'}
+function table(headers,rows){if(!rows.length)return noRows("No records are available in this workspace yet.");return '<div class="table-wrap"><table><thead><tr>'+headers.map(function(h){return '<th>'+esc(h)+'</th>'}).join("")+'</tr></thead><tbody>'+rows.join("")+'</tbody></table></div>'}
+function sectionFor(key,title,content){$("sections").insertAdjacentHTML("beforeend",makeSection(key,title,content));}
+function activateTab(key){
+Array.from($("tabs").querySelectorAll("button")).forEach(function(b){b.classList.toggle("active",b.dataset.tab===key)});
+Array.from($("sections").querySelectorAll(".section")).forEach(function(s){s.hidden=s.id!=="sec-"+key});
+}
+function addTab(key,label){var b=document.createElement("button");b.type="button";b.dataset.tab=key;b.textContent=label;b.addEventListener("click",function(){activateTab(key)});$("tabs").appendChild(b)}
+async function loadTasks(){
+var r=await client.from("staff_tasks").select("id,title,description,priority,status,due_at,created_at,assigned_to").order("created_at",{ascending:false}).limit(50);
+if(r.error)throw r.error;
+var html=(r.data||[]).map(function(t){
+var opts=["open","in_progress","blocked","done","cancelled"].map(function(s){return '<option value="'+s+'" '+(t.status===s?"selected":"")+'>'+s.replace("_"," ")+'</option>'}).join("");
+return '<article class="task"><strong>'+esc(t.title)+'</strong><p>'+esc(t.description||"No extra instructions")+'</p><small>Priority: '+esc(t.priority)+' · Due: '+esc(t.due_at||"Not set")+'</small>'+(has("tasks","update")?'<div class="row"><select data-task-status="'+esc(t.id)+'">'+opts+'</select><button type="button" data-task-save="'+esc(t.id)+'">Save status</button></div>':'<p>Status: '+esc(t.status)+'</p>')+'</article>';
+}).join("");
+sectionFor("tasks","Assigned Tasks",html||noRows("No assigned tasks yet."));
+}
+async function loadInventory(){
+var r=await client.from("products").select("id,name,category,stock_quantity,low_stock_threshold,expiry_date,track_inventory,is_active,sku").order("name").limit(100);
+if(r.error)throw r.error;
+var rows=(r.data||[]).map(function(p){return '<tr><td>'+esc(p.name)+'</td><td>'+esc(p.category)+'</td><td>'+esc(p.track_inventory?p.stock_quantity:"Not tracked")+'</td><td>'+esc(p.low_stock_threshold)+'</td><td>'+esc(p.expiry_date||"—")+'</td><td>'+esc(p.is_active?"Active":"Hidden")+'</td></tr>'});
+sectionFor("inventory","Catalogue & Stock",table(["Product","Collection","Stock","Alert at","Expiry","Visibility"],rows));
+}
+async function loadOrders(){
+var r=await client.from("store_orders").select("id,order_number,customer_name,order_status,payment_status,total,currency,created_at").order("created_at",{ascending:false}).limit(50);
+if(r.error)throw r.error;
+var rows=(r.data||[]).map(function(o){return '<tr><td>'+esc(o.order_number)+'</td><td>'+esc(o.customer_name)+'</td><td>'+esc(o.order_status)+'</td><td>'+esc(o.payment_status)+'</td><td>'+esc(money(o.total))+'</td><td>'+esc(new Date(o.created_at).toLocaleString())+'</td></tr>'});
+sectionFor("orders","Orders & Fulfilment",table(["Order","Customer","Order status","Payment","Total","Created"],rows));
+}
+async function loadMedia(){
+var r=await client.from("media_assets").select("id,title,asset_type,asset_url,caption,status,created_at").order("created_at",{ascending:false}).limit(50);
+if(r.error)throw r.error;
+var rows=(r.data||[]).map(function(m){return '<tr><td>'+esc(m.title)+'</td><td>'+esc(m.asset_type)+'</td><td>'+esc(m.status)+'</td><td><a href="'+esc(m.asset_url)+'" target="_blank" rel="noopener">Open asset</a></td><td>'+esc(m.caption||"")+'</td></tr>'});
+sectionFor("media","Media Library",table(["Title","Type","Status","Asset","Caption"],rows));
+}
+async function loadInvoices(){
+var r=await client.from("store_invoices").select("invoice_number,status,issue_date,due_date,total,created_at").order("created_at",{ascending:false}).limit(50);
+if(r.error)throw r.error;
+var rows=(r.data||[]).map(function(v){return '<tr><td>'+esc(v.invoice_number)+'</td><td>'+esc(v.status)+'</td><td>'+esc(v.issue_date)+'</td><td>'+esc(v.due_date||"—")+'</td><td>'+esc(money(v.total))+'</td></tr>'});
+sectionFor("invoices","Invoices",table(["Invoice","Status","Issued","Due","Total"],rows));
+}
+async function loadPayments(){
+var r=await client.from("store_payment_records").select("order_id,amount,payment_method,status,reference_number,created_at").order("created_at",{ascending:false}).limit(50);
+if(r.error)throw r.error;
+var rows=(r.data||[]).map(function(v){return '<tr><td>'+esc(v.order_id)+'</td><td>'+esc(money(v.amount))+'</td><td>'+esc(v.payment_method)+'</td><td>'+esc(v.status)+'</td><td>'+esc(v.reference_number||"—")+'</td></tr>'});
+sectionFor("payments","Payment Records",table(["Order ID","Amount","Method","Status","Reference"],rows));
+}
+async function loadPassports(){
+var r=await client.from("product_passports").select("product_id,public_slug,batch_code,best_before,published,updated_at").order("updated_at",{ascending:false}).limit(50);
+if(r.error)throw r.error;
+var rows=(r.data||[]).map(function(v){return '<tr><td>'+esc(v.product_id)+'</td><td>'+esc(v.batch_code||"—")+'</td><td>'+esc(v.best_before||"—")+'</td><td>'+esc(v.published?"Published":"Unpublished")+'</td></tr>'});
+sectionFor("passports","Product Passports",table(["Product ID","Batch","Best before","Public status"],rows));
+}
+async function buildWorkspace(){
+hideAll();$("workspace").hidden=false;
+$("welcome").textContent="Welcome, "+(profile.display_name||"Team member");
+$("teamEmailLabel").textContent=currentUser.email||"";
+$("teamRole").textContent=profile.role;
+$("tabs").replaceChildren();$("sections").replaceChildren();
+var jobs=[];
+if(has("tasks","read")||has("tasks","update")){addTab("tasks","Tasks");jobs.push(["tasks",loadTasks])}
+if(has("orders","read")||has("dispatch","read")){addTab("orders","Orders");jobs.push(["orders",loadOrders])}
+if(has("inventory","read")||has("catalogue","read")){addTab("inventory","Stock");jobs.push(["inventory",loadInventory])}
+if(has("media","read")){addTab("media","Media");jobs.push(["media",loadMedia])}
+if(has("invoices","read")){addTab("invoices","Invoices");jobs.push(["invoices",loadInvoices])}
+if(has("payments","read")){addTab("payments","Payments");jobs.push(["payments",loadPayments])}
+if(has("certificates","read")){addTab("passports","QR / Passports");jobs.push(["passports",loadPassports])}
+if(!jobs.length){$("workspaceNotice").hidden=false;say("workspaceNotice","Your account is approved, but no workspace permissions are assigned yet. Ask Main Admin to set your role permissions.");return}
+var failures=[];
+for(var i=0;i<jobs.length;i++){
+try{await jobs[i][1]()}catch(e){failures.push(jobs[i][0])}
+}
+if(failures.length){$("workspaceNotice").hidden=false;say("workspaceNotice","Some approved modules could not load because their database permission or service is unavailable: "+failures.join(", ")+". Other modules remain available.",true)}
+activateTab(jobs[0][0]);
+}
+async function loadIdentity(){
+var s=await client.auth.getSession();
+if(s.error||!s.data.session||!s.data.session.user){showLogin();return}
+currentUser=s.data.session.user;
+var r=await client.from("staff_profiles").select("email,display_name,role,approved,permissions").eq("id",currentUser.id).maybeSingle();
+if(r.error||!r.data){await client.auth.signOut();showLogin();say("loginStatus","This sign-in is not linked to a CRAVE team invitation.",true);return}
+profile=r.data;
+if(profile.role==="owner"){await client.auth.signOut();showLogin();say("loginStatus","Main Admin must use the separate secure owner sign-in.",true);return}
+if(!["supervisor","staff","media","accounts"].includes(profile.role)){await client.auth.signOut();showLogin();say("loginStatus","This account does not have an active team role.",true);return}
+if(profile.approved!==true){hideAll();$("pending").hidden=false;$("pendingEmail").textContent=profile.email||currentUser.email||"";say("pendingStatus","Waiting for Main Admin to approve this account. No staff data is available until approval.");return}
+permissions=profile.permissions||{};
+await buildWorkspace();
+}
+$("loginForm").addEventListener("submit",async function(e){
+e.preventDefault();var email=$("teamEmail").value.trim().toLowerCase(),btn=$("sendCode");
+if(!email||!client)return;
+btn.disabled=true;btn.textContent="Sending…";
+try{
+var r=await client.auth.signInWithOtp({email:email,options:{shouldCreateUser:false,emailRedirectTo:location.origin+"/?team-access=1"}});
+if(r.error)throw r.error;
+$("codeBox").hidden=false;say("loginStatus","Secure sign-in request accepted. Check the invited email inbox and enter the 6-digit code. If the message contains a link instead, open it on this device.");
+}catch(e){say("loginStatus","Could not send the team sign-in email. Check that the address is the one invited by Main Admin and that email delivery is available.",true)}
+finally{btn.disabled=false;btn.textContent="Send secure sign-in email"}
+});
+$("verifyCode").addEventListener("click",async function(){
+var email=$("teamEmail").value.trim().toLowerCase(),token=$("teamCode").value.trim(),btn=$("verifyCode");
+if(!/^[0-9]{6}$/.test(token)){say("loginStatus","Enter the 6-digit code from the invitation email.",true);return}
+btn.disabled=true;btn.textContent="Verifying…";
+try{var r=await client.auth.verifyOtp({email:email,token:token,type:"email"});if(r.error)throw r.error;await loadIdentity()}
+catch(e){say("loginStatus","The code could not be verified. Check the code or request a fresh sign-in email.",true)}
+finally{btn.disabled=false;btn.textContent="Verify & open workspace"}
+});
+$("pendingRefresh").addEventListener("click",loadIdentity);
+$("pendingSignOut").addEventListener("click",async function(){await client.auth.signOut();showLogin()});
+$("teamSignOut").addEventListener("click",async function(){await client.auth.signOut();currentUser=null;profile=null;permissions={};showLogin()});
+$("sections").addEventListener("click",async function(e){
+var b=e.target.closest("[data-task-save]");if(!b)return;
+var id=b.dataset.taskSave,select=$("sections").querySelector('[data-task-status="'+id+'"]');if(!select)return;
+b.disabled=true;b.textContent="Saving…";
+try{var r=await client.from("staff_tasks").update({status:select.value}).eq("id",id);if(r.error)throw r.error;b.textContent="Saved";await loadTasks();activateTab("tasks")}
+catch(e){b.disabled=false;b.textContent="Save status";alert("Task status could not be updated. Check the task assignment and permissions.")}
+});
+if(!config.url||!config.anonKey||!window.supabase){showLogin();say("loginStatus","Secure sign-in service is not available. Refresh this page and try again.",true);return}
+client=window.supabase.createClient(config.url,config.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+client.auth.onAuthStateChange(function(event){if(event==="SIGNED_OUT"){profile=null;permissions={};showLogin()}});
+loadIdentity().catch(function(){showLogin();say("loginStatus","Could not verify your team account. Refresh and try again.",true)});
+})();
+</script>
+</body>
+</html>
