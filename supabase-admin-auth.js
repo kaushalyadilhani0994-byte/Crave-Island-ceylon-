@@ -881,7 +881,7 @@
         },250);
       });
       const url=new URL(window.location.href);
-      const hasAuthCallback=url.searchParams.has("code")||url.hash.includes("access_token=")||url.hash.includes("refresh_token=")||url.searchParams.has("error_description")||url.searchParams.has("error");
+      const hasAuthCallback=url.searchParams.has("code")||url.searchParams.has("token_hash")||url.hash.includes("access_token=")||url.hash.includes("refresh_token=")||url.searchParams.has("error_description")||url.searchParams.has("error");
       if(hasAuthCallback){
         // Supabase's email-link callback may be the step that establishes the
         // owner's persisted session. Never sign out before that session is
