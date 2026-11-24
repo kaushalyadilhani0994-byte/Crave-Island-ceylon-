@@ -64,7 +64,7 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: "valid_email_and_role_required" }), { status: 400, headers: { ...headers, "Content-Type": "application/json" } });
     }
 
-    const redirectTo = origin && headers["Access-Control-Allow-Origin"] === origin ? origin + "/" : "https://craveislandceylonv18supabaseintegra.vercel.app/";
+    const redirectTo = origin && headers["Access-Control-Allow-Origin"] === origin ? origin + "/?team-access=1" : "https://craveislandceylonv18supabaseintegra.vercel.app/?team-access=1";
     const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
       data: { display_name: displayName, crave_team_invite: true },
       redirectTo,
