@@ -71,6 +71,7 @@ var esc=function(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){r
 var has=function(module,action){var a=permissions&&Array.isArray(permissions[module])?permissions[module]:[];return a.indexOf(action)>=0};
 var say=function(id,message,bad){var el=$(id);if(!el)return;el.textContent=message;el.hidden=false;if(bad)el.style.background="#f8deda"};
 var money=function(v){var n=Number(v||0);return "LKR "+n.toLocaleString("en-LK",{maximumFractionDigits:2})};
+var safeHref=function(v){try{var u=new URL(String(v||""),location.origin);if(u.protocol!=="https:"||u.username||u.password)return "";return u.href}catch(_){return ""}};
 function hideAll(){ $("login").hidden=true;$("pending").hidden=true;$("workspace").hidden=true; }
 function showLogin(){hideAll();$("login").hidden=false}
 function noRows(msg){return '<div class="empty">'+esc(msg)+'</div>'}
@@ -106,7 +107,7 @@ sectionFor("orders","Orders & Fulfilment",table(["Order","Customer","Order statu
 async function loadMedia(){
 var r=await client.from("media_assets").select("id,title,asset_type,asset_url,caption,status,created_at").order("created_at",{ascending:false}).limit(50);
 if(r.error)throw r.error;
-var rows=(r.data||[]).map(function(m){return '<tr><td>'+esc(m.title)+'</td><td>'+esc(m.asset_type)+'</td><td>'+esc(m.status)+'</td><td><a href="'+esc(m.asset_url)+'" target="_blank" rel="noopener">Open asset</a></td><td>'+esc(m.caption||"")+'</td></tr>'});
+var rows=(r.data||[]).map(function(m){var href=safeHref(m.asset_url);return '<tr><td>'+esc(m.title)+'</td><td>'+esc(m.asset_type)+'</td><td>'+esc(m.status)+'</td><td>'+(href?'<a href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">Open asset</a>':'Unavailable')+'</td><td>'+esc(m.caption||"")+'</td></tr>'});
 sectionFor("media","Media Library",table(["Title","Type","Status","Asset","Caption"],rows));
 }
 async function loadInvoices(){
