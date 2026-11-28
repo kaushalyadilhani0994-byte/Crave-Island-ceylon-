@@ -73,6 +73,12 @@
     // This class is the verified-session gate used by the original V18 Control Room.
     // It must never alter the storefront navigation or inject an Admin nav item.
     document.body.classList.toggle("cic-owner-shortcuts-unified", visible === true);
+    // Keep Admin and product QR in the original top utility rail, but expose
+    // them only after the approved owner OTP session has been verified.
+    document.querySelectorAll("[data-cic-owner-utility]").forEach(button => {
+      button.hidden = visible !== true;
+      button.setAttribute("aria-hidden", visible === true ? "false" : "true");
+    });
     const legacyEntry = document.getElementById("cicOwnerAdminNavEntry");
     if (legacyEntry) legacyEntry.remove();
     syncOwnerAdminShortcut();
