@@ -66,15 +66,54 @@
     shortcut.className = "cic-owner-admin-float";
     shortcut.setAttribute("aria-label", "Open secure CRAVE owner Admin sign-in");
     shortcut.innerHTML = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 19 6v5c0 4.7-2.8 8-7 10-4.2-2-7-5.3-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span>Admin</span>';
-    shortcut.addEventListener("click", function () { if (typeof window.openAdminAccess === "function") window.openAdminAccess(); });
+    shortcut.addEventListener("click", function (event) {
+      if (shortcut.dataset.dragged === "1") { event.preventDefault(); event.stopPropagation(); shortcut.dataset.dragged = "0"; return; }
+      if (typeof window.openAdminAccess === "function") window.openAdminAccess();
+    });
+    // Owner can move the floating Admin shortcut anywhere on the screen.
+    try {
+      const saved = JSON.parse(localStorage.getItem("cicOwnerAdminFloatPosition") || "null");
+      if (saved && Number.isFinite(saved.left) && Number.isFinite(saved.top)) {
+        shortcut.style.left = Math.max(4, Math.min(window.innerWidth - 90, saved.left)) + "px";
+        shortcut.style.top = Math.max(4, Math.min(window.innerHeight - 52, saved.top)) + "px";
+        shortcut.style.right = "auto"; shortcut.style.bottom = "auto";
+      }
+    } catch (_) {}
+    let drag = null;
+    shortcut.addEventListener("pointerdown", function (event) {
+      if (event.button !== undefined && event.button !== 0) return;
+      const rect = shortcut.getBoundingClientRect();
+      drag = {x:event.clientX,y:event.clientY,left:rect.left,top:rect.top,moved:false};
+      shortcut.setPointerCapture && shortcut.setPointerCapture(event.pointerId);
+    });
+    shortcut.addEventListener("pointermove", function (event) {
+      if (!drag) return;
+      const dx=event.clientX-drag.x, dy=event.clientY-drag.y;
+      if (!drag.moved && Math.hypot(dx,dy)<7) return;
+      drag.moved=true; shortcut.dataset.dragged="1";
+      const left=Math.max(4,Math.min(window.innerWidth-shortcut.offsetWidth-4,drag.left+dx));
+      const top=Math.max(4,Math.min(window.innerHeight-shortcut.offsetHeight-4,drag.top+dy));
+      shortcut.style.left=left+"px"; shortcut.style.top=top+"px";
+      shortcut.style.right="auto"; shortcut.style.bottom="auto";
+    });
+    function finishDrag() {
+      if (!drag) return;
+      if (drag.moved) {
+        const rect=shortcut.getBoundingClientRect();
+        try { localStorage.setItem("cicOwnerAdminFloatPosition",JSON.stringify({left:rect.left,top:rect.top})); } catch (_) {}
+      }
+      drag=null;
+    }
+    shortcut.addEventListener("pointerup",finishDrag);
+    shortcut.addEventListener("pointercancel",finishDrag);
     document.body.appendChild(shortcut);
   }
   function setOwnerNavVisible(visible) {
     // This class is the verified-session gate used by the original V18 Control Room.
     // It must never alter the storefront navigation or inject an Admin nav item.
     document.body.classList.toggle("cic-owner-shortcuts-unified", visible === true);
-    // Keep Admin and product QR in the original top utility rail, but expose
-    // them only after the approved owner OTP session has been verified.
+    // Expose the owner-only top business shortcuts only after approved OTP.
+    // QR stays in the customer's bottom navigation; Admin stays as a movable float.
     document.querySelectorAll("[data-cic-owner-utility]").forEach(button => {
       button.hidden = visible !== true;
       button.setAttribute("aria-hidden", visible === true ? "false" : "true");
@@ -87,7 +126,7 @@
     if (document.getElementById("cic-owner-admin-float-style")) return;
     const style = document.createElement("style");
     style.id = "cic-owner-admin-float-style";
-    style.textContent = ".cic-owner-admin-float{position:fixed;right:max(10px,env(safe-area-inset-right,0px));bottom:calc(104px + env(safe-area-inset-bottom,0px));z-index:140;display:flex;align-items:center;gap:7px;padding:10px 13px;border:1px solid #d4af37;border-radius:999px;background:#2c1a14;color:#fff8e7;box-shadow:0 6px 22px #0004;font:700 11px system-ui;letter-spacing:.2px;touch-action:manipulation}.cic-owner-admin-float svg{flex:0 0 auto}.cic-owner-admin-float:focus-visible{outline:3px solid #d4af37;outline-offset:3px}@media(min-width:700px){.cic-owner-admin-float{right:max(calc((100vw - 620px)/2 + 12px),12px);bottom:110px}}";
+    style.textContent = ".cic-owner-admin-float{position:fixed;right:max(10px,env(safe-area-inset-right,0px));bottom:calc(104px + env(safe-area-inset-bottom,0px));z-index:140;display:flex;align-items:center;gap:7px;padding:10px 13px;border:1px solid #d4af37;border-radius:999px;background:#2c1a14;color:#fff8e7;box-shadow:0 6px 22px #0004;font:700 11px system-ui;letter-spacing:.2px;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}.cic-owner-admin-float svg{flex:0 0 auto}.cic-owner-admin-float:focus-visible{outline:3px solid #d4af37;outline-offset:3px}@media(min-width:700px){.cic-owner-admin-float{right:max(calc((100vw - 620px)/2 + 12px),12px);bottom:110px}}";
     document.head.appendChild(style);
   }
   async function isApprovedOwner(user) {
