@@ -168,8 +168,8 @@ main{display:block!important;position:relative!important;margin:0!important;padd
 .utility{flex:0 0 auto}
 .cic-owner-utility[hidden]{display:none!important}
 body.cic-owner-shortcuts-unified .cic-owner-utility{display:flex!important}
-.bottom .nav-qr-passport{display:none!important}
-.bottom{grid-template-columns:repeat(6,minmax(0,1fr))!important}
+.bottom .nav-qr-passport{display:flex!important}
+.bottom{grid-template-columns:repeat(7,minmax(0,1fr))!important}
 </style>
 </head>
 <body>
@@ -413,7 +413,6 @@ window.roleOpen=function(target){const map={brand:'controlRoomModal',catalog:'co
   const disabled=["adminModal","controlRoomModal","socialModal","mediaModal","loyaltyModal","scratchModal","certModal","historyModal","inviteModal","qrModal"];
   const blocked=new Set(disabled);
   function hideLegacyControls(){
-    document.querySelectorAll(".nav-qr-passport").forEach(el=>{el.hidden=true;el.setAttribute("aria-hidden","true");el.style.display="none";});
     disabled.forEach(id=>{const el=document.getElementById(id);if(el){el.hidden=true;el.setAttribute("aria-hidden","true");el.style.display="none";}});
     document.querySelectorAll("[onclick]").forEach(el=>{
       const action=el.getAttribute("onclick")||"";
