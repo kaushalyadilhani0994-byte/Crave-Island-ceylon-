@@ -157,6 +157,21 @@ main{display:block!important;position:relative!important;margin:0!important;padd
 /* V18 owner media/image refinement */
 .photo-feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.photo-feature{position:relative;min-height:150px;border-radius:15px;overflow:hidden;background:#2c1a14;color:#fff;border:1px solid #d4af37;isolation:isolate}.photo-feature img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}.photo-feature:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(25,12,7,.88),rgba(25,12,7,.06) 78%);z-index:-1}.photo-feature div{position:absolute;left:11px;right:10px;bottom:11px}.photo-feature b{display:block;font:400 17px Georgia,serif}.photo-feature span{display:block;font-size:9px;line-height:1.4;margin-top:4px;color:#f4e6d6}.owner-image-panel{border:1px solid #d4af37;background:#fffaf3;border-radius:14px;padding:12px;margin:12px 0}.owner-image-panel h4{font:400 19px Georgia,serif;margin:0 0 5px}.owner-image-panel p{font-size:10px;line-height:1.5;color:#806d65}.owner-image-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end}.owner-image-row label{font-size:10px;font-weight:800;display:block;margin-bottom:5px}.owner-image-row input,.owner-image-row select{font-size:10px}.owner-preview{width:100%;height:90px;object-fit:cover;border-radius:10px;background:#eadbd3;margin-top:8px}.invite-box{border:1px solid #d4af37!important;background:linear-gradient(135deg,#fffaf3,#f3e7d9)!important;padding:14px!important;border-radius:14px}.invite-box h4{font:400 20px Georgia,serif!important;margin:0 0 6px}.invite-box p{font-size:10px!important;line-height:1.55}.invite-fields{display:grid;gap:8px;margin:10px 0}.invite-fields label{font-size:10px;font-weight:800}.invite-fields input,.invite-fields select{width:100%;padding:10px;border:1px solid #d8cbc0;border-radius:9px;background:#fff;font-size:11px}.demo-warning{background:#fff0d7;border:1px solid #e5c88e;border-radius:10px;padding:9px;font-size:9px;line-height:1.5;color:#62491e;margin-top:9px}@media(max-width:380px){.photo-feature-grid{gap:7px}.photo-feature{min-height:135px}.owner-image-row{grid-template-columns:1fr}}
 
+
+/* V18 FIX: keep the customer bottom navigation pinned to the device viewport while the page scrolls. */
+html,body{transform:none!important;}
+body>.bottom,body>nav.bottom{
+  position:fixed!important;
+  top:auto!important;
+  bottom:calc(8px + env(safe-area-inset-bottom,0px))!important;
+  left:50%!important;
+  right:auto!important;
+  margin:0!important;
+  transform:translate3d(-50%,0,0)!important;
+  z-index:999!important;
+  will-change:transform;
+}
+@media(max-width:699px){body>nav.bottom{width:calc(100% - 12px)!important;}}
 </style>
 <meta name="cic-startup" content="clean-single-state-entrance">
 <meta name="cic-update" content="V18-OWNER-MEDIA-INVITATION-REFINEMENT">
